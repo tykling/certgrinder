@@ -7,10 +7,10 @@
 ####################################################
 
 ###### CONFIG ########
-# certgrinder hostname
-CERTGRINDER_HOST="certgrinder1.servers.baconsvin.org"
+# your certgrinder server hostname
+CERTGRINDER_HOST="certgrinder.example.com"
 
-# x509
+# x509 info for the CSR
 PRIMARY_DOMAIN="example.com"
 ALL_DOMAINS="DNS:example.com,DNS:example.net"
 COUNTRY="DK"
@@ -19,7 +19,7 @@ ORG="ExampleOrg"
 # path to openssl config
 OPENSSL_CONFIG="/etc/ssl/openssl.cnf"
 
-# command to run after cert renew
+# whatever command to run after cert renew, remember to add sudo permissions to run this
 RENEW_HOOK="sudo pkill -HUP -F /var/run/charybdis/charybdis.pid"
 
 # cert paths
@@ -62,7 +62,7 @@ fi
 
 # certificate time
 echo "new CSR created, contacting certgrinder server to get certificate ...."
-cat $CSR | ssh $CERTGRINDER_HOST /usr/local/bin/certgrinder > $TEMPCERT
+cat $CSR | ssh $CERTGRINDER_HOST /usr/local/bin/csrgrinder > $TEMPCERT
 if [ $? -eq 0 ]; then
         # success, we have a new certificate
         cp $TEMPCERT $CERT
