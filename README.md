@@ -12,7 +12,7 @@ The primary advantage of this design is that the signing stack and credentials a
 The central host with the signing stack is called the "certgrinder server". The individual servers (the ones that need certificates) are called "certgrinder clients".
 
 ### Operation
-The theory behind this is simple. Each server (certgrinder client) does the following:
+The theory behind this is simple. Each Certgrinder client (the certificate consumers, like webservers) does the following:
 
 0. Configure http redirect from /.well-known/acme-challenge/ to the certgrinder server.
 1. Generate an RSA keypair
