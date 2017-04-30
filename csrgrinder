@@ -1,0 +1,25 @@
+#!/bin/sh
+####################################################
+# This file is part of certgrinder.
+# The latest version can be found on Github at
+# https://github.com/tykling/certgrinder
+####################################################
+
+# get CSR from stdin and write to a temp file
+STDIN=$(cat)
+CSRFILE=$(mktemp)
+echo "$STDIN" > $CSRFILE
+
+# get a temp filename for the certificate
+CERTFILE=$(mktemp)
+rm -f $CERTFILE
+
+# issue new certificate
+sudo /usr/local/bin/certbot certonly --non-interactive --quiet --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $CERTFILE
+
+# output certificate to stdout
+cat $CERTFILE
+
+# clean up temp files
+rm $CSRFILE $CERTFILE
+
