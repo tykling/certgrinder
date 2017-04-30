@@ -3,7 +3,7 @@ certgrinder
 
 
 ## Background
-Certgrinder is a set of scripts to handle Letsencrypt cert signing on a central host rather than on the servers which need the certificates.
+Certgrinder is a set of scripts to handle Letsencrypt cert signing on a central host rather than on the servers which need the certificates. Read more at https://blog.tyk.nu/blog/introducing-certgrinder-a-letsencrypt-ssh-proxy/
 
 ### Advantages
 The primary advantage of this design is that the signing stack and credentials are never exposed on servers with untrusted users on them.
