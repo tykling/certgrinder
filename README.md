@@ -37,19 +37,6 @@ A few things need to be configured near the top of the script, primarily the dom
 ### csrgrinder
 The csrgrinder script sits on the certgrinder server and is called over ssh by the certgrinder clients. It takes a CSR on stdin as input and outputs a signed certificate on stdout.
 
-
-## Installation Details
-
-### Certgrinder server
-The certgrinder server needs to have the Letsencrypt (or whatever) software signing stack installed and configured. It also needs a dedicated certgrinder user with sudo access to run the certbot binary.
-
-1. Install certbot or other signing software stack
-2. Configure credentials for certbot (or whatever)
-3. Add a "certgrinder" user
-4. Add something like this to sudoers: `certgrinder ALL=(ALL) NOPASSWD: /usr/local/bin/certbot`
-5. Add the ssh public key for each certgrinder client (see next section) to .ssh/authorized_keys with appropriate restrictions: `from=2a01:3a0:1:1900:85:235:250:85,command=/usr/local/bin/csrgrinder,no-port-forwarding,no-x11-forwarding,no-agent-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEAX6ArpY9CLqV4H1BmlikEcFVp9geDSeRNNdaEB57jL certgrinder@ircd.tyknet.dk`
-6. Install the csrgrinder script to /usr/local/bin/csrgrinder
-
-### Certgrinder clients
-The certgrinder clients just need to create a keypair and use that to create the CSR needed to get the certificate. Then cat the CSR over ssh to the certgrinder server and you'll get a signed cert on stdout. This can be done by hand or by the certgrinder script in this repository.
+## More info
+Read more at https://blog.tyk.nu/blog/introducing-certgrinder-a-letsencrypt-ssh-proxy/
 
