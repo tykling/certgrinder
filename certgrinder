@@ -8,7 +8,7 @@
 
 ###### CONFIG ########
 # your certgrinder server hostname
-CERTGRINDER_HOST="certgrinder.example.com"
+CERTGRINDER_HOST="certgrinder.example.org"
 
 # x509 info for the CSR
 PRIMARY_DOMAIN="example.com"
