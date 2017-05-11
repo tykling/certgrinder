@@ -1,0 +1,6 @@
+certgrinder.yml
+venv/
+*.csr
+*.key
+*.crt
+

@@ -1,0 +1,17 @@
+---
+path: "/home/user/devel/certgrinder"
+
+domainlist:
+  - ['example.com']
+  - ['example.org', 'example.net']
+
+server: "certgrinder.example.com"
+
+x509:
+  'C': 'DK'
+  'O': 'Baconsvin'
+
+cert_renew_threshold_days: 30
+
+csrgrinder_path: '/usr/local/bin/csrgrinder'
+

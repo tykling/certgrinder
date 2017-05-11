@@ -14,7 +14,7 @@ The central host with the signing stack is called the "certgrinder server". The 
 ### Operation
 The theory behind this is simple. Each Certgrinder client (the certificate consumers, like webservers) does the following:
 
-0. Configure http redirect from /.well-known/acme-challenge/ to the certgrinder server.
+0. Configure http redirect from /.well-known/acme-challenge/ to the certgrinder server. The redirect must be functional for all domains you intend to put in the CSR.
 1. Generate an RSA keypair
 2. Generate a new CSR.
 3. Cat the CSR over SSH to the certgrinder server, certgrinder server returns the signed certicate on stdout.
@@ -27,15 +27,20 @@ This is easy to do from crontab with a small script. If you want some inspiratio
 Certgrinder primarily consists of two files. One is a script that runs on the certgrinder clients, simply called "certgrinder". The other runs on the Certgrinder server and is called "csrgrinder".
 
 ### certgrinder
-The certgrinder script is meant to be run under a dedicated user and has two tasks.
+Two flavours of the certgrinder script exists. The bash version of the script can be configured near the top of the script. The Python script comes with a yaml config file. Use whichever suits you, but note that only the Python version supports multiple keys/certificates.
 
-1. Create an RSA key if one isn't found.
-2. Create CSR and use it to get a signed certificate using the certgrinder server
+The certgrinder script is meant to be run under a dedicated user and has two primary tasks:
 
-A few things need to be configured near the top of the script, primarily the domain names.
+1. Create an RSA keypair. This can also be done manually if you prefer:
+`openssl genrsa -out example.com.key 4096`
+
+2. Create CSR and use it to get a signed certificate from the certgrinder server. If you want to do this manually you first you need to add a [SAN] section to openssl.cnf file, since openssl doesn't support doing it on the command line. The [SAN] section should contain one line with all the domains in the following format `subjectAltName=DNS:example.com,DNS:www.example.com,DNS:example.org`. Then run the following command:
+`openssl req -new -sha256 -key example.com.key -subj "/C=DK/O=MyExampleOrg/CN=example.com" -reqexts SAN -extensions SAN -config /path/to/openssl.cnf
+
+It is possible to do this with a rather unpleasant looking oneliner, which only works in bash. If you are interested you can find it in certgrinder.sh.
 
 ### csrgrinder
-The csrgrinder script sits on the certgrinder server and is called over ssh by the certgrinder clients. It takes a CSR on stdin as input and outputs a signed certificate on stdout.
+The csrgrinder script lives on the certgrinder server. It is very simple, just a couple of lines, and it is called over SSH by the certgrinder clients. It takes a PEM formatted CSR on stdin as input, and outputs a signed PEM formatted certificate on stdout.
 
 ## More info
 Read more at https://blog.tyk.nu/blog/introducing-certgrinder-a-letsencrypt-ssh-proxy/
