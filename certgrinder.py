@@ -125,7 +125,7 @@ class Certgrinder:
             certificate_string=open(self.certificate_path, 'r').read()
             self.certificate=OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate_string)
         else:
-            logger.debug("certificate %s not found" % self.keypair_path)
+            logger.debug("certificate %s not found" % self.certificate_path)
             self.certificate = False
 
         return self.certificate
