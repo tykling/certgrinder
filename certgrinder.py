@@ -157,7 +157,7 @@ class Certgrinder:
         cat the csr over ssh to the certgrinder server.
         """
         logger.info("ready to get signed certificate using csr %s" % self.csr_path)
-        p = subprocess.Popen(['ssh', self.conf['server'], self.conf['csrgrinder_path'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(['ssh', self.conf['server'], self.conf['csrgrinder_path']], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate(input=OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, self.csr))
 
         # parse the certificate in stdout (which should contains a valid PEM certificate)
