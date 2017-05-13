@@ -32,7 +32,7 @@ class Certgrinder:
                 return False
 
 
-    ############# RSA KEY METHODS ################################################
+############# RSA KEY METHODS ################################################
 
 
     def load_keypair(self):
@@ -89,7 +89,7 @@ class Certgrinder:
         setattr(self.csr.get_subject(), 'CN', domains[0])
 
         # add subjectAltName x598 extension
-        altnames = ','.join(['DNS:%s' % domain for domain in domains.split(",")])
+        altnames = ','.join(['DNS:%s' % domain for domain in domains])
         logger.debug("Adding subjectAltName extension with value %s" % altnames)
         self.csr.add_extensions([
             OpenSSL.crypto.X509Extension(
@@ -157,7 +157,9 @@ class Certgrinder:
         cat the csr over ssh to the certgrinder server.
         """
         logger.info("ready to get signed certificate using csr %s" % self.csr_path)
+        # open SSH to the certgrinder server
         p = subprocess.Popen(['ssh', self.conf['server'], self.conf['csrgrinder_path']], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # send the CSR to stdin and save stdout+stderr
         stdout, stderr = p.communicate(input=OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, self.csr))
 
         # parse the certificate in stdout (which should contains a valid PEM certificate)
@@ -242,6 +244,7 @@ if __name__ == '__main__':
 
         with PidFile(piddir=certgrinder.conf['path']):
             for domains in certgrinder.conf['domainlist']:
+                domains = domains.split(",")
                 logger.info("------ processing domains: %s" % domains)
                 if certgrinder.grind(domains):
                     logger.info("----- successfully processed domains: %s" % domains)
