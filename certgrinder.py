@@ -145,7 +145,7 @@ class Certgrinder:
         # find the timedelta between now and the expire_date
         expiredelta = expiration - datetime.now()
 
-        if expiredelta.days() < self.conf['cert_renew_threshold_days']:
+        if expiredelta.days < self.conf['cert_renew_threshold_days']:
             # we are close to expiry
             return False
         else:
