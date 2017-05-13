@@ -211,7 +211,7 @@ class Certgrinder:
         if self.load_certificate():
             logger.debug("Loaded certificate %s, checking validity..." % self.certificate_path)
             if self.check_certificate_validity():
-                logger.debug("The certificate %s is valid for at least another %s days, skipping" % (self.certificate_path, days))
+                logger.debug("The certificate %s is valid for at least another %s days, skipping" % (self.certificate_path, self.conf['cert_renew_threshold_days']))
                 return True
             else:
                 logger.info("The certificate %s is valid for less than %s days, renewing..." % (self.certificate_path, self.conf['cert_renew_threshold_days']))
