@@ -81,12 +81,13 @@ class Certgrinder:
         self.csr.set_pubkey(self.keypair)
 
         # set all the x509 properties from the config
+        subject = self.csr.get_subject()
         for key, value in self.conf['x509'].items():
-            setattr(self.csr.get_subject(), key, value)
+            setattr(subject, key, value)
 
         # set CN (this can be removed when everyone supports rfc6125 which
         # says that CN should not be checked when subjectAltName is present)
-        setattr(self.csr.get_subject(), 'CN', domains[0])
+        setattr(subject, 'CN', domains[0])
 
         # add subjectAltName x598 extension
         altnames = ','.join(['DNS:%s' % domain for domain in domains])
