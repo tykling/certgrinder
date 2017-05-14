@@ -12,20 +12,25 @@ echo "$STDIN" > $CSRFILE
 logger "Wrote $(stat -f%z $CSRFILE) bytes CSR from client $SSH_CLIENT to temp file $CSRFILE"
 
 # get a temp filename for the certificate
+FULLCHAINFILE=$(mktemp)
+
+# also specify --cert-path and --chain-path to avoid certbot writing them in the homedir as .pem files
+CHAINFILE=$(mktemp)
 CERTFILE=$(mktemp)
-rm -f $CERTFILE
+rm -f $CHAINFILE $FULLCHAINFILE $CERTFILE
 
 # issue new certificate
 logger "Running certbot..."
-sudo /usr/local/bin/certbot certonly --non-interactive --quiet --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $CERTFILE
+sudo /usr/local/bin/certbot certonly --non-interactive --quiet --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $FULLCHAINFILE --cert-path $CERTFILE --chain-path $CHAINFILE
 if [ $? -eq 0 ]; then
     logger "Success. Certbot wrote $(stat -f%z $CERTFILE) bytes certificate chain to $CERTFILE - sending to stdout and cleaning up temp files"
 else
     logger "Failure. Certbot exit code was $?"
 fi
 
-# output certificate to stdout
-cat $CERTFILE
+# output full certificate chain to stdout
+cat $FULLCHAINFILE
 
 # clean up temp files
-rm $CSRFILE $CERTFILE
+rm $CSRFILE $CERTFILE $CHAINFILE $FULLCHAINFILE
+
