@@ -80,12 +80,7 @@ class Certgrinder:
         # set public key 
         self.csr.set_pubkey(self.keypair)
 
-        # set all the x509 properties from the config
-        for key, value in self.conf['x509'].items():
-            setattr(self.csr.get_subject(), key, value)
-
-        # set CN (this can be removed when everyone supports rfc6125 which
-        # says that CN should not be checked when subjectAltName is present)
+        # set only CN in subject, since everything else is removed by letsencrypt
         setattr(self.csr.get_subject(), 'CN', domains[0])
 
         # add subjectAltName x598 extension

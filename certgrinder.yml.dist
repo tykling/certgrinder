@@ -10,12 +10,6 @@ domainlist:
 # hostname of the certgrinder server
 server: "certgrinder.example.com"
 
-# x509 properties for certificate subject,
-# the first domain in the lists above will be added as CN
-x509:
-  'C': 'DK'
-  'O': 'My Example Org'
-
 # renew certificate when this many days or fewer validity left
 cert_renew_threshold_days: 30
 
