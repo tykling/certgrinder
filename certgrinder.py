@@ -167,24 +167,27 @@ class Certgrinder:
         try:
             self.certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, stdout)
         except Exception as E:
-            logger.exception("There was a problem getting the new certificate. This was stdout:")
+            logger.exception("Got an exception while parsing the new certificate, something went wrong. Exception %s and this was stdout:" % E)
             logger.error(stdout)
             logger.error("this was in stderr:")
             logger.error(stderr)
             return False
 
-        # save cert to disk
-        self.save_certificate()
+        # save cert to disk, pass stdout to maintain chain,
+        # as self.certificate only contains the server cert,
+        # not LE intermediate
+        self.save_certificate(stdout)
         return True
 
 
-    def save_certificate(self):
+    def save_certificate(self, stdout):
         """
         Save the PEM certificate to the path self.certificate_path
         """
+        # TODO: make this use self.certificate if it is possible to make OpenSSL.crypto.load_certificate() get the full chain
         with open(self.certificate_path, 'w') as f:
-            f.write(OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, self.certificate))
-        logger.info("saved new certificate to %s" % self.certificate_path)
+            f.write(stdout)
+        logger.info("saved new certificate chain to %s" % self.certificate_path)
 
 
 ############# MAIN METHOD ################################################
