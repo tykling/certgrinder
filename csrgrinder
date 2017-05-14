@@ -29,4 +29,3 @@ cat $CERTFILE
 
 # clean up temp files
 rm $CSRFILE $CERTFILE
-
