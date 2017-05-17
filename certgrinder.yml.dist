@@ -13,6 +13,9 @@ server: "certgrinder.example.com"
 # renew certificate when this many days or fewer validity left
 cert_renew_threshold_days: 30
 
-# the path of the certgrinder binary on the remote server
+# the path of the csrgrinder binary on the remote server
 csrgrinder_path: '/usr/local/bin/csrgrinder'
+
+# issue selfsigned if something goes wrong?
+selfsigned_fallback: True
 

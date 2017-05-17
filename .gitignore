@@ -3,4 +3,5 @@ venv/
 *.csr
 *.key
 *.crt
+*.pyc
 

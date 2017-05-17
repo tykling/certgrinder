@@ -1,4 +1,4 @@
-import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, textwrap
+import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, textwrap, time
 from datetime import datetime
 from pid import PidFile
 
@@ -131,31 +131,60 @@ class Certgrinder:
     def check_certificate_validity(self):
         """
         Checks the validity of the certificate.
-        Returns a simpe True or False based on self.conf['cert_renew_threshold_days']
+        Returns a simpe True or False based on self.conf['cert_renew_threshold_days'],
+        and whether the certificate is valid (not selfsigned)
         """
+        # check issuer
+        if self.certificate.get_subject().issuer == self.certificate.get_subject():
+            logger.debug("This certificate is selfsigned, check_certificate_validity() returning False")
+            return False
+
+        # check expiration
         notafter = self.certificate.get_notAfter()
         try:
             expiration = datetime.strptime(notafter, "%Y%m%d%H%M%SZ")
         except Exception as E:
             logger.exception("Got exception while parsing notAfter from x509: %s" % notafter)
             return False
+
         # find the timedelta between now and the expire_date
         expiredelta = expiration - datetime.now()
-
         if expiredelta.days < self.conf['cert_renew_threshold_days']:
-            # we are close to expiry
+            logger.debug("Less than %s days to expiry of certificate, check_certificate_validity() returning False" % self.conf['cert_renew_threshold_days'])
             return False
         else:
-            # not yet
+            logger.debug("More than %s days to expiry of certificate, check_certificate_validity() returning True" % self.conf['cert_renew_threshold_days'])
             return True
+
+
+    def get_new_selfsigned_certificate(self):
+        """
+        Create a selfsigned certificate
+        """
+        logger.info("generating selfsigned certificate using csr %s" % self.csr_path)
+        self.certificate = OpenSSL.crypto.X509()
+        self.certificate.set_serial_number(int(time.time()))
+        self.certificate.gmtime_adj_notBefore(0)
+        # make it last 90 days like the real LE certificates
+        self.certificate.gmtime_adj_notAfter(90*24*60*60)
+        self.certificate.set_subject(self.csr.get_subject())
+        self.certificate.set_issuer(self.certificate.get_subject())
+
+        # set public key and sign
+        self.certificate.set_pubkey(self.keypair)
+        self.certificate.sign(self.keypair, "sha256")
+        return True
+
 
     def get_new_certificate(self):
         """
         cat the csr over ssh to the certgrinder server.
         """
         logger.info("ready to get signed certificate using csr %s" % self.csr_path)
+
         # open SSH to the certgrinder server
         p = subprocess.Popen(['ssh', self.conf['server'], self.conf['csrgrinder_path']], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
         # send the CSR to stdin and save stdout+stderr
         stdout, stderr = p.communicate(input=OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, self.csr))
 
@@ -167,7 +196,11 @@ class Certgrinder:
             logger.error(stdout)
             logger.error("this was in stderr:")
             logger.error(stderr)
-            return False
+            if self.conf['selfsigned_fallback']:
+                if not self.get_new_selfsigned_certificate():
+                    return False
+            else:
+                return False
 
         # save cert to disk, pass stdout to maintain chain,
         # as self.certificate only contains the server cert,
@@ -198,7 +231,7 @@ class Certgrinder:
             return True
 
         logger.debug("Running post renew hook: %s" % self.conf['post_renew_hook'])
-        p = subprocess.Popen([self.conf['post_renew_hook'])
+        p = subprocess.Popen([self.conf['post_renew_hook']])
         exitcode = p.wait()
 
         if exitcode != 0:
