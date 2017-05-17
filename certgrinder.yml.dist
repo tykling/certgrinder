@@ -4,8 +4,8 @@ path: "/home/user/devel/certgrinder"
 
 # a list of sets of domains to get certificates for
 domainlist:
-  - ['example.com']
-  - ['example.org', 'example.net']
+  - 'example.com'
+  - 'example.org,example.net'
 
 # hostname of the certgrinder server
 server: "certgrinder.example.com"
