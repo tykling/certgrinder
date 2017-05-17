@@ -312,7 +312,7 @@ if __name__ == '__main__':
 
             if certgrinder.hook_needed:
                 logger.info("at least one certificate was renewed, running post renew hook...")
-                certgrinder.run_post_renew_hook()
+                certgrinder.run_post_renew_hooks()
 
             logger.debug("All done, exiting.")
 
