@@ -1,4 +1,4 @@
-import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, textwrap, time
+import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, textwrap, time, sys
 from datetime import datetime
 from pid import PidFile
 
