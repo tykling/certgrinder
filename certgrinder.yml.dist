@@ -19,3 +19,7 @@ csrgrinder_path: '/usr/local/bin/csrgrinder'
 # issue selfsigned if something goes wrong?
 selfsigned_fallback: True
 
+# run these after renewal of one or more certificates
+post_renew_hooks:
+  - '/usr/sbin/service nginx reload'
+

@@ -225,21 +225,24 @@ class Certgrinder:
 
 ############# POST RENEW HOOK METHOD #######################################
 
-    def run_post_renew_hook(self):
-        if 'post_renew_hook' not in self.conf or not self.conf['post_renew_hook']:
-            logger.debug("no self.conf['post_renew_hook'] found, not doing anything")
+
+    def run_post_renew_hooks(self):
+        if 'post_renew_hooks' not in self.conf or not self.conf['post_renew_hooks']:
+            logger.debug("no self.conf['post_renew_hooks'] found, not doing anything")
             return True
 
-        logger.debug("Running post renew hook: %s" % self.conf['post_renew_hook'])
-        p = subprocess.Popen([self.conf['post_renew_hook']])
-        exitcode = p.wait()
+        for hook in self.conf['post_renew_hooks']:
+            logger.debug("Running post renew hook: %s" % hook)
+            p = subprocess.Popen([hook])
+            exitcode = p.wait()
 
-        if exitcode != 0:
-            logger.error("Got exit code %s when running post_renew_hook %s" % (exitcode, self.conf['post_renew_hook']))
-            return False
-        else:
-            logger.debug("Post renew hook ended with exit code 0, good.")
-            return True
+            if exitcode != 0:
+                logger.error("Got exit code %s when running post_renew_hook %s" % (exitcode, hook))
+            else:
+                logger.debug("Post renew hook %s ended with exit code 0, good." % hook)
+
+        # all done
+        return
 
 
 ############# MAIN METHOD ################################################
@@ -309,8 +312,7 @@ if __name__ == '__main__':
 
             if certgrinder.hook_needed:
                 logger.info("at least one certificate was renewed, running post renew hook...")
-                if not certgrinder.run_post_renew_hook():
-                    logger.error("There was a problem running the post renew hook! exit code != 0")
+                certgrinder.run_post_renew_hook():
 
             logger.debug("All done, exiting.")
 
