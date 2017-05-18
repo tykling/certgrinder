@@ -25,11 +25,11 @@ class Certgrinder:
         # initialise variable
         self.hook_needed = False
 
-    def read_config(self):
+    def read_config(self, configfile):
         """
         Actually reads and parses the yaml config file
         """
-        with open("certgrinder.yml", "r") as f:
+        with open(configfile, "r") as f:
             try:
                 self.conf = yaml.load(f)
                 return True
