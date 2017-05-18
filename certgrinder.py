@@ -246,8 +246,9 @@ class Certgrinder:
             return True
 
         for hook in self.conf['post_renew_hooks']:
-            logger.debug("Running post renew hook: %s" % hook)
-            p = subprocess.Popen(hook.split(" "))
+            logger.debug("Running post renew hook (with sudo): %s" % hook)
+            # run with sudo
+            p = subprocess.Popen(['sudo']+hook.split(" "))
             exitcode = p.wait()
 
             if exitcode != 0:
