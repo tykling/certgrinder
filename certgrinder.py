@@ -1,4 +1,4 @@
-import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, textwrap, time, sys
+import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, textwrap, time, sys, argparse
 from datetime import datetime
 from pid import PidFile
 
@@ -11,7 +11,11 @@ class Certgrinder:
         """
         The __init__ method just reads the config file and checks a few things
         """
-        if not self.read_config():
+        parser = argparse.ArgumentParser()
+        parser.add_argument("comfigfile", , help="The path to the certgrinder.yml config file to use")
+        args = parser.parse_args()
+
+        if not self.read_config(args.configfile):
             sys.exit(1)
 
         if 'domainlist' not in self.conf:
