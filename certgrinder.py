@@ -124,7 +124,11 @@ class Certgrinder:
     def load_certificate(self):
         if os.path.exists(self.certificate_path):
             certificate_string=open(self.certificate_path, 'r').read()
-            self.certificate=OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate_string)
+            try:
+                self.certificate=OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate_string)
+            except OpenSSL.crypto.Error:
+                logger.exception("Got an exception while reading the certificate %s" % self.certificate_path)
+                self.certificate = False
         else:
             logger.debug("certificate %s not found" % self.certificate_path)
             self.certificate = False
