@@ -200,7 +200,7 @@ class Certgrinder:
         try:
             self.certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, stdout)
         except Exception as E:
-            logger.exception("Got an exception while parsing the new certificate, something went wrong. Exception %s and this was stdout:" % E)
+            logger.exception("Got an exception while parsing cert, something went wrong while getting the certificate from the certgrinder server. Exception %s and this was stdout:" % E)
             logger.error(stdout)
             logger.error("this was in stderr:")
             logger.error(stderr)
@@ -247,7 +247,7 @@ class Certgrinder:
 
         for hook in self.conf['post_renew_hooks']:
             logger.debug("Running post renew hook: %s" % hook)
-            p = subprocess.Popen([hook])
+            p = subprocess.Popen(hook.split(" "))
             exitcode = p.wait()
 
             if exitcode != 0:
