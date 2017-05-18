@@ -12,7 +12,7 @@ class Certgrinder:
         The __init__ method just reads the config file and checks a few things
         """
         parser = argparse.ArgumentParser()
-        parser.add_argument("comfigfile", , help="The path to the certgrinder.yml config file to use")
+        parser.add_argument("comfigfile", help="The path to the certgrinder.yml config file to use")
         args = parser.parse_args()
 
         if not self.read_config(args.configfile):
