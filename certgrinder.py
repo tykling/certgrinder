@@ -221,11 +221,17 @@ class Certgrinder:
         return True
 
 
-    def save_certificate(self, stdout):
+    def save_certificate(self, stdout=None):
         """
         Save the PEM certificate to the path self.certificate_path
         """
-        # TODO: make this use self.certificate if it is possible to make OpenSSL.crypto.load_certificate() get the full chain
+        # TODO: make this use self.certificate for regular as well as selfsigned certs, 
+        # if it is possible to make OpenSSL.crypto.load_certificate() get the full chain including intermediate
+        if not stdout:
+            # stdout is empty, must be a selfsigned certificate
+            stdout = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, self.certificate)
+
+        # save the file
         with open(self.certificate_path, 'w') as f:
             f.write(stdout)
         logger.info("saved new certificate chain to %s" % self.certificate_path)
