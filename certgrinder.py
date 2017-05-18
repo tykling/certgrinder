@@ -143,7 +143,7 @@ class Certgrinder:
         and whether the certificate is valid (not selfsigned)
         """
         # check issuer
-        if self.certificate.get_subject().issuer == self.certificate.get_subject():
+        if self.certificate.get_issuer() == self.certificate.get_subject():
             logger.debug("This certificate is selfsigned, check_certificate_validity() returning False")
             return False
 
