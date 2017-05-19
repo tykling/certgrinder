@@ -30,17 +30,19 @@ CERTFILE=$(mktemp)
 rm -f $CHAINFILE $FULLCHAINFILE $CERTFILE
 
 # issue new certificate
-logger "Running certbot..."
-sudo /usr/local/bin/certbot certonly --non-interactive --quiet --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $FULLCHAINFILE --cert-path $CERTFILE --chain-path $CHAINFILE $TEST
+COMMAND="sudo /usr/local/bin/certbot certonly --non-interactive --quiet --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $FULLCHAINFILE --cert-path $CERTFILE --chain-path $CHAINFILE $TEST"
+logger "Running certbot command: $COMMAND"
+$COMMAND
+
+# check certbot exit code
 if [ $? -eq 0 ]; then
     logger "Success. Certbot wrote $(stat -f%z $CERTFILE) bytes certificate chain to $CERTFILE - sending to stdout and cleaning up temp files"
+    # output full certificate chain to stdout
+    cat $FULLCHAINFILE
 else
     logger "Failure. Certbot exit code was $?"
 fi
 
-# output full certificate chain to stdout
-cat $FULLCHAINFILE
-
-# clean up temp files
-rm $CSRFILE $CERTFILE $CHAINFILE $FULLCHAINFILE
+# clean up temp files (some of these may not exist if certbot failed for some reason)
+rm -f $CSRFILE $CERTFILE $CHAINFILE $FULLCHAINFILE
 
