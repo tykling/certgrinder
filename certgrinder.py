@@ -4,6 +4,7 @@ from pid import PidFile
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.handlers.SysLogHandler(address='/var/run/syslog'))
 
 
 class Certgrinder:
@@ -325,13 +326,16 @@ if __name__ == '__main__':
         Main method. Simply loops over sets of domains in the config and
         calls certgrinder.grind() for each
         """
+        # parse commandline arguments
         parser = argparse.ArgumentParser()
         parser.add_argument("configfile", help="The path to the certgrinder.yml config file to use")
         parser.add_argument('--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
         args = parser.parse_args()
 
+        # instatiate Certgrinder object
         certgrinder = Certgrinder(args.configfile, test=args.test)
 
+        # write pidfile and loop over domaintest
         with PidFile(piddir=certgrinder.conf['path']):
             for domains in certgrinder.conf['domainlist']:
                 domains = domains.split(",")
