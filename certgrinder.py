@@ -7,15 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 class Certgrinder:
-    def __init__(self):
+    def __init__(self, configfile, test):
         """
         The __init__ method just reads the config file and checks a few things
         """
-        parser = argparse.ArgumentParser()
-        parser.add_argument("configfile", help="The path to the certgrinder.yml config file to use")
-        args = parser.parse_args()
-
-        if not self.read_config(args.configfile):
+        if not self.read_config(configfile):
             sys.exit(1)
 
         if 'domainlist' not in self.conf:
@@ -24,6 +20,8 @@ class Certgrinder:
 
         # initialise variable
         self.hook_needed = False
+        self.test = test
+
 
     def read_config(self, configfile):
         """
@@ -191,7 +189,7 @@ class Certgrinder:
         logger.info("ready to get signed certificate using csr %s" % self.csr_path)
 
         # open SSH to the certgrinder server
-        p = subprocess.Popen(['ssh', self.conf['server'], self.conf['csrgrinder_path']], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(['ssh', self.conf['server'], self.conf['csrgrinder_path'], 'test' if self.test else ''], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # send the CSR to stdin and save stdout+stderr
         stdout, stderr = p.communicate(input=OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, self.csr))
@@ -314,7 +312,12 @@ if __name__ == '__main__':
         Main method. Simply loops over sets of domains in the config and
         calls certgrinder.grind() for each
         """
-        certgrinder = Certgrinder()
+        parser = argparse.ArgumentParser()
+        parser.add_argument("configfile", help="The path to the certgrinder.yml config file to use")
+        parser.add_argument('--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
+        args = parser.parse_args()
+
+        certgrinder = Certgrinder(args.configfile, test=args.test)
 
         with PidFile(piddir=certgrinder.conf['path']):
             for domains in certgrinder.conf['domainlist']:

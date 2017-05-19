@@ -9,7 +9,17 @@
 STDIN=$(cat)
 CSRFILE=$(mktemp)
 echo "$STDIN" > $CSRFILE
-logger "Wrote $(stat -f%z $CSRFILE) bytes CSR from client $SSH_CLIENT to temp file $CSRFILE"
+
+# are we in testmode?
+if [ "$#" -eq "1" -a "$1" = "test" ]; then
+    TEST="--staging"
+    MODE="test"
+else
+    TEST=
+    MODE="production"
+fi
+
+logger "Wrote $(stat -f%z $CSRFILE) bytes CSR from client $SSH_CLIENT to temp file $CSRFILE (running in $MODE mode)"
 
 # get a temp filename for the certificate
 FULLCHAINFILE=$(mktemp)
@@ -21,7 +31,7 @@ rm -f $CHAINFILE $FULLCHAINFILE $CERTFILE
 
 # issue new certificate
 logger "Running certbot..."
-sudo /usr/local/bin/certbot certonly --non-interactive --quiet --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $FULLCHAINFILE --cert-path $CERTFILE --chain-path $CHAINFILE
+sudo /usr/local/bin/certbot certonly --non-interactive --quiet --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $FULLCHAINFILE --cert-path $CERTFILE --chain-path $CHAINFILE $TEST
 if [ $? -eq 0 ]; then
     logger "Success. Certbot wrote $(stat -f%z $CERTFILE) bytes certificate chain to $CERTFILE - sending to stdout and cleaning up temp files"
 else
