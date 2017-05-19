@@ -4,7 +4,10 @@ from pid import PidFile
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.handlers.SysLogHandler(address='/var/run/syslog'))
+try:
+    logger.addHandler(logging.handlers.SysLogHandler(address='/var/run/log'))
+except Exception as E:
+    logger.exception("Unable to connect to syslog socket /var/run/log - disabling syslog")
 
 
 class Certgrinder:
