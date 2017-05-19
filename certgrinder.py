@@ -188,10 +188,16 @@ class Certgrinder:
         """
         logger.info("ready to get signed certificate using csr %s" % self.csr_path)
 
-        # open SSH to the certgrinder server
-        command = ['ssh', self.conf['server'], self.conf['csrgrinder_path'], 'test' if self.test else ''] 
+        # put the ssh command together
+        command = 'ssh %(server)s %(csrgrinder)s' % {
+            server: self.conf['server'],
+            csrgrinder: self.conf['csrgrinder_path']
+        }
+        if self.test:
+            command += ' test'
+
         logger.debug("running ssh command: %s" % command)
-        p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # send the CSR to stdin and save stdout+stderr
         stdout, stderr = p.communicate(input=OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, self.csr))
