@@ -190,8 +190,8 @@ class Certgrinder:
 
         # put the ssh command together
         command = 'ssh %(server)s %(csrgrinder)s' % {
-            server: self.conf['server'],
-            csrgrinder: self.conf['csrgrinder_path']
+            'server': self.conf['server'],
+            'csrgrinder': self.conf['csrgrinder_path']
         }
         if self.test:
             command += ' test'
