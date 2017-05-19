@@ -140,9 +140,14 @@ class Certgrinder:
         Returns a simpe True or False based on self.conf['cert_renew_threshold_days'],
         and whether the certificate is valid (not selfsigned)
         """
-        # check issuer
+        # check if selfsigned
         if self.certificate.get_issuer() == self.certificate.get_subject():
             logger.debug("This certificate is selfsigned, check_certificate_validity() returning False")
+            return False
+
+        # check if issued by staging
+        if self.certificate.get_issuer().CN == u'Fake LE Intermediate X1':
+            logger.debug("This certificate was issued by LE staging CA, check_certificate_validity() returning False")
             return False
 
         # check expiration
