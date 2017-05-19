@@ -10,8 +10,9 @@ STDIN=$(cat)
 CSRFILE=$(mktemp)
 echo "$STDIN" > $CSRFILE
 
-# are we in testmode?
-if [ "$#" -eq "1" -a "$1" = "test" ]; then
+# are we in testmode? get args from $SSH_ORIGINAL_COMMAND
+set -- $SSH_ORIGINAL_COMMAND
+if [ "$#" -eq "2" -a "$2" = "test" ]; then
     TEST="--staging"
     MODE="test"
 else
