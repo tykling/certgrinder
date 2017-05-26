@@ -183,7 +183,7 @@ class Certgrinder:
             logger.info("selfsigned_fallback is disabled in config")
             return False
 
-        logger.info("generating selfsigned certificate using csr %s" % self.csr_path)
+        logger.warning("WARNING: generating selfsigned certificate using csr %s" % self.csr_path)
         self.certificate = OpenSSL.crypto.X509()
         self.certificate.set_serial_number(int(time.time()))
         self.certificate.gmtime_adj_notBefore(0)
