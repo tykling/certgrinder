@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 try:
     logger.addHandler(logging.handlers.SysLogHandler(address='/var/run/log'))
 except Exception as E:
-    logger.exception("Unable to connect to syslog socket /var/run/log - disabling syslog")
+    logger.exception("Unable to connect to syslog socket /var/run/log - syslog not enabled")
 
 
 class Certgrinder:
