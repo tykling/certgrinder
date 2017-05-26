@@ -124,6 +124,9 @@ class Certgrinder:
 
 
     def load_certificate(self):
+        """
+        Reads PEM certificate from the path in self.certificate_path
+        """
         if os.path.exists(self.certificate_path):
             certificate_string=open(self.certificate_path, 'r').read()
             try:
@@ -176,6 +179,10 @@ class Certgrinder:
         """
         Create a selfsigned certificate
         """
+        if not self.conf['selfsigned_fallback']:
+            logger.info("selfsigned_fallback is disabled in config")
+            return False
+
         logger.info("generating selfsigned certificate using csr %s" % self.csr_path)
         self.certificate = OpenSSL.crypto.X509()
         self.certificate.set_serial_number(int(time.time()))
@@ -188,6 +195,8 @@ class Certgrinder:
         # set public key and sign
         self.certificate.set_pubkey(self.keypair)
         self.certificate.sign(self.keypair, "sha256")
+
+        # all good
         return True
 
 
@@ -219,10 +228,14 @@ class Certgrinder:
             logger.error(stdout)
             logger.error("this was in stderr:")
             logger.error(stderr)
-            if self.conf['selfsigned_fallback']:
-                if not self.get_new_selfsigned_certificate():
-                    return False
-            else:
+            if not self.get_new_selfsigned_certificate():
+                # we dont have a certificate
+                return False
+
+        # a few sanity checks of the certificate seems like a good idea
+        if not self.check_certificate_sanity():
+            if not self.get_new_selfsigned_certificate():
+                # we dont have a certificate
                 return False
 
         # save cert to disk, pass stdout to maintain chain,
@@ -233,6 +246,42 @@ class Certgrinder:
         # we have saved a new certificate, so we will need to run the post renew hook later
         self.hook_needed = True
 
+        return True
+
+
+    def check_certificate_sanity(self):
+        """
+        Performs a few sanity checks of the certificate obtained from the certgrinder server:
+        - checks that the public key is correct
+        - checks that the subject is correct
+        - checks that the SubjectAltName data is correct
+        Return False if a problem is found, True if all is well
+        """
+        # check self.certificate has the same pubkey as the CSR
+        if OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, self.certificate.get_pubkey()) != OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, self.key):
+            logger.error("The certificate returned from the certgrinder server does not have the public key we expected")
+            return False
+
+        # check if certificate has the same subject as our CSR (which is CN only)
+        if self.certificate.get_subject() != self.csr.get_subject():
+            logger.error("The certificate returned from the certgrinder server does not have the same subject as our CSR")
+            return False
+
+        # check if the certificates SubjectAltName contains all the domains our CSR has,
+        # loop over extensions until we find the subjectAltName one
+        found = False
+        for i in range(self.certificate.get_extension_count()):
+            if self.certificate.get_extension(i).get_short_name() == "subjectAltName":
+                found = True
+                # .get_data() returns ASN.1 encoded data, compare with data from the CSR
+                if self.certificate.get_extension(i).get_data() != self.csr.get_extensions()[0].get_data():
+                    logger.error("The certificate returned from the certgrinder server does not have the same data in SubjectAltName as our CSR")
+                    return False
+        if not found:
+            # subjectAltName extension not found
+            return False
+
+        # all good
         return True
 
 
