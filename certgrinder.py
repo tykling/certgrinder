@@ -276,6 +276,8 @@ class Certgrinder:
                 # .get_data() returns ASN.1 encoded data, compare with data from the CSR
                 if self.certificate.get_extension(i).get_data() != self.csr.get_extensions()[0].get_data():
                     logger.error("The certificate returned from the certgrinder server does not have the same data in SubjectAltName as our CSR")
+                    logger.error("cert has: %s" % self.certificate.get_extension(i).get_data())
+                    logger.error("csr has: %s" % self.csr.get_extensions()[0].get_data())
                     return False
         if not found:
             # subjectAltName extension not found
