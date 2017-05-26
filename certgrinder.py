@@ -258,7 +258,7 @@ class Certgrinder:
         Return False if a problem is found, True if all is well
         """
         # check self.certificate has the same pubkey as the CSR
-        if OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, self.certificate.get_pubkey()) != OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, self.key):
+        if OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, self.certificate.get_pubkey()) != OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, self.keypair):
             logger.error("The certificate returned from the certgrinder server does not have the public key we expected")
             return False
 
