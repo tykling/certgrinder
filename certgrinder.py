@@ -254,7 +254,7 @@ class Certgrinder:
         Performs a few sanity checks of the certificate obtained from the certgrinder server:
         - checks that the public key is correct
         - checks that the subject is correct
-        - checks that the SubjectAltName data is correct
+        - checks that the SubjectAltName data is correct (TODO)
         Return False if a problem is found, True if all is well
         """
         # check self.certificate has the same pubkey as the CSR
@@ -267,21 +267,9 @@ class Certgrinder:
             logger.error("The certificate returned from the certgrinder server does not have the same subject as our CSR")
             return False
 
-        # check if the certificates SubjectAltName contains all the domains our CSR has,
-        # loop over extensions until we find the subjectAltName one
-        found = False
-        for i in range(self.certificate.get_extension_count()):
-            if self.certificate.get_extension(i).get_short_name() == "subjectAltName":
-                found = True
-                # .get_data() returns ASN.1 encoded data, compare with data from the CSR
-                if self.certificate.get_extension(i).get_data() != self.csr.get_extensions()[0].get_data():
-                    logger.error("The certificate returned from the certgrinder server does not have the same data in SubjectAltName as our CSR")
-                    logger.error("cert has: %s" % self.certificate.get_extension(i).get_data())
-                    logger.error("csr has: %s" % self.csr.get_extensions()[0].get_data())
-                    return False
-        if not found:
-            # subjectAltName extension not found
-            return False
+        # TODO: check if the certificates SubjectAltName contains all the domains our CSR has,
+        # we cannot just compare the extension data because letsencrypt may change the order of the domains,
+        # so we have to parse the ASN.1 data and loop over both sets of domains and compare
 
         # all good
         return True
