@@ -207,7 +207,12 @@ class Certgrinder:
         logger.info("ready to get signed certificate using csr %s" % self.csr_path)
 
         # put the ssh command together
-        command = 'ssh %(server)s %(csrgrinder)s' % {
+        if 'bind_ip' in self.conf:
+            bind_ip="-b %s" % self.conf['bind_ip']
+        else:
+            bind_ip=""
+        command = 'ssh %(bind_ip)s %(server)s %(csrgrinder)s' % {
+            'bind_ip': bind_ip,
             'server': self.conf['server'],
             'csrgrinder': self.conf['csrgrinder_path']
         }
@@ -220,7 +225,7 @@ class Certgrinder:
         # send the CSR to stdin and save stdout+stderr
         stdout, stderr = p.communicate(input=OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, self.csr))
 
-        # parse the certificate in stdout (which should contains a valid PEM certificate)
+        # parse the certificate in stdout (which should contain a valid PEM certificate)
         try:
             self.certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, stdout)
         except Exception as E:

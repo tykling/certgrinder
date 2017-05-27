@@ -23,3 +23,6 @@ selfsigned_fallback: True
 post_renew_hooks:
   - '/usr/sbin/service nginx reload'
 
+# set this if the ssh source ip is important
+#bind_ip: "192.0.2.23"
+
