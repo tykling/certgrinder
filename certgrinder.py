@@ -48,7 +48,15 @@ class Certgrinder:
         Checks if the keypair file exists on disk, and calls self.create_keypair() if not
         """
         if os.path.exists(self.keypair_path):
+            # check permissions for self.keypair_path
+            if oct(os.stat(self.keypair_path).st_mode)[4:] != "640":
+                logger.debug("keypair %s has incorrect permissions, fixing to 640..." % self.keypair_path)
+                os.chmod(self.keypair_path, 0o640)
+
+            # read keypair
             keypair_string=open(self.keypair_path, 'r').read()
+
+            # parse keypair
             self.keypair=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, keypair_string)
         else:
             logger.debug("keypair %s not found, creating new keypair..." % self.keypair_path)
@@ -72,6 +80,7 @@ class Certgrinder:
         """
         with open(self.keypair_path, 'w') as f:
             f.write(OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.keypair))
+        os.chmod(self.keypair_path, 0o640)
         logger.debug("saved keypair to %s" % self.keypair_path)
 
 
@@ -116,6 +125,7 @@ class Certgrinder:
         """
         with open(self.csr_path, 'w') as f:
             f.write(OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, self.csr))
+        os.chmod(self.csr_path, 0o644)
         logger.debug("saved CSR to %s" % self.csr_path)
 
 
@@ -248,6 +258,12 @@ class Certgrinder:
         # not LE intermediate
         self.save_certificate(stdout)
 
+        # make a concat'ed version of the key+cert for applications that want that
+        if self.concat_certkey():
+            logger.debug("saved concat'ed privkey+chain to %s" % self.concat_path)
+        else:
+            logger.error("was unable to save concat'ed version of privkey+chain to %s" % self.concat_path
+
         # we have saved a new certificate, so we will need to run the post renew hook later
         self.hook_needed = True
 
@@ -293,8 +309,20 @@ class Certgrinder:
         # save the file
         with open(self.certificate_path, 'w') as f:
             f.write(stdout)
+        os.chmod(self.certificate_path, 0o644)
         logger.info("saved new certificate chain to %s" % self.certificate_path)
 
+
+    def concat_certkey(self):
+        """
+        Creates a single file with the private key and the cert chain, in that order
+        """
+        with open(self.concat_path, 'w') as concat:
+            with open(self.keypair_path) as infile:
+                concat.write(infile.read())
+            with open(self.certificate_path) as infile:
+                concat.write(infile.read())
+        os.chmod(self.concat_path, 0o640)
 
 ############# POST RENEW HOOK METHOD #######################################
 
@@ -332,6 +360,9 @@ class Certgrinder:
 
         self.csr_path = os.path.join(self.conf['path'], '%s.csr' % domains[0])
         logger.debug("csr path: %s" % self.csr_path)
+
+        self.concat_path = os.path.join(self.conf['path'], '%s-concat.pem' % domains[0])
+        logger.debug("concat path: %s" % self.concat_path)
 
         # attempt to load/generate keypair for this set of domains
         if self.load_keypair():
