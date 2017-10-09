@@ -262,7 +262,7 @@ class Certgrinder:
         if self.concat_certkey():
             logger.debug("saved concat'ed privkey+chain to %s" % self.concat_path)
         else:
-            logger.error("was unable to save concat'ed version of privkey+chain to %s" % self.concat_path
+            logger.error("was unable to save concat'ed version of privkey+chain to %s" % self.concat_path)
 
         # we have saved a new certificate, so we will need to run the post renew hook later
         self.hook_needed = True
