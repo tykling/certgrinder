@@ -334,8 +334,14 @@ class Certgrinder:
 
         for hook in self.conf['post_renew_hooks']:
             logger.debug("Running post renew hook (with sudo): %s" % hook)
+            if 'sudo_path' in self.conf:
+                sudo_path = self.conf['sudo_path']
+            else:
+                # default sudo path
+                sudo_path = '/usr/local/bin/sudo'
+
             # run with sudo
-            p = subprocess.Popen(['sudo']+hook.split(" "))
+            p = subprocess.Popen([sudo_path]+hook.split(" "))
             exitcode = p.wait()
 
             if exitcode != 0:
