@@ -26,3 +26,6 @@ post_renew_hooks:
 # set this if the ssh source ip is important
 #bind_ip: "192.0.2.23"
 
+# the full path to the sudo binary, defaults to /usr/local/bin/sudo
+#sudo_path: '/usr/local/bin/sudo'
+
