@@ -11,7 +11,7 @@ except Exception as E:
 
 
 class Certgrinder:
-    def __init__(self, configfile, test):
+    def __init__(self, configfile, test, tlsa):
         """
         The __init__ method just reads the config file and checks a few things
         """
@@ -25,6 +25,7 @@ class Certgrinder:
         # initialise variable
         self.hook_needed = False
         self.test = test
+        self.tlsa = tlsa
 
 
     def read_config(self, configfile):
@@ -355,6 +356,23 @@ class Certgrinder:
         return
 
 
+############# TLSA METHODS #######################################
+
+
+    def generate_tlsa(self):
+        derkey = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
+        tlsa310 = binascii.hexlify(derkey)
+        tlsa311 = hashlib.sha256(derkey).hexdigest()
+        tlsa312 = hashlib.sha512(derkey).hexdigest()
+
+        # print the TLSA record values
+        for domain in domains:
+            logger.info("------- TLSA records for %s" % domain)
+            logger.info("%s.%s 3 1 0 %s" % (self.tlsa, domain, tlsa310))
+            logger.info("%s.%s 3 1 1 %s" % (self.tlsa, domain, tlsa311))
+            logger.info("%s.%s 3 1 2 %s" % (self.tlsa, domain, tlsa312))
+
+
 ############# MAIN METHOD ################################################
 
 
@@ -378,6 +396,11 @@ class Certgrinder:
         else:
             logger.error("Unable to load or generate keypair %s" % self.keypair_path)
             return False
+
+        # are we running TLSA mode?
+        if self.tlsa:
+            self.generate_tlsa()
+            sys.exit(0)
 
         # attempt to load certificate (if we even have one)
         if self.load_certificate():
@@ -416,10 +439,11 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument("configfile", help="The path to the certgrinder.yml config file to use")
         parser.add_argument('--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
+        parser.add_argument('--tlsa', dest='tlsa', default=False, help="Tell certgrinder to generate and check TLSA records for the given service, for example: --tlsa _853._tcp")
         args = parser.parse_args()
 
         # instatiate Certgrinder object
-        certgrinder = Certgrinder(args.configfile, test=args.test)
+        certgrinder = Certgrinder(args.configfile, test=args.test, tlsa=args.tlsa)
 
         # write pidfile and loop over domaintest
         with PidFile(piddir=certgrinder.conf['path']):
