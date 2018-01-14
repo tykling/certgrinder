@@ -323,6 +323,8 @@ class Certgrinder:
             with open(self.certificate_path) as infile:
                 concat.write(infile.read())
         os.chmod(self.concat_path, 0o640)
+        return True
+
 
 ############# POST RENEW HOOK METHOD #######################################
 
