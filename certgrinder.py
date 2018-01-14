@@ -1,4 +1,4 @@
-import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, logging.handlers, textwrap, time, sys, argparse, binascii, hashlib
+import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, logging.handlers, textwrap, time, sys, argparse, binascii, hashlib, dns.resolver
 from datetime import datetime
 from pid import PidFile
 
@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 try:
     logger.addHandler(logging.handlers.SysLogHandler(address='/var/run/log'))
 except Exception as E:
-    logger.exception("Unable to connect to syslog socket /var/run/log - syslog not enabled")
+    logger.exception("Unable to connect to syslog socket /var/run/log - syslog not enabled. Exception info:")
 
 
 class Certgrinder:
@@ -22,10 +22,11 @@ class Certgrinder:
             logger.error("domainlist not found in conf")
             sys.exit(1)
 
-        # initialise variable
+        # initialise variables
         self.hook_needed = False
         self.test = test
         self.showtlsa = showtlsa
+        self.tlsatypes = ["3 1 0", "3 1 1", "3 1 2"]
 
 
     def read_config(self, configfile):
@@ -359,21 +360,62 @@ class Certgrinder:
 ############# TLSA METHODS #######################################
 
 
-    def generate_tlsa(self):
-        tlsa = []
+    def generate_tlsa(self, derkey, tlsatype):
+        if tlsatype == "3 1 0":
+            return binascii.hexlify(derkey)
+        elif tlsatype == "3 1 1":
+            return hashlib.sha256(derkey).hexdigest()
+        elif tlsatype == "3 1 2":
+            return hashlib.sha512(derkey).hexdigest()
+        else:
+            logger.error("Unsupported TLSA type: %s" % tlsatype)
+        return False
+
+
+    def lookup_tlsa(self, tlsatype, service, domain):
+        try:
+            dnsresponse = dns.resolver.query("%s.%s" % (service, domain), "TLSA")
+        except dns.resolver.NXDOMAIN:
+            # no TLSA records for this name and service exist
+            return False
+
+        # loop over the responses
+        for reply in dnsresponse:
+            # is this reply of the right type?
+            if tlsatype == "%s %s %s" % (reply.usage, reply.selector, reply.mtype):
+                return binascii.hexlify(reply.cert)
+        return False
+
+
+    def print_tlsa(self, service):
+        # get the public key in DER format
         derkey = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
-        tlsa.append(('310', binascii.hexlify(derkey)))
-        tlsa.append(('311', hashlib.sha256(derkey).hexdigest()))
-        tlsa.append(('312', hashlib.sha512(derkey).hexdigest()))
-        return tlsa
+
+        # loop over the domains and print the TLSA record values
+        for domain in self.domains:
+            logger.info("------- TLSA records for %s" % domain)
+            for tlsatype in self.tlsatypes:
+                tlsadata = self.generate_tlsa(self, derkey, tlsatype)
+                logger.info("%s.%s %s %s" % (service, domain, tlsatype, tlsadata))
 
 
-    def print_tlsa(self, tlsa):
-        # print the TLSA record values
+    def check_tlsa(self, service):
+        # get the public key in DER format
+        derkey = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
+
+        # loop over the domains and fetch the TLSA records from the DNS,
+        # and compare them to locally generated values
         for domain in domains:
-            for tlsatype, value in tlsa:
-                logger.info("------- TLSA records for %s" % domain)
-                logger.info("%s.%s %s %s" % (self.showtlsa, domain, " ".join(tlsatype.split()), value))
+            for tlsatype in self.tlsatypes:
+                dns_reply = self.lookup_tlsa(tlsatype, service, domain)
+                if dns_reply:
+                    # reply for this tlsatype found, check data
+                    if binascii.hexlify(reply.cert) == self.generate_tlsa(derkey, tlsatype):
+                        logger.info("TLSA record %s.%s type %s found in DNS matches the local key, good.")
+                    else:
+                        logger.warning("TLSA record %s.%s type %s found in DNS does NOT match the local key, it needs to be updated!")
+                else:
+                    logger.error("TLSA record %s.%s type %s not found in DNS, it needs to be added!" % (service, domain, tlsatype))
 
 
 ############# MAIN METHOD ################################################
@@ -400,10 +442,14 @@ class Certgrinder:
             logger.error("Unable to load or generate keypair %s" % self.keypair_path)
             return False
 
-        # are we running TLSA mode?
+        # are we running in showtlsa mode?
         if self.showtlsa:
-            tlsa = self.generate_tlsa()
-            self.print_tlsa(tlsa)
+            self.print_tlsa(service=self.showtlsa)
+            sys.exit(0)
+
+        # are we running in checktlsa mode?
+        if self.checktlsa:
+            self.check_tlsa(service=self.checktlsa)
             sys.exit(0)
 
         # attempt to load certificate (if we even have one)
@@ -443,7 +489,8 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument("configfile", help="The path to the certgrinder.yml config file to use")
         parser.add_argument('--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
-        parser.add_argument('--showtlsa', dest='showtlsa', default=False, help="Tell certgrinder to generate and check TLSA records for the given service, for example: --tlsa _853._tcp")
+        parser.add_argument('--showtlsa', dest='showtlsa', default=False, help="Tell certgrinder to generate and print TLSA records for the given service, for example: --showtlsa _853._tcp")
+        parser.add_argument('--checktlsa', dest='checktlsa', default=False, help="Tell certgrinder to lookup TLSA records for the given service in the DNS and compare with what we have locally, for example: --checktlsa _853._tcp")
         args = parser.parse_args()
 
         # instatiate Certgrinder object

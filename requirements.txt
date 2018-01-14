@@ -1,4 +1,5 @@
 pyOpenSSL==17.0.0
 PyYAML==3.12
 pid==2.1.1
+dnspython==1.15.0
 
