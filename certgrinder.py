@@ -11,7 +11,7 @@ except Exception as E:
 
 
 class Certgrinder:
-    def __init__(self, configfile, test, tlsa):
+    def __init__(self, configfile, test, showtlsa):
         """
         The __init__ method just reads the config file and checks a few things
         """
@@ -25,7 +25,7 @@ class Certgrinder:
         # initialise variable
         self.hook_needed = False
         self.test = test
-        self.tlsa = tlsa
+        self.showtlsa = showtlsa
 
 
     def read_config(self, configfile):
@@ -360,17 +360,20 @@ class Certgrinder:
 
 
     def generate_tlsa(self):
+        tlsa = []
         derkey = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
-        tlsa310 = binascii.hexlify(derkey)
-        tlsa311 = hashlib.sha256(derkey).hexdigest()
-        tlsa312 = hashlib.sha512(derkey).hexdigest()
+        tlsa.append('310', binascii.hexlify(derkey))
+        tlsa.append('311', hashlib.sha256(derkey).hexdigest())
+        tlsa.append('312', hashlib.sha512(derkey).hexdigest())
+        return tlsa
 
+
+    def print_tlsa(self, tlsa):
         # print the TLSA record values
         for domain in domains:
-            logger.info("------- TLSA records for %s" % domain)
-            logger.info("%s.%s 3 1 0 %s" % (self.tlsa, domain, tlsa310))
-            logger.info("%s.%s 3 1 1 %s" % (self.tlsa, domain, tlsa311))
-            logger.info("%s.%s 3 1 2 %s" % (self.tlsa, domain, tlsa312))
+            for tlsatype, value in tlsa:
+                logger.info("------- TLSA records for %s" % domain)
+                logger.info("%s.%s %s %s" % (self.showtlsa, domain, " ".join(tlsatype.split()), value))
 
 
 ############# MAIN METHOD ################################################
@@ -399,7 +402,8 @@ class Certgrinder:
 
         # are we running TLSA mode?
         if self.tlsa:
-            self.generate_tlsa()
+            tlsa = self.generate_tlsa()
+            self.print_tlsa(tlsa)
             sys.exit(0)
 
         # attempt to load certificate (if we even have one)
@@ -439,11 +443,11 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument("configfile", help="The path to the certgrinder.yml config file to use")
         parser.add_argument('--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
-        parser.add_argument('--tlsa', dest='tlsa', default=False, help="Tell certgrinder to generate and check TLSA records for the given service, for example: --tlsa _853._tcp")
+        parser.add_argument('--showtlsa', dest='showtlsa', default=False, help="Tell certgrinder to generate and check TLSA records for the given service, for example: --tlsa _853._tcp")
         args = parser.parse_args()
 
         # instatiate Certgrinder object
-        certgrinder = Certgrinder(args.configfile, test=args.test, tlsa=args.tlsa)
+        certgrinder = Certgrinder(args.configfile, test=args.test, showtlsa=args.showtlsa)
 
         # write pidfile and loop over domaintest
         with PidFile(piddir=certgrinder.conf['path']):
