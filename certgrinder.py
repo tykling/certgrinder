@@ -362,9 +362,9 @@ class Certgrinder:
     def generate_tlsa(self):
         tlsa = []
         derkey = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
-        tlsa.append('310', binascii.hexlify(derkey))
-        tlsa.append('311', hashlib.sha256(derkey).hexdigest())
-        tlsa.append('312', hashlib.sha512(derkey).hexdigest())
+        tlsa.append(('310', binascii.hexlify(derkey)))
+        tlsa.append(('311', hashlib.sha256(derkey).hexdigest()))
+        tlsa.append(('312', hashlib.sha512(derkey).hexdigest()))
         return tlsa
 
 
@@ -401,7 +401,7 @@ class Certgrinder:
             return False
 
         # are we running TLSA mode?
-        if self.tlsa:
+        if self.showtlsa:
             tlsa = self.generate_tlsa()
             self.print_tlsa(tlsa)
             sys.exit(0)
