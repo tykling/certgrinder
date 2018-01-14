@@ -374,17 +374,21 @@ class Certgrinder:
 
 
     def lookup_tlsa(self, tlsatype, service, domain):
+        logger.debug("Looking up TLSA record in DNS: %s.%s %s" % (service, domain, tlsatype))
         try:
             dnsresponse = dns.resolver.query("%s.%s" % (service, domain), "TLSA")
         except dns.resolver.NXDOMAIN:
-            # no TLSA records for this name and service exist
+            logger.debug("NXDOMAIN returned, no TLSA records in DNS for: %s.%s %s" % (service, domain, tlsatype))
             return False
 
         # loop over the responses
         for reply in dnsresponse:
             # is this reply of the right type?
-            if tlsatype == "%s %s %s" % (reply.usage, reply.selector, reply.mtype):
+            replytype = "%s %s %s" % (reply.usage, reply.selector, reply.mtype)
+            logger.debug("Found TLSA record type %s" % replytype)
+            if tlsatype == replytype:
                 return binascii.hexlify(reply.cert)
+        logger.debug("No TLSA records of type %s found" % tlsatype)
         return False
 
 
@@ -410,6 +414,7 @@ class Certgrinder:
             for tlsatype in self.tlsatypes:
                 dns_reply = self.lookup_tlsa(tlsatype, service, domain)
                 if dns_reply:
+                    logger.debug("Received DNS reply: %s - checking data..." % dns_reply)
                     # reply for this tlsatype found, check data
                     if binascii.hexlify(dns_reply.cert) == self.generate_tlsa(derkey, tlsatype):
                         logger.info("TLSA record %s.%s type %s found in DNS matches the local key, good.")
