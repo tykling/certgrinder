@@ -414,9 +414,9 @@ class Certgrinder:
             for tlsatype in self.tlsatypes:
                 dns_reply = self.lookup_tlsa(tlsatype, service, domain)
                 if dns_reply:
-                    logger.debug("Received DNS reply: %s - checking data..." % dns_reply)
+                    logger.debug("Received DNS reply TLSA type %s: %s - checking data..." % (tlsatype, dns_reply))
                     # reply for this tlsatype found, check data
-                    if binascii.hexlify(dns_reply.cert) == self.generate_tlsa(derkey, tlsatype):
+                    if dns_reply == self.generate_tlsa(derkey, tlsatype):
                         logger.info("TLSA record %s.%s type %s found in DNS matches the local key, good.")
                     else:
                         logger.warning("TLSA record %s.%s type %s found in DNS does NOT match the local key, it needs to be updated!")
