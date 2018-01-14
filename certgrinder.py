@@ -11,7 +11,7 @@ except Exception as E:
 
 
 class Certgrinder:
-    def __init__(self, configfile, test, showtlsa):
+    def __init__(self, configfile, test, showtlsa, checktlsa):
         """
         The __init__ method just reads the config file and checks a few things
         """
@@ -26,6 +26,7 @@ class Certgrinder:
         self.hook_needed = False
         self.test = test
         self.showtlsa = showtlsa
+        self.checktlsa = checktlsa
         self.tlsatypes = ["3 1 0", "3 1 1", "3 1 2"]
 
 
@@ -387,19 +388,19 @@ class Certgrinder:
         return False
 
 
-    def print_tlsa(self, service):
+    def print_tlsa(self, service, domains):
         # get the public key in DER format
         derkey = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
 
         # loop over the domains and print the TLSA record values
-        for domain in self.domains:
+        for domain in domains:
             logger.info("------- TLSA records for %s" % domain)
             for tlsatype in self.tlsatypes:
-                tlsadata = self.generate_tlsa(self, derkey, tlsatype)
+                tlsadata = self.generate_tlsa(derkey, tlsatype)
                 logger.info("%s.%s %s %s" % (service, domain, tlsatype, tlsadata))
 
 
-    def check_tlsa(self, service):
+    def check_tlsa(self, service, domains):
         # get the public key in DER format
         derkey = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
 
@@ -444,12 +445,12 @@ class Certgrinder:
 
         # are we running in showtlsa mode?
         if self.showtlsa:
-            self.print_tlsa(service=self.showtlsa)
+            self.print_tlsa(service=self.showtlsa, domains=domains)
             sys.exit(0)
 
         # are we running in checktlsa mode?
         if self.checktlsa:
-            self.check_tlsa(service=self.checktlsa)
+            self.check_tlsa(service=self.checktlsa, domains=domains)
             sys.exit(0)
 
         # attempt to load certificate (if we even have one)
@@ -494,7 +495,7 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
         # instatiate Certgrinder object
-        certgrinder = Certgrinder(args.configfile, test=args.test, showtlsa=args.showtlsa)
+        certgrinder = Certgrinder(args.configfile, test=args.test, showtlsa=args.showtlsa, checktlsa=args.checktlsa)
 
         # write pidfile and loop over domaintest
         with PidFile(piddir=certgrinder.conf['path']):
