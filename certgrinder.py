@@ -419,9 +419,10 @@ class Certgrinder:
                     if dns_reply == self.generate_tlsa(derkey, tlsatype):
                         logger.info("The TLSA record for name %s.%s type %s found in DNS matches the local key, good." % (service, domain, tlsatype))
                     else:
-                        logger.warning("The TLSA record for name %s.%s type %s found in DNS does NOT match the local key, it needs to be updated!")
+                        logger.warning("The TLSA record for name %s.%s type %s found in DNS does NOT match the local key, it needs to be updated!" % (service, domain, tlsatype))
                 else:
-                    logger.error("TLSA record for name %s.%s type %s not found in DNS, it needs to be added!" % (service, domain, tlsatype))
+                    logger.warning("TLSA record for name %s.%s type %s not found in DNS, it needs to be added:" % (service, domain, tlsatype))
+                    logger.warning("%s.%s %s %s" % (service, domain, tlsatype, self.generate_tlsa(derkey, tlsatype)))
 
 
 ############# MAIN METHOD ################################################
