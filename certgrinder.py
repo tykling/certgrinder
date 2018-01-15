@@ -504,8 +504,8 @@ if __name__ == '__main__':
         parser.add_argument('-t', '--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
         parser.add_argument('-s', '--showtlsa', dest='showtlsa', default=False, help="Tell certgrinder to generate and print TLSA records for the given service, for example: --showtlsa _853._tcp")
         parser.add_argument('-c', '--checktlsa', dest='checktlsa', default=False, help="Tell certgrinder to lookup TLSA records for the given service in the DNS and compare with what we have locally, for example: --checktlsa _853._tcp")
-        parser.add_argument('-d', '--debug', action='store_const', dest='log_level', const=logging.DEBUG, help='Debug output')
-        parser.add_argument('-q', '--quiet', action='store_const', dest='log_level', const=logging.WARNING, default=logging.INFO, help='Quiet mode. No output if there is nothing to do.')
+        parser.add_argument('-d', '--debug', action='store_const', dest='log_level', const=logging.DEBUG, default=logging.INFO, help='Debug output. Lots of output about the internal workings of certgrinder.')
+        parser.add_argument('-q', '--quiet', action='store_const', dest='log_level', const=logging.WARNING, help='Quiet mode. No output at all if there is nothing to do.')
         args = parser.parse_args()
 
         # configure logging at the requested loglevel
