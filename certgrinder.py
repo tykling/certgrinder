@@ -469,7 +469,7 @@ class Certgrinder:
         if self.load_certificate():
             logger.debug("Loaded certificate %s, checking validity..." % self.certificate_path)
             if self.check_certificate_validity():
-                logger.debug("The certificate %s is valid for at least another %s days, skipping" % (self.certificate_path, self.conf['cert_renew_threshold_days']))
+                logger.info("The certificate %s is valid for at least another %s days, skipping" % (self.certificate_path, self.conf['cert_renew_threshold_days']))
                 return True
             else:
                 logger.info("The certificate %s is valid for less than %s days, renewing..." % (self.certificate_path, self.conf['cert_renew_threshold_days']))
@@ -495,8 +495,8 @@ class Certgrinder:
 
 if __name__ == '__main__':
         """
-        Main method. Simply loops over sets of domains in the config and
-        calls certgrinder.grind() for each
+        Main method. Parse arguments, configure logging, and then
+        loop over sets of domains in the config and call certgrinder.grind() for each.
         """
         # parse commandline arguments
         parser = argparse.ArgumentParser()
@@ -504,7 +504,8 @@ if __name__ == '__main__':
         parser.add_argument('-t', '--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
         parser.add_argument('-s', '--showtlsa', dest='showtlsa', default=False, help="Tell certgrinder to generate and print TLSA records for the given service, for example: --showtlsa _853._tcp")
         parser.add_argument('-c', '--checktlsa', dest='checktlsa', default=False, help="Tell certgrinder to lookup TLSA records for the given service in the DNS and compare with what we have locally, for example: --checktlsa _853._tcp")
-        parser.add_argument('-d', '--debug', action='store_const', dest='log_level', const=logging.DEBUG, default=logging.WARNING, help='Debug output')
+        parser.add_argument('-d', '--debug', action='store_const', dest='log_level', const=logging.DEBUG, help='Debug output')
+        parser.add_argument('-q', '--quiet', action='store_const', dest='log_level', const=logging.WARNING, default=logging.INFO, help='Quiet mode. No output if there is nothing to do.')
         args = parser.parse_args()
 
         # configure logging at the requested loglevel
@@ -519,23 +520,21 @@ if __name__ == '__main__':
         except Exception as E:
             logger.exception("Unable to connect to syslog socket /var/run/log - syslog not enabled. Exception info:")
 
-        logger.info("Configured loglevel to %s" % args.log_level)
-
         # instatiate Certgrinder object
         certgrinder = Certgrinder(args.configfile, test=args.test, showtlsa=args.showtlsa, checktlsa=args.checktlsa)
 
         # write pidfile and loop over domaintest
         with PidFile(piddir=certgrinder.conf['path']):
             for domains in certgrinder.conf['domainlist']:
-                domains = domains.split(",")
-                logger.info("------ processing domains: %s" % domains)
-                if certgrinder.grind(domains):
-                    logger.info("----- successfully processed domains: %s" % domains)
+                domainlist = domains.split(",")
+                logger.info("Processing domains: %s" % domains)
+                if certgrinder.grind(domainlist):
+                    logger.info("Done processing domains: %s" % domains)
                 else:
-                    logger.error("----- error processing domains: %s" % domains)
+                    logger.error("Error processing domains: %s" % domains)
 
             if certgrinder.hook_needed:
-                logger.info("at least one certificate was renewed, running post renew hook...")
+                logger.info("At least one certificate was renewed, running post renew hook...")
                 certgrinder.run_post_renew_hooks()
 
             logger.debug("All done, exiting.")
