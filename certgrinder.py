@@ -1,13 +1,7 @@
 import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, logging.handlers, textwrap, time, sys, argparse, binascii, hashlib, dns.resolver
 from datetime import datetime
 from pid import PidFile
-
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-try:
-    logger.addHandler(logging.handlers.SysLogHandler(address='/var/run/log'))
-except Exception as E:
-    logger.exception("Unable to connect to syslog socket /var/run/log - syslog not enabled. Exception info:")
+logger = logging.getLogger("certgrinder.%s" % __name__)
 
 
 class Certgrinder:
@@ -506,11 +500,26 @@ if __name__ == '__main__':
         """
         # parse commandline arguments
         parser = argparse.ArgumentParser()
-        parser.add_argument("configfile", help="The path to the certgrinder.yml config file to use")
-        parser.add_argument('--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
-        parser.add_argument('--showtlsa', dest='showtlsa', default=False, help="Tell certgrinder to generate and print TLSA records for the given service, for example: --showtlsa _853._tcp")
-        parser.add_argument('--checktlsa', dest='checktlsa', default=False, help="Tell certgrinder to lookup TLSA records for the given service in the DNS and compare with what we have locally, for example: --checktlsa _853._tcp")
+        parser.add_argument('configfile', help='The path to the certgrinder.yml config file to use, default ~/certgrinder.yml', default='~/certgrinder.yml')
+        parser.add_argument('-t', '--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
+        parser.add_argument('-s', '--showtlsa', dest='showtlsa', default=False, help="Tell certgrinder to generate and print TLSA records for the given service, for example: --showtlsa _853._tcp")
+        parser.add_argument('-c', '--checktlsa', dest='checktlsa', default=False, help="Tell certgrinder to lookup TLSA records for the given service in the DNS and compare with what we have locally, for example: --checktlsa _853._tcp")
+        parser.add_argument('-d', '--debug', action='store_const', dest='log_level', const=logging.DEBUG, default=logging.WARNING, help='Debug output')
         args = parser.parse_args()
+
+        # configure logging at the requested loglevel
+        logging.basicConfig(
+            level=args.log_level,
+            format="%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s",
+            datefmt='%Y-%m-%d %H:%M:%S %z',
+        )
+        # connect to syslog
+        try:
+            logger.addHandler(logging.handlers.SysLogHandler(address='/var/run/log'))
+        except Exception as E:
+            logger.exception("Unable to connect to syslog socket /var/run/log - syslog not enabled. Exception info:")
+
+        logger.info("Configured loglevel to %s" % self.args.log_level)
 
         # instatiate Certgrinder object
         certgrinder = Certgrinder(args.configfile, test=args.test, showtlsa=args.showtlsa, checktlsa=args.checktlsa)
