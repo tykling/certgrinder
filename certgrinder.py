@@ -420,7 +420,7 @@ class Certgrinder:
             for tlsatype in self.tlsatypes:
                 dns_reply = self.lookup_tlsa(tlsatype, service, domain)
                 if dns_reply:
-                    logger.debug("Received DNS reply for TLSA type %s: %s - checking data..." % (tlsatype, dns_reply))
+                    logger.debug("Received DNS response for TLSA type %s: %s answers - checking data..." % (tlsatype, len(dns_reply)))
                     # reply for this tlsatype found, check data
                     generated = self.generate_tlsa(derkey, tlsatype)
                     found = False
