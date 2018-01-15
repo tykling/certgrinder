@@ -65,7 +65,7 @@ class Certgrinder:
 
     def create_keypair(self):
         """
-        Generates an RSA keypair
+        Generates an RSA keypair in self.keypair and calls self.save_keypair() to write it to disk
         """
         self.keypair = OpenSSL.crypto.PKey()
         self.keypair.generate_key(OpenSSL.crypto.TYPE_RSA, 4096)
@@ -74,7 +74,7 @@ class Certgrinder:
 
     def save_keypair(self):
         """
-        Saves RSA keypair to disk
+        Saves RSA keypair in self.keypair to disk in self.keypair_path
         """
         with open(self.keypair_path, 'w') as f:
             f.write(OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.keypair))
@@ -87,7 +87,10 @@ class Certgrinder:
 
     def generate_csr(self, domains):
         """
-        Generates a new CSR
+        Generates a new CSR in self.csr based on the public key in self.keypair.
+        Only sets CN since everything else is removed by LetsEncrypt in the certificate anyway.
+        Add all domains in subjectAltName, including the one put into CN.
+        Finally call self.save_csr() to write it to disk.
         """
         logger.info("Generating CSR for domains: %s" % domains)
         self.csr = OpenSSL.crypto.X509Req()
@@ -233,7 +236,7 @@ class Certgrinder:
         # send the CSR to stdin and save stdout+stderr
         stdout, stderr = p.communicate(input=OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, self.csr))
 
-        # parse the certificate in stdout (which should contain a valid PEM certificate)
+        # parse the certificate in stdout (which should now contain a valid signed PEM certificate)
         try:
             self.certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, stdout)
         except Exception as E:
@@ -328,6 +331,10 @@ class Certgrinder:
 
 
     def run_post_renew_hooks(self):
+        """
+        Loops over configured post_renew_hooks and runs them with sudo.
+        The path for sudo defaults to /usr/local/bin/sudo but can be set in the config file
+        """
         if 'post_renew_hooks' not in self.conf or not self.conf['post_renew_hooks']:
             logger.debug("no self.conf['post_renew_hooks'] found, not doing anything")
             return True
@@ -357,11 +364,18 @@ class Certgrinder:
 
 
     def generate_tlsa(self, derkey, tlsatype):
+        """
+        Generates and returns the data part of a TLSA record of the requested type,
+        based on the DER format public key supplied.
+        """
         if tlsatype == "3 1 0":
+            # Generate DANE-EE Publickey Full (3 1 0) TLSA Record
             return binascii.hexlify(derkey)
         elif tlsatype == "3 1 1":
+            # Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record
             return hashlib.sha256(derkey).hexdigest()
         elif tlsatype == "3 1 2":
+            # Generate DANE-EE Publickey SHA512 (3 1 2) TLSA Record
             return hashlib.sha512(derkey).hexdigest()
         else:
             logger.error("Unsupported TLSA type: %s" % tlsatype)
@@ -369,6 +383,11 @@ class Certgrinder:
 
 
     def lookup_tlsa(self, tlsatype, service, domain):
+        """
+        Lookup TLSA records in DNS for the given service and domain.
+        loop over the responses and look for the requested tlsatype.
+        Return a list of matching results or False if none were found.
+        """
         try:
             if self.nameserver:
                 logger.debug("Looking up TLSA record in DNS using system resolver: %s.%s %s" % (service, domain, tlsatype))
@@ -399,18 +418,26 @@ class Certgrinder:
 
 
     def print_tlsa(self, service, domains):
+        """
+        Outputs the TLSA records for the given service and domain,
+        as returned by self.generate_tlsa()
+        """
         # get the public key in DER format
         derkey = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
 
         # loop over the domains and print the TLSA record values
         for domain in domains:
-            logger.info("------- TLSA records for %s" % domain)
+            logger.info("TLSA records for %s.%s:" % (service, domain))
             for tlsatype in self.tlsatypes:
                 tlsadata = self.generate_tlsa(derkey, tlsatype)
                 logger.info("%s.%s %s %s" % (service, domain, tlsatype, tlsadata))
 
 
     def check_tlsa(self, service, domains):
+        """
+        Loops over domains and checks the TLSA records in DNS.
+        Outputs the data needed to add/fix records when errors are found.
+        """
         # get the public key in DER format
         derkey = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
 
@@ -442,6 +469,11 @@ class Certgrinder:
 
 
     def grind(self, domains):
+        """
+        The main engine of Certgrinder. Sets paths and loads the keypair (or generates one if needed).
+        Runs showtlsa and checktlsa mode if requested. If not, the certificate is loaded.
+        If it is time to get a new certificate a CSR is generated and used to get a new certificate.
+        """
         # set paths
         self.keypair_path = os.path.join(self.conf['path'], '%s.key' % domains[0])
         logger.debug("key path: %s" % self.keypair_path)
