@@ -519,7 +519,7 @@ if __name__ == '__main__':
         except Exception as E:
             logger.exception("Unable to connect to syslog socket /var/run/log - syslog not enabled. Exception info:")
 
-        logger.info("Configured loglevel to %s" % self.args.log_level)
+        logger.info("Configured loglevel to %s" % args.log_level)
 
         # instatiate Certgrinder object
         certgrinder = Certgrinder(args.configfile, test=args.test, showtlsa=args.showtlsa, checktlsa=args.checktlsa)
