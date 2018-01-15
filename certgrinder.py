@@ -378,18 +378,23 @@ class Certgrinder:
         try:
             dnsresponse = dns.resolver.query("%s.%s" % (service, domain), "TLSA")
         except dns.resolver.NXDOMAIN:
+            # maybe also catch dns.exception.Timeout here
             logger.debug("NXDOMAIN returned, no TLSA records in DNS for: %s.%s %s" % (service, domain, tlsatype))
             return False
 
         # loop over the responses
+        result = []
         for reply in dnsresponse:
             # is this reply of the right type?
             replytype = "%s %s %s" % (reply.usage, reply.selector, reply.mtype)
             logger.debug("Found TLSA record type %s" % replytype)
             if tlsatype == replytype:
-                return binascii.hexlify(reply.cert)
-        logger.debug("No TLSA records of type %s found" % tlsatype)
-        return False
+                result.append(binascii.hexlify(reply.cert))
+        if result:
+            logger.debug("Returning %s TLSA records of type %s" % (len(result), tlsatype))
+        else:
+            logger.debug("No TLSA records of type %s found" % tlsatype)
+        return result
 
 
     def print_tlsa(self, service, domains):
@@ -411,17 +416,24 @@ class Certgrinder:
         # loop over the domains and fetch the TLSA records from the DNS,
         # and compare them to locally generated values
         for domain in domains:
+            logger.debug("=========== DOMAIN: %s =============" % domain)
             for tlsatype in self.tlsatypes:
                 dns_reply = self.lookup_tlsa(tlsatype, service, domain)
                 if dns_reply:
-                    logger.debug("Received DNS reply TLSA type %s: %s - checking data..." % (tlsatype, dns_reply))
+                    logger.debug("Received DNS reply for TLSA type %s: %s - checking data..." % (tlsatype, dns_reply))
                     # reply for this tlsatype found, check data
-                    if dns_reply == self.generate_tlsa(derkey, tlsatype):
-                        logger.info("The TLSA record for name %s.%s type %s found in DNS matches the local key, good." % (service, domain, tlsatype))
-                    else:
-                        logger.warning("The TLSA record for name %s.%s type %s found in DNS does NOT match the local key, it needs to be updated!" % (service, domain, tlsatype))
+                    generated = self.generate_tlsa(derkey, tlsatype)
+                    found = False
+                    for reply in dns_reply:
+                        if reply == generated:
+                            logger.info("A TLSA record for name %s.%s type %s found in DNS matches the local key, good." % (service, domain, tlsatype))
+                            found = True
+                            break
+                    if not found:
+                        logger.warning("None of the TLSA records found in DNS for the name %s.%s of type %s match the local key. DNS needs to be updated:" % (service, domain, tlsatype))
+                        logger.warning("%s.%s %s %s" % (service, domain, tlsatype, self.generate_tlsa(derkey, tlsatype)))
                 else:
-                    logger.warning("TLSA record for name %s.%s type %s not found in DNS, it needs to be added:" % (service, domain, tlsatype))
+                    logger.warning("No TLSA records for name %s.%s of type %s was found in DNS. It needs to be added:" % (service, domain, tlsatype))
                     logger.warning("%s.%s %s %s" % (service, domain, tlsatype, self.generate_tlsa(derkey, tlsatype)))
 
 
