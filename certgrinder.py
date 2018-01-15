@@ -5,7 +5,7 @@ logger = logging.getLogger("certgrinder.%s" % __name__)
 
 
 class Certgrinder:
-    def __init__(self, configfile, test, showtlsa, checktlsa):
+    def __init__(self, configfile, test, showtlsa, checktlsa, nameserver):
         """
         The __init__ method just reads the config file and checks a few things
         """
@@ -21,6 +21,7 @@ class Certgrinder:
         self.test = test
         self.showtlsa = showtlsa
         self.checktlsa = checktlsa
+        self.nameserver = nameserver
         self.tlsatypes = ["3 1 0", "3 1 1", "3 1 2"]
 
 
@@ -368,12 +369,18 @@ class Certgrinder:
 
 
     def lookup_tlsa(self, tlsatype, service, domain):
-        logger.debug("Looking up TLSA record in DNS: %s.%s %s" % (service, domain, tlsatype))
         try:
+            if self.nameserver:
+                logger.debug("Looking up TLSA record in DNS using system resolver: %s.%s %s" % (service, domain, tlsatype))
+                res = dns.resolver.Resolver(configure=False)
+                res.nameservers = [self.nameserver]
+            else:
+                logger.debug("Looking up TLSA record in DNS using DNS server %s: %s.%s %s" % (self.nameserver, service, domain, tlsatype))
+                res = dns.resolver
             dnsresponse = dns.resolver.query("%s.%s" % (service, domain), "TLSA")
         except dns.resolver.NXDOMAIN:
-            # maybe also catch dns.exception.Timeout here
-            logger.debug("NXDOMAIN returned, no TLSA records in DNS for: %s.%s %s" % (service, domain, tlsatype))
+            # TODO: maybe also catch dns.exception.Timeout here?
+            logger.debug("NXDOMAIN returned, no TLSA records found in DNS for: %s.%s %s" % (service, domain, tlsatype))
             return False
 
         # loop over the responses
@@ -410,7 +417,7 @@ class Certgrinder:
         # loop over the domains and fetch the TLSA records from the DNS,
         # and compare them to locally generated values
         for domain in domains:
-            logger.debug("=========== DOMAIN: %s =============" % domain)
+            logger.info("Looking up TLSA records for %s.%s" % (service, domain))
             for tlsatype in self.tlsatypes:
                 dns_reply = self.lookup_tlsa(tlsatype, service, domain)
                 if dns_reply:
@@ -420,7 +427,7 @@ class Certgrinder:
                     found = False
                     for reply in dns_reply:
                         if reply == generated:
-                            logger.info("A TLSA record for name %s.%s type %s found in DNS matches the local key, good." % (service, domain, tlsatype))
+                            logger.info("TLSA record for name %s.%s type %s found in DNS matches the local key, good." % (service, domain, tlsatype))
                             found = True
                             break
                     if not found:
@@ -504,6 +511,7 @@ if __name__ == '__main__':
         parser.add_argument('-t', '--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
         parser.add_argument('-s', '--showtlsa', dest='showtlsa', default=False, help="Tell certgrinder to generate and print TLSA records for the given service, for example: --showtlsa _853._tcp")
         parser.add_argument('-c', '--checktlsa', dest='checktlsa', default=False, help="Tell certgrinder to lookup TLSA records for the given service in the DNS and compare with what we have locally, for example: --checktlsa _853._tcp")
+        parser.add_argument('-n', '--nameserver', dest='nameserver', default=False, help="Tell certgrinder to use this DNS server to lookup TLSA records. Only relevant with -c / --checktlsa")
         parser.add_argument('-d', '--debug', action='store_const', dest='log_level', const=logging.DEBUG, default=logging.INFO, help='Debug output. Lots of output about the internal workings of certgrinder.')
         parser.add_argument('-q', '--quiet', action='store_const', dest='log_level', const=logging.WARNING, help='Quiet mode. No output at all if there is nothing to do.')
         args = parser.parse_args()
@@ -521,7 +529,13 @@ if __name__ == '__main__':
             logger.exception("Unable to connect to syslog socket /var/run/log - syslog not enabled. Exception info:")
 
         # instatiate Certgrinder object
-        certgrinder = Certgrinder(args.configfile, test=args.test, showtlsa=args.showtlsa, checktlsa=args.checktlsa)
+        certgrinder = Certgrinder(
+            configfile=args.configfile,
+            test=args.test,
+            showtlsa=args.showtlsa,
+            checktlsa=args.checktlsa,
+            nameserver=args.nameserver
+        )
 
         # write pidfile and loop over domaintest
         with PidFile(piddir=certgrinder.conf['path']):
