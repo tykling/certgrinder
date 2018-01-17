@@ -402,12 +402,20 @@ class Certgrinder:
             else:
                 logger.debug("Looking up TLSA record in DNS using system resolver: %s.%s %s" % (service, domain, tlsatype))
                 res = dns.resolver
-            dnsresponse = dns.resolver.query("%s.%s" % (service, domain), "TLSA")
+            dnsresponse = res.query("%s.%s" % (service, domain), "TLSA")
         except dns.resolver.NXDOMAIN:
-            # TODO: maybe also catch dns.exception.Timeout here?
-            # TODO: maybe also dns.resolver.NoAnswer ?
-            logger.debug("NXDOMAIN returned, no TLSA records found in DNS for: %s.%s %s" % (service, domain, tlsatype))
+            logger.debug("NXDOMAIN returned, no TLSA records found in DNS for: %s.%s" % (service, domain, tlsatype))
             return False
+        except dns.exception.SyntaxError:
+            logger.error("Error parsing DNS server. Only IP addresses are supported.")
+            return False
+        except dns.exception.Timeout:
+            logger.error("Timeout while waiting for DNS server. Error.")
+            return False
+        except dns.resolver.NoAnswer:
+            logger.error("Empty answer returned. No TLSA records found in DNS for: %s.%s" % (service, domain))
+            return False
+
 
         # loop over the responses
         result = []
@@ -550,7 +558,7 @@ if __name__ == '__main__':
         parser.add_argument('-t', '--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
         parser.add_argument('-s', '--showtlsa', dest='showtlsa', default=False, help="Tell certgrinder to generate and print TLSA records for the given service, for example: --showtlsa _853._tcp")
         parser.add_argument('-c', '--checktlsa', dest='checktlsa', default=False, help="Tell certgrinder to lookup TLSA records for the given service in the DNS and compare with what we have locally, for example: --checktlsa _853._tcp")
-        parser.add_argument('-n', '--nameserver', dest='nameserver', default=False, help="Tell certgrinder to use this DNS server to lookup TLSA records. Only relevant with -c / --checktlsa")
+        parser.add_argument('-n', '--nameserver', dest='nameserver', default=False, help="Tell certgrinder to use this DNS server IP to lookup TLSA records. Only relevant with -c / --checktlsa. Only v4/v6 IPs, no hostnames.")
         parser.add_argument('-d', '--debug', action='store_const', dest='log_level', const=logging.DEBUG, default=logging.INFO, help='Debug output. Lots of output about the internal workings of certgrinder.')
         parser.add_argument('-q', '--quiet', action='store_const', dest='log_level', const=logging.WARNING, help='Quiet mode. No output at all if there is nothing to do.')
         parser.add_argument('-v', '--version', dest='version', default=False, action='store_true', help='Show version and exit.')
