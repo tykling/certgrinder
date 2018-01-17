@@ -2,9 +2,13 @@ import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, logging.handler
 from datetime import datetime
 from pid import PidFile
 logger = logging.getLogger("certgrinder.%s" % __name__)
+__version__ = "0.9.1"
 
 
 class Certgrinder:
+    """
+    The main Certgrinder client class.
+    """
     def __init__(self, configfile, test, showtlsa, checktlsa, nameserver):
         """
         The __init__ method just reads the config file and checks a few things
@@ -23,6 +27,7 @@ class Certgrinder:
         self.checktlsa = checktlsa
         self.nameserver = nameserver
         self.tlsatypes = ["3 1 0", "3 1 1", "3 1 2"]
+        self.__version__ = __version__
 
 
     def read_config(self, configfile):
@@ -539,7 +544,7 @@ if __name__ == '__main__':
         loop over sets of domains in the config and call certgrinder.grind() for each.
         """
         # parse commandline arguments
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(description="Certgrinder version %s. See the README.md file for more info." % __version__)
         parser.add_argument('configfile', help='The path to the certgrinder.yml config file to use, default ~/certgrinder.yml', default='~/certgrinder.yml')
         parser.add_argument('-t', '--test', dest='test', default=False, action='store_true', help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.")
         parser.add_argument('-s', '--showtlsa', dest='showtlsa', default=False, help="Tell certgrinder to generate and print TLSA records for the given service, for example: --showtlsa _853._tcp")
@@ -547,6 +552,7 @@ if __name__ == '__main__':
         parser.add_argument('-n', '--nameserver', dest='nameserver', default=False, help="Tell certgrinder to use this DNS server to lookup TLSA records. Only relevant with -c / --checktlsa")
         parser.add_argument('-d', '--debug', action='store_const', dest='log_level', const=logging.DEBUG, default=logging.INFO, help='Debug output. Lots of output about the internal workings of certgrinder.')
         parser.add_argument('-q', '--quiet', action='store_const', dest='log_level', const=logging.WARNING, help='Quiet mode. No output at all if there is nothing to do.')
+        parser.add_argument('-v', '--version', dest='version', default=False, action='store_true', help='Show version and exit.')
         args = parser.parse_args()
 
         # configure logging at the requested loglevel
@@ -555,6 +561,12 @@ if __name__ == '__main__':
             format="%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s",
             datefmt='%Y-%m-%d %H:%M:%S %z',
         )
+
+        # show version and exit?
+        if args.version:
+            logger.info("Certgrinder version %s" % __version__)
+            sys.exit(0)
+
         # connect to syslog
         try:
             logger.addHandler(logging.handlers.SysLogHandler(address='/var/run/log'))
