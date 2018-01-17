@@ -514,12 +514,12 @@ class Certgrinder:
         # are we running in showtlsa mode?
         if self.showtlsa:
             self.print_tlsa(service=self.showtlsa, domains=domains)
-            sys.exit(0)
+            return True
 
         # are we running in checktlsa mode?
         if self.checktlsa:
             self.check_tlsa(service=self.checktlsa, domains=domains)
-            sys.exit(0)
+            return True
 
         # attempt to load certificate (if we even have one)
         if self.load_certificate():
