@@ -478,7 +478,7 @@ class Certgrinder:
                         logger.warning("None of the TLSA records found in DNS for the name %s.%s of type %s match the local key. DNS needs to be updated:" % (service, domain, tlsatype))
                         logger.warning("%s.%s %s %s" % (service, domain, tlsatype, self.generate_tlsa(derkey, tlsatype)))
                 else:
-                    logger.warning("No TLSA records for name %s.%s of type %s was found in DNS. It needs to be added:" % (service, domain, tlsatype))
+                    logger.warning("No TLSA records for name %s.%s of type %s was found in DNS. This record needs to be added:" % (service, domain, tlsatype))
                     logger.warning("%s.%s %s %s" % (service, domain, tlsatype, self.generate_tlsa(derkey, tlsatype)))
 
 
