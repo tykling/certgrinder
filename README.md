@@ -12,6 +12,22 @@ The central host with the signing stack is called the "Certgrinder server". The 
 ## Files
 Certgrinder primarily consists of two scripts. Most of the functionality is in a Python script called `certgrinder.py` which runs on all the Certgrinder clients. The other one is written in Bourne sh, runs on the Certgrinder server (called over SSH by the clients), and is called "csrgrinder". A typical homedir for a Certgrinder user looks like this:
 
+    [certgrinder@znc ~]$ ls -l
+    total 43
+    drwxr-xr-x  3 root         certgrinder   11 Jan 17 11:59 certgrinder
+    -rw-r--r--  1 certgrinder  wheel        649 Jan 17 12:31 certgrinder.yml
+    drwxr-x---  2 certgrinder  certgrinder    6 Jan 17 12:31 certificates
+    drwxr-xr-x  5 root         certgrinder    6 Oct  9 09:31 virtualenv
+    [certgrinder@znc ~]$ ls -l certificates/
+    total 32
+    -rw-r-----  1 certgrinder  certgrinder  7058 Dec  9 02:49 znc.tyknet.dk-concat.pem
+    -rw-r--r--  1 certgrinder  certgrinder  3786 Dec  9 02:49 znc.tyknet.dk.crt
+    -rw-r--r--  1 certgrinder  certgrinder  1647 Dec  9 02:49 znc.tyknet.dk.csr
+    -rw-r-----  1 certgrinder  certgrinder  3272 Oct  9 09:32 znc.tyknet.dk.key
+    [certgrinder@znc ~]$
+
+The `certgrinder` folder contains the code from Github, `certificates` contains all the key material, and `virtualenv` contains the environment to run it.
+
 ### certgrinder.py
 The certgrinder.py Python script is meant to be run under a dedicated user and has two primary tasks:
 
