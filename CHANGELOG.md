@@ -6,6 +6,11 @@ All notable changes to these roles will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 
+## [v0.9.4][17-jan-2018]
+### Fixed:
+- The showtlsa (-s) and checktlsa (-c) features did not work for multiple domain sets
+
+
 ## [v0.9.3][17-jan-2018]
 ### Fixed:
 - Custom nameserver functionality was not working due to an error
