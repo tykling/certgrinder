@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, logging.handlers, textwrap, time, sys, argparse, binascii, hashlib, dns.resolver
 from datetime import datetime
 from pid import PidFile
