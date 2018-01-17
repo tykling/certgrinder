@@ -404,7 +404,7 @@ class Certgrinder:
                 res = dns.resolver
             dnsresponse = res.query("%s.%s" % (service, domain), "TLSA")
         except dns.resolver.NXDOMAIN:
-            logger.debug("NXDOMAIN returned, no TLSA records found in DNS for: %s.%s" % (service, domain, tlsatype))
+            logger.debug("NXDOMAIN returned, no TLSA records found in DNS for: %s.%s" % (service, domain))
             return False
         except dns.resolver.NoAnswer:
             logger.error("Empty answer returned. No TLSA records found in DNS for: %s.%s" % (service, domain))
