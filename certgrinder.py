@@ -391,14 +391,15 @@ class Certgrinder:
         try:
             if self.nameserver:
                 logger.debug("Looking up TLSA record in DNS using DNS server %s: %s.%s %s" % (self.nameserver, service, domain, tlsatype))
-                res = dns.resolver
-            else:
-                logger.debug("Looking up TLSA record in DNS using system resolver: %s.%s %s" % (service, domain, tlsatype))
                 res = dns.resolver.Resolver(configure=False)
                 res.nameservers = [self.nameserver]
+            else:
+                logger.debug("Looking up TLSA record in DNS using system resolver: %s.%s %s" % (service, domain, tlsatype))
+                res = dns.resolver
             dnsresponse = dns.resolver.query("%s.%s" % (service, domain), "TLSA")
         except dns.resolver.NXDOMAIN:
             # TODO: maybe also catch dns.exception.Timeout here?
+            # TODO: maybe also dns.resolver.NoAnswer ?
             logger.debug("NXDOMAIN returned, no TLSA records found in DNS for: %s.%s %s" % (service, domain, tlsatype))
             return False
 
