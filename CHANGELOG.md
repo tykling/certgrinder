@@ -6,9 +6,16 @@ All notable changes to these roles will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 
+## [v0.9.3][17-jan-2018]
+### Fixed:
+- Custom nameserver functionality was not working due to an error
+- Catch more types of exceptions when looking up DNS results, and exit if a serious error occurs.
+
+
 ## [v0.9.2][17-jan-2018]
 ### Fixed:
 - Typo in CHANGELOG.md
+
 
 ## [v0.9.1][17-jan-2018]
 ### Fixed:
