@@ -406,16 +406,18 @@ class Certgrinder:
         except dns.resolver.NXDOMAIN:
             logger.debug("NXDOMAIN returned, no TLSA records found in DNS for: %s.%s" % (service, domain, tlsatype))
             return False
-        except dns.exception.SyntaxError:
-            logger.error("Error parsing DNS server. Only IP addresses are supported.")
-            return False
-        except dns.exception.Timeout:
-            logger.error("Timeout while waiting for DNS server. Error.")
-            return False
         except dns.resolver.NoAnswer:
             logger.error("Empty answer returned. No TLSA records found in DNS for: %s.%s" % (service, domain))
             return False
-
+        except dns.exception.SyntaxError:
+            logger.error("Error parsing DNS server. Only IP addresses are supported.")
+            exit(1)
+        except dns.exception.Timeout:
+            logger.error("Timeout while waiting for DNS server. Error.")
+            exit(1)
+        except Exception as E:
+            logger.error("Exception received during DNS lookup: %s" % E)
+            return False
 
         # loop over the responses
         result = []
@@ -428,7 +430,7 @@ class Certgrinder:
         if result:
             logger.debug("Returning %s TLSA records of type %s" % (len(result), tlsatype))
         else:
-            logger.debug("No TLSA records of type %s found" % tlsatype)
+            logger.debug("TLSA records found, but none of the type %s were found" % tlsatype)
         return result
 
 
