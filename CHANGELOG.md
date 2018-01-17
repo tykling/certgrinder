@@ -6,6 +6,10 @@ All notable changes to these roles will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 
+## [v0.9.2][17-jan-2018]
+### Fixed:
+- Typo in CHANGELOG.md
+
 ## [v0.9.1][17-jan-2018]
 ### Fixed:
 - Logic for using a custom nameserver with -n / --nameserver was inverted.
@@ -16,7 +20,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Add shebang line to certgrinder.py and make the script executable.
 
 
--## [v0.9.0][16-jan-2018]
+## [v0.9.0][16-jan-2018]
 ### Added:
 - This changelog. First numbered release.
 
