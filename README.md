@@ -13,7 +13,8 @@ The central host with the signing stack is called the "Certgrinder server". The 
 Apart from the primary purpose of getting signed certificates the `certgrinder.py` script has a few other features that may be of use.
 
 ### TLSA Generation
-The `-s` / `--showtlsa` switch suspends normal operation and instead loops over the configured domainsets and generates TLSA records for the public keys. The result is printed to the terminal in a format suitable for putting in the DNS. The 
+The `-s` / `--showtlsa` switch suspends normal operation and instead loops over the configured domainsets and generates TLSA records for the public keys. The result is printed to the terminal in a format suitable for putting in the DNS. It looks like this:
+
     [certgrinder@znc ~]$ ./virtualenv/bin/python certgrinder/certgrinder.py -s _443._tcp -n 109.238.48.13 certgrinder.yml
     2018-02-16 08:42:18 +0000 INFO certgrinder.__main__:<module>():576:  Processing domains: znc.tyknet.dk
     2018-02-16 08:42:18 +0000 INFO certgrinder.__main__:print_tlsa():430:  TLSA records for _443._tcp.znc.tyknet.dk:
