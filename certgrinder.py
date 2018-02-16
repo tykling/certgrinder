@@ -1,16 +1,16 @@
 #!/usr/bin/env python
-import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, logging.handlers, textwrap, time, sys, argparse, binascii, hashlib, dns.resolver
+import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, logging.handlers, textwrap, time, sys, argparse, binascii, hashlib, dns.resolver, base64
 from datetime import datetime
 from pid import PidFile
 logger = logging.getLogger("certgrinder.%s" % __name__)
-__version__ = "0.9.3"
+__version__ = "0.9.5"
 
 
 class Certgrinder:
     """
     The main Certgrinder client class.
     """
-    def __init__(self, configfile, test, showtlsa, checktlsa, nameserver):
+    def __init__(self, configfile, test, showtlsa, checktlsa, nameserver, showspki):
         """
         The __init__ method just reads the config file and checks a few things
         """
@@ -27,6 +27,7 @@ class Certgrinder:
         self.showtlsa = showtlsa
         self.checktlsa = checktlsa
         self.nameserver = nameserver
+        self.showspki = showspki
         self.tlsatypes = ["3 1 0", "3 1 1", "3 1 2"]
         self.__version__ = __version__
 
@@ -86,6 +87,13 @@ class Certgrinder:
             f.write(OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.keypair))
         os.chmod(self.keypair_path, 0o640)
         logger.debug("saved keypair to %s" % self.keypair_path)
+
+
+    def get_der_pubkey(self):
+        """
+        Returns the DER format public key
+        """
+        return OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
 
 
 ############# CSR METHODS ################################################
@@ -366,6 +374,26 @@ class Certgrinder:
         return
 
 
+############# SPKI METHODS #######################################
+
+
+    def generate_spki(self, derkey):
+        """
+        Generates and returns an pin-sha256 spki hpkp style pin for the provided public key.
+        OpenSSL equivalent command is:
+        openssl x509 -in example.com.crt -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl base64
+        """
+        return base64.b64encode(hashlib.sha256(derkey).digest())
+
+
+    def show_spki(self):
+        """
+        Get and print the spki pin for the public key
+        """
+        spki = self.generate_spki(self.get_der_pubkey())
+        logger.info('pin-sha256="%s"' % spki)
+
+
 ############# TLSA METHODS #######################################
 
 
@@ -440,7 +468,7 @@ class Certgrinder:
         as returned by self.generate_tlsa()
         """
         # get the public key in DER format
-        derkey = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
+        derkey = self.get_der_pubkey()
 
         # loop over the domains and print the TLSA record values
         for domain in domains:
@@ -521,6 +549,11 @@ class Certgrinder:
             self.check_tlsa(service=self.checktlsa, domains=domains)
             return True
 
+        # are we running in showspki mode?
+        if self.showspki:
+            self.show_spki()
+            return True
+
         # attempt to load certificate (if we even have one)
         if self.load_certificate():
             logger.debug("Loaded certificate %s, checking validity..." % self.certificate_path)
@@ -561,6 +594,7 @@ if __name__ == '__main__':
         parser.add_argument('-s', '--showtlsa', dest='showtlsa', default=False, help="Tell certgrinder to generate and print TLSA records for the given service, for example: --showtlsa _853._tcp")
         parser.add_argument('-c', '--checktlsa', dest='checktlsa', default=False, help="Tell certgrinder to lookup TLSA records for the given service in the DNS and compare with what we have locally, for example: --checktlsa _853._tcp")
         parser.add_argument('-n', '--nameserver', dest='nameserver', default=False, help="Tell certgrinder to use this DNS server IP to lookup TLSA records. Only relevant with -c / --checktlsa. Only v4/v6 IPs, no hostnames.")
+        parser.add_argument('-p', '--showspki', dest='showspki', default=False, action='store_true', help="Tell certgrinder to generate and print the pin-sha256 spki pins for the public keys it manages.")
         parser.add_argument('-d', '--debug', action='store_const', dest='log_level', const=logging.DEBUG, default=logging.INFO, help='Debug output. Lots of output about the internal workings of certgrinder.')
         parser.add_argument('-q', '--quiet', action='store_const', dest='log_level', const=logging.WARNING, help='Quiet mode. No output at all if there is nothing to do.')
         parser.add_argument('-v', '--version', dest='version', default=False, action='store_true', help='Show version and exit.')
@@ -590,7 +624,8 @@ if __name__ == '__main__':
             test=args.test,
             showtlsa=args.showtlsa,
             checktlsa=args.checktlsa,
-            nameserver=args.nameserver
+            nameserver=args.nameserver,
+            showspki=args.showspki
         )
 
         # write pidfile and loop over domaintest

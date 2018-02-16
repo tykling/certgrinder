@@ -39,13 +39,12 @@ The certgrinder.py Python script is meant to be run under a dedicated user and h
 It comes with a requirements.txt which can be used to install the needed Python packages from pip. It has a few different commandline options which are shown here:
 
     [certgrinder@myserver ~]$ ./virtualenv/bin/python certgrinder/certgrinder.py -h
-    usage: certgrinder.py [-h] [-t] [-s SHOWTLSA] [-c CHECKTLSA] [-n NAMESERVER]
-                          [-d] [-q]
-                          configfile
+    usage: certgrinder.py [-h] [-t] [-s SHOWTLSA] [-c CHECKTLSA] [-n NAMESERVER] [-p] [-d] [-q] [-v] configfile
+
+    Certgrinder version 0.9.5. See the README.md file for more info.
 
     positional arguments:
-      configfile            The path to the certgrinder.yml config file to use,
-                            default ~/certgrinder.yml
+      configfile            The path to the certgrinder.yml config file to use, default ~/certgrinder.yml
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -55,10 +54,11 @@ It comes with a requirements.txt which can be used to install the needed Python 
       -c CHECKTLSA, --checktlsa CHECKTLSA
                             Tell certgrinder to lookup TLSA records for the given service in the DNS and compare with what we have locally, for example: --checktlsa _853._tcp
       -n NAMESERVER, --nameserver NAMESERVER
-                            Tell certgrinder to use this DNS server to lookup TLSA records. Only relevant with -c / --checktlsa
+                            Tell certgrinder to use this DNS server IP to lookup TLSA records. Only relevant with -c / --checktlsa. Only v4/v6 IPs, no hostnames.
+      -p, --showspki        Tell certgrinder to generate and print the pin-sha256 spki pins for the public keys it manages.
       -d, --debug           Debug output. Lots of output about the internal workings of certgrinder.
       -q, --quiet           Quiet mode. No output at all if there is nothing to do.
-
+      -v, --version         Show version and exit.
 
 ### csrgrinder
 The csrgrinder script lives on the Certgrinder server. It is very simple, just a couple of lines sh, and it is called over SSH by the Certgrinder clients. It takes a PEM formatted CSR on stdin as input, and outputs a signed PEM formatted certificate on stdout.
