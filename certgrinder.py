@@ -3,7 +3,7 @@ import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, logging.handler
 from datetime import datetime
 from pid import PidFile
 logger = logging.getLogger("certgrinder.%s" % __name__)
-__version__ = "0.9.5"
+__version__ = "0.9.6-dev"
 
 
 class Certgrinder:

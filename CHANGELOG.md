@@ -6,12 +6,21 @@ All notable changes to these roles will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 
+## [v0.9.6-dev][UNRELEASED]
+### Fixed:
+- Language and typos and layout in README
+
+### Added:
+- Describe --showtlsa, --checktlsa and --showspki in README
+
+
 ## [v0.9.5][16-feb-2018]
 ### Fixed:
 - v0.9.4 had the wrong version number in the .py file.
 
 ### Added:
 - -p / --showspki switch to output pin-sha256 pins for the public keys. Useful for HPKP or other pinning that uses the same format.
+
 
 ## [v0.9.4][17-jan-2018]
 ### Fixed:
