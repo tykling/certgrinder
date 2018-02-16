@@ -601,9 +601,14 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
         # configure logging at the requested loglevel
+        if args.log_level==logging.DEBUG:
+            logformat = "%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s"
+        else:
+            logformat = "%(asctime)s %(levelname)s: %(message)s"
+
         logging.basicConfig(
             level=args.log_level,
-            format="%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s",
+            format=logformat,
             datefmt='%Y-%m-%d %H:%M:%S %z',
         )
 
