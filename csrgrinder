@@ -31,7 +31,7 @@ CERTFILE=$(mktemp)
 rm -f $CHAINFILE $FULLCHAINFILE $CERTFILE
 
 # issue new certificate
-COMMAND="sudo /usr/local/bin/certbot certonly --non-interactive --quiet --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $FULLCHAINFILE --cert-path $CERTFILE --chain-path $CHAINFILE $TEST"
+COMMAND="sudo /usr/local/bin/certbot certonly --non-interactive --quiet --rsa-key-size 4096 --authenticator webroot --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $FULLCHAINFILE --cert-path $CERTFILE --chain-path $CHAINFILE $TEST"
 logger "Running certbot command: $COMMAND"
 $COMMAND
 
