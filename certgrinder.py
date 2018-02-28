@@ -254,9 +254,10 @@ class Certgrinder:
         try:
             self.certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, stdout)
         except Exception as E:
-            logger.exception("Got an exception while parsing cert, something went wrong while getting the certificate from the certgrinder server. Exception %s and this was stdout:" % E)
+            logger.exception("Got an exception while parsing output from ssh call, a certificate was not returned by the certgrinder server. Exception %s:" % E)
+            logger.error("this is stdout from the ssh call:")
             logger.error(stdout)
-            logger.error("this was in stderr:")
+            logger.error("this is stderr from the ssh call:")
             logger.error(stderr)
             if not self.get_new_selfsigned_certificate():
                 # we dont have a certificate

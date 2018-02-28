@@ -22,28 +22,42 @@ fi
 
 logger "Wrote $(stat -f%z $CSRFILE) bytes CSR from client $SSH_CLIENT to temp file $CSRFILE (running in $MODE mode)"
 
-# get a temp filename for the certificate
-FULLCHAINFILE=$(mktemp)
+# get the directory we are running from
+BASEPATH=$(realpath $0 | rev | cut -d "/" -f 2- | rev)
 
-# also specify --cert-path and --chain-path to avoid certbot writing them in the homedir as .pem files
+# get a temp filename for the certificate files
+FULLCHAINFILE=$(mktemp)
 CHAINFILE=$(mktemp)
 CERTFILE=$(mktemp)
 rm -f $CHAINFILE $FULLCHAINFILE $CERTFILE
 
-# issue new certificate
-COMMAND="sudo /usr/local/bin/certbot certonly --non-interactive --quiet --rsa-key-size 4096 --authenticator webroot --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $FULLCHAINFILE --cert-path $CERTFILE --chain-path $CHAINFILE $TEST"
-logger "Running certbot command: $COMMAND"
-$COMMAND
+# get a temp filename to save any error output from certbot
+ERRORFILE=$(mktemp)
 
-# check certbot exit code
-if [ $? -eq 0 ]; then
-    logger "Success. Certbot wrote $(stat -f%z $CERTFILE) bytes certificate chain to $CERTFILE - sending to stdout and cleaning up temp files"
-    # output full certificate chain to stdout
-    cat $FULLCHAINFILE
-else
-    logger "Failure. Certbot exit code was $?"
-fi
+# loop over the challenge types
+for challenge in dns http; do
+    # issue new certificate
+    COMMAND="/usr/local/bin/sudo /usr/local/bin/certbot certonly --non-interactive --quiet --rsa-key-size 4096 --authenticator manual --preferred-challenges $challenge --manual-auth-hook ${BASEPATH}/manual-auth-hook --manual-cleanup-hook ${BASEPATH}/manual-cleanup-hook --manual-public-ip-logging-ok --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $FULLCHAINFILE --cert-path $CERTFILE --chain-path $CHAINFILE $TEST"
+    logger "Running certbot command: $COMMAND"
+    $COMMAND 2> $ERRORFILE
+    EXITCODE=$?
+
+    # check certbot exit code
+    if [ $EXITCODE -eq 0 ]; then
+        logger "Success. Certbot wrote $(stat -f%z $CERTFILE) bytes certificate chain to $CERTFILE - sending to stdout and cleaning up temp files"
+        # output full certificate chain to stdout
+        cat $FULLCHAINFILE
+        break
+    else
+        logger -s "Failed to get certificate using challenge type $challenge. Certbot exit code was $?. Certbot output was:"
+        cat $ERRORFILE | logger -s
+    fi
+done
 
 # clean up temp files (some of these may not exist if certbot failed for some reason)
-rm -f $CSRFILE $CERTFILE $CHAINFILE $FULLCHAINFILE
+rm -f $CSRFILE $CERTFILE $CHAINFILE $FULLCHAINFILE $ERRORFILE
+
+# mirror certbots exitcode
+logger "exiting with exit code $EXITCODE"
+exit $EXITCODE
 

@@ -1,6 +1,6 @@
 ---
 # where to put keys and certificates
-path: "/home/user/devel/certgrinder"
+path: "/usr/home/certgrinder/certificates"
 
 # a list of sets of domains to get certificates for
 domainlist:
@@ -13,15 +13,16 @@ server: "certgrinder.example.com"
 # renew certificate when this many days or fewer validity left
 cert_renew_threshold_days: 30
 
-# the path of the csrgrinder binary on the remote server
-csrgrinder_path: '/usr/local/bin/csrgrinder'
+# the path of the csrgrinder binary on the remote server,
+# usually in the homedir of the certgrinder user
+csrgrinder_path: '~/certgrinder/csrgrinder'
 
 # issue selfsigned if something goes wrong?
 selfsigned_fallback: True
 
 # run these after renewal of one or more certificates
-post_renew_hooks:
-  - '/usr/sbin/service nginx reload'
+#post_renew_hooks:
+#  - '/usr/sbin/service nginx reload'
 
 # set this if the ssh source ip is important
 #bind_ip: "192.0.2.23"

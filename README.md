@@ -9,7 +9,22 @@ The primary advantage of this approach is that the signing stack and LetsEncrypt
 ### Terminology
 The central host with the signing stack is called the "Certgrinder server". The individual servers (the ones that need certificates) are called "Certgrinder clients".
 
-## Features
+### Challenge Types
+Certgrinder initially only supported the HTTP-01 challenge, but now also supports the DNS-01 challenge type. Each challenge type has its own advantages. If the Certgrinder client happens to be a webserver, then the HTTP-01 challenge is very easy to get up and running. On the other hand, if the Certgrinder client is NOT a webserver, then it might be better to use the DNS-01 challenge type, to avoid having to install a webserver just to serve a LetsEncrypt challenge redirect.
+
+Certgrinder will try both challenge types (dns first, then http), so your clients can use whatever is the best fit. Usually my webservers use HTTP-01 and everything else uses DNS-01. YMMV.
+
+### HTTP-01
+With the HTTP-01 challenge the Certgrinder server serves the challenge over plain unencrypted HTTP, which means you need a running webserver on the Certgrinder server. To prepare, each Certgrinder client implements an HTTP 301/302 redirect from `/.well-known/acme-challenge/` to the Certgrinder server. When requesting a certificate the Certgrinder server receives the challenge and path from Certbot (which in turn gets it from LetsEncrypt of course). The challenge is then saved in the webroot path under `/.well-known/acme-challenge/`. LetsEncrypts challenge checker then loops over the domains in the `CSR` and does a HTTP request to each for `/.well-known/acme-challenge/${path}` and expects the response to contain the challenge.
+
+### DNS-01
+With the `DNS-01` challenge the Certgrinder server serves the challenge over DNS, which means you need a running authoritative DNS server on the Certgrinder server.
+
+To prepare, first you need to invent and delegate a zone to the DNS server on your Certgrinder server, say, acme.certgrinder.example.com. This zone will be used to house the challenges and will be served directly by your server. This means you need to create NS records to delegate the zone to your Certgrinder server, which needs to support dynamic updates. Then you create a `CNAME` record called `_acme-challenge.${DOMAIN}` pointing at `${DOMAIN}.${CERTGRINDERZONE}` for each domain in the `CSR`.
+
+Example: To get a certificate for `smtp.example.org` you would create `_acme-challenge.smtp.example.org CNAME smtp.example.org.acme.certgrinder.example.com` if your acme challenge zone was `acme.certgrinder.example.com`.
+
+## Additional Features
 Apart from the primary purpose of getting signed certificates the `certgrinder.py` script has a few other features that may be of use.
 
 ### TLSA Generation
@@ -149,7 +164,7 @@ The Certgrinder server does the following:
 2. When clients connect they run the `csrgrinder` script, which receives the CSR from the client on stdin, runs Certbot, and outputs the signed certificate on stdout
 
 Each clients SSH key and IP must be configured on the Certgrinder server in .ssh/authorized_keys, for example:
-`from="192.0.2.134",command="/usr/local/bin/csrgrinder",no-port-forwarding,no-x11-forwarding,no-agent-forwarding ssh-ed25519 AAAAC3........ user@hostname`
+`from="192.0.2.134",command="~/certgrinder/csrgrinder",no-port-forwarding,no-x11-forwarding,no-agent-forwarding ssh-ed25519 AAAAC3........ user@hostname`
 
 ## More info
 Read more at https://blog.tyk.nu/blog/introducing-certgrinder-a-letsencrypt-ssh-proxy/

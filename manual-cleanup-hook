@@ -1,0 +1,9 @@
+#!/bin/sh
+if [ -z "$CERTBOT_TOKEN" ]; then
+        # dns challenge
+        echo "unimplemented"
+else
+        # http challenge
+        rm -f "/usr/local/www/letsencrypt-auto/.well-known/acme-challenge/${CERTBOT_TOKEN}"
+fi
+
