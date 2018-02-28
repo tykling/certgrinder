@@ -22,7 +22,7 @@ With the `DNS-01` challenge the Certgrinder server serves the challenge over DNS
 
 To prepare, first you need to invent and delegate a zone to the DNS server on your Certgrinder server, say, acme.certgrinder.example.com. This zone will be used to house the challenges and will be served directly by your server. This means you need to create NS records to delegate the zone to your Certgrinder server, which needs to support dynamic updates. Then you create a `CNAME` record called `_acme-challenge.${DOMAIN}` pointing at `${DOMAIN}.${CERTGRINDERZONE}` for each domain in the `CSR`.
 
-Example: To get a certificate for `smtp.example.org` you would create `_acme-challenge.smtp.example.org CNAME smtp.example.org.acme.certgrinder.example.com` if your acme challenge zone was `acme.certgrinder.example.com`.
+Example: To get a certificate for `smtp.example.org` you would create `_acme-challenge.smtp.example.org CNAME smtp.example.org.acme.certgrinder.example.com` if your acme challenge zone was `acme.certgrinder.example.com`. csrgrinder will create smtp.example.org.acme.certgrinder.example.com TXT with the validation string, and delete if afterwards.
 
 ## Additional Features
 Apart from the primary purpose of getting signed certificates the `certgrinder.py` script has a few other features that may be of use.

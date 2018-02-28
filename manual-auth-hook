@@ -3,6 +3,7 @@
 # $CERTBOT_DOMAIN is the domain being authenticated.
 # $CERTBOT_VALIDATION is the validation string
 # $CERTBOT_TOKEN is the requested filename (for http-01 only)
+# $ACMEZONE is set by Certgrinder and contains the zone we are working with
 
 if [ ! -d /usr/local/www/letsencrypt-auto/.well-known/acme-challenge ]; then
         mkdir -p /usr/local/www/letsencrypt-auto/.well-known/acme-challenge
@@ -10,9 +11,9 @@ fi
 
 if [ -z "$CERTBOT_TOKEN" ]; then
         # dns challenge
-        echo "unimplemented"
+        (echo "update add ${CERTBOT_DOMAIN}.${ACMEZONE}. 3600 TXT \"${CERTBOT_VALIDATION}\""; echo "send") | /usr/local/bin/nsupdate -k /usr/local/etc/namedb/rndc.key
 else
         # http challenge
-        echo "$CERTBOT_VALIDATION" > "/usr/local/www/letsencrypt-auto/.well-known/acme-challenge/${CERTBOT_TOKEN}"
+        echo "${CERTBOT_VALIDATION}" > "/usr/local/www/letsencrypt-auto/.well-known/acme-challenge/${CERTBOT_TOKEN}"
 fi
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 if [ -z "$CERTBOT_TOKEN" ]; then
         # dns challenge
-        echo "unimplemented"
+        (echo "update delete ${CERTBOT_DOMAIN}.${ACMEZONE}. TXT"; echo "send") | /usr/local/bin/nsupdate -k /usr/local/etc/namedb/rndc.key
 else
         # http challenge
         rm -f "/usr/local/www/letsencrypt-auto/.well-known/acme-challenge/${CERTBOT_TOKEN}"
