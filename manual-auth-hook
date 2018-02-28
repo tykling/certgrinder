@@ -4,6 +4,10 @@
 # $CERTBOT_VALIDATION is the validation string
 # $CERTBOT_TOKEN is the requested filename (for http-01 only)
 
+if [ ! -d /usr/local/www/letsencrypt-auto/.well-known/acme-challenge ]; then
+        mkdir -p /usr/local/www/letsencrypt-auto/.well-known/acme-challenge
+fi
+
 if [ -z "$CERTBOT_TOKEN" ]; then
         # dns challenge
         echo "unimplemented"
