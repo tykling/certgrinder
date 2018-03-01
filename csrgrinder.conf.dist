@@ -1,0 +1,11 @@
+####################################################
+# csrgrinder configuration file
+# This file is part of certgrinder.
+# The latest version can be found on Github at
+# https://github.com/tykling/certgrinder
+####################################################
+#
+# ACMEZONE defines the zone under which DNS-01 challenges will be served.
+
+ACMEZONE=acme.example.com
+

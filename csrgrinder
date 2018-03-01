@@ -1,5 +1,6 @@
 #!/bin/sh
 ####################################################
+# Main csrgrinder script.
 # This file is part of certgrinder.
 # The latest version can be found on Github at
 # https://github.com/tykling/certgrinder
@@ -25,6 +26,16 @@ logger "Wrote $(stat -f%z $CSRFILE) bytes CSR from client $SSH_CLIENT to temp fi
 # get the directory we are running from
 BASEPATH=$(realpath $0 | rev | cut -d "/" -f 2- | rev)
 
+# define some defaults
+: ${AUTHHOOK:="${BASEPATH}/manual-auth-hook"}
+: ${CLEANUPHOOK:="${BASEPATH}/manual-cleanup-hook"}
+: ${WEBROOT}:="/usr/local/www/letsencrypt-auto"}
+
+# load config file (optional, but DNS-01 will be skipped if $ACMEZONE is not configured
+if [ -f "${BASEPATH}/csrgrinder.conf" ]; then
+    . "${BASEPATH}/csrgrinder.conf"
+fi
+
 # get a temp filename for the certificate files
 FULLCHAINFILE=$(mktemp)
 CHAINFILE=$(mktemp)
@@ -34,10 +45,17 @@ rm -f $CHAINFILE $FULLCHAINFILE $CERTFILE
 # get a temp filename to save any error output from certbot
 ERRORFILE=$(mktemp)
 
-# loop over the challenge types
-for challenge in dns http; do
+# loop over the supported challenge types
+for CHALLENGE in dns http; do
+    if [ "$CHALLENGE" = "dns" -a -z $ACMEZONE ]; then
+        logger "Not attempting DNS-01 because ACMEZONE is unset."
+        continue
+    fi
+
+    logger "Attempting challenge type ${CHALLENGE}..."
+
     # issue new certificate
-    COMMAND="/usr/local/bin/sudo /usr/local/bin/certbot certonly --non-interactive --quiet --rsa-key-size 4096 --authenticator manual --preferred-challenges $challenge --manual-auth-hook ${BASEPATH}/manual-auth-hook --manual-cleanup-hook ${BASEPATH}/manual-cleanup-hook --manual-public-ip-logging-ok --config /usr/local/etc/letsencrypt/letsencrypt.ini --csr $CSRFILE --fullchain-path $FULLCHAINFILE --cert-path $CERTFILE --chain-path $CHAINFILE $TEST"
+    COMMAND="/usr/local/bin/sudo ACMEZONE=${ACMEZONE} WEBROOT=${WEBROOT} /usr/local/bin/certbot certonly --non-interactive --quiet --rsa-key-size 4096 --authenticator manual --preferred-challenges ${CHALLENGE} --manual-auth-hook ${AUTHHOOK} --manual-cleanup-hook ${CLEANUPHOOK} --manual-public-ip-logging-ok --csr ${CSRFILE} --fullchain-path ${FULLCHAINFILE} --cert-path ${CERTFILE} --chain-path ${CHAINFILE} ${TEST}"
     logger "Running certbot command: $COMMAND"
     $COMMAND 2> $ERRORFILE
     EXITCODE=$?
@@ -58,6 +76,6 @@ done
 rm -f $CSRFILE $CERTFILE $CHAINFILE $FULLCHAINFILE $ERRORFILE
 
 # mirror certbots exitcode
-logger "exiting with exit code $EXITCODE"
+logger "Exiting csrgrinder with exit code $EXITCODE"
 exit $EXITCODE
 
