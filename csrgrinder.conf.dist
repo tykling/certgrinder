@@ -18,3 +18,6 @@
 # CLEANUPHOOK overrides the default manual-cleanup-hook script which comes with Certgrinder
 #CLEANUPHOOK="/path/to/cleanup/hook/executable"
 
+# WEBROOT overrides the default webroot where the challenges are written
+#WEBROOT=/usr/local/www/letsencrypt-auto
+
