@@ -17,12 +17,16 @@ Certgrinder will try both challenge types (dns first, then http), so your client
 ### HTTP-01
 With the HTTP-01 challenge the Certgrinder server serves the challenge over plain unencrypted HTTP, which means you need a running webserver on the Certgrinder server. To prepare, each Certgrinder client implements an HTTP 301/302 redirect from `/.well-known/acme-challenge/` to the Certgrinder server. When requesting a certificate the Certgrinder server receives the challenge and path from Certbot (which in turn gets it from LetsEncrypt of course). The challenge is then saved in the webroot path under `/.well-known/acme-challenge/`. LetsEncrypts challenge checker then loops over the domains in the `CSR` and does a HTTP request to each for `/.well-known/acme-challenge/${path}` and expects the response to contain the challenge.
 
+The script that writes the challenge file to the webroot is called `manual-auth-hook` but if you want to use another it can be configured in `csrgrinder.conf`. The script that deletes the challenge from the webroot is called `manual-cleanup-hook`, but if you want to use another that can also be configured in `csrgrinder.conf`. The scripts are simple and the comments explain which environment variables are made available to them for each challenge type.
+
 ### DNS-01
 With the `DNS-01` challenge the Certgrinder server serves the challenge over DNS, which means you need a running authoritative DNS server on the Certgrinder server.
 
-To prepare, first you need to invent and delegate a zone to the DNS server on your Certgrinder server, say, acme.certgrinder.example.com. This zone will be used to house the challenges and will be served directly by your server. This means you need to create NS records to delegate the zone to your Certgrinder server, which needs to support dynamic updates. Then you create a `CNAME` record called `_acme-challenge.${DOMAIN}` pointing at `${DOMAIN}.${CERTGRINDERZONE}` for each domain in the `CSR`.
+To prepare, first you need to invent and delegate a zone to the DNS server on your Certgrinder server, say, acme.example.com. This zone will be used to house the challenges and will be served directly by your server. This means you need to create NS records to delegate the zone to your Certgrinder server, which needs to support dynamic updates. Then you create a `CNAME` record called `_acme-challenge.${DOMAIN}` pointing at `${DOMAIN}.${CERTGRINDERZONE}` for each domain in the `CSR`.
 
-Example: To get a certificate for `smtp.example.org` you would create `_acme-challenge.smtp.example.org CNAME smtp.example.org.acme.certgrinder.example.com` if your acme challenge zone was `acme.certgrinder.example.com`. csrgrinder will create smtp.example.org.acme.certgrinder.example.com TXT with the validation string, and delete if afterwards.
+Example: To get a certificate for `smtp.example.org` you would create `_acme-challenge.smtp.example.org CNAME smtp.example.org.acme.example.com` if your acme challenge zone was `acme.example.com`. csrgrinder will create smtp.example.org.acme.example.com TXT with the validation string, and delete if afterwards.
+
+The `manual-auth-hook` script creates the DNS record using `nsupdate` and an `rndc.key` file in the path `/usr/local/etc/namedb/rndc.key`. If you want to use another script you can configure it in `csrgrinder.conf`. The same goes for the cleanup script.
 
 ## Additional Features
 Apart from the primary purpose of getting signed certificates the `certgrinder.py` script has a few other features that may be of use.
