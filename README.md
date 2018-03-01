@@ -10,7 +10,7 @@ The primary advantage of this approach is that the signing stack and LetsEncrypt
 The central host with the signing stack is called the "Certgrinder server". The individual servers (the ones that need certificates) are called "Certgrinder clients".
 
 ### Challenge Types
-Certgrinder initially only supported the HTTP-01 challenge, but now also supports the DNS-01 challenge type. Each challenge type has its own advantages. If the Certgrinder client happens to be a webserver, then the HTTP-01 challenge is very easy to get up and running. On the other hand, if the Certgrinder client is NOT a webserver, then it might be better to use the DNS-01 challenge type, to avoid having to install a webserver just to serve a LetsEncrypt challenge redirect.
+Certgrinder supports two challenge types, DNS-01 and HTTP-01. DNS-01 is recommended, but if the Certgrinder client happens to be a webserver, then the HTTP-01 challenge is very easy to get up and running. On the other hand, if the Certgrinder client is anything other than a webserver, then it is better to use the DNS-01 challenge type, to avoid having to install a webserver just to serve a LetsEncrypt challenge redirect.
 
 Certgrinder will try both challenge types (dns first, then http), so your clients can use whatever is the best fit. Usually my webservers use HTTP-01 and everything else uses DNS-01. YMMV.
 
@@ -20,13 +20,13 @@ With the HTTP-01 challenge the Certgrinder server serves the challenge over plai
 The script that writes the challenge file to the webroot is called `manual-auth-hook` but if you want to use another it can be configured in `csrgrinder.conf`. The script that deletes the challenge from the webroot is called `manual-cleanup-hook`, but if you want to use another that can also be configured in `csrgrinder.conf`. The scripts are simple and the comments explain which environment variables are made available to them for each challenge type.
 
 ### DNS-01
-With the `DNS-01` challenge the Certgrinder server serves the challenge over DNS, which means you need a running authoritative DNS server on the Certgrinder server.
+With the `DNS-01` challenge the Certgrinder server serves the challenge over DNS, which means you either need to run an authoritative DNS server on the Certgrinder server yourself. You can also use an external DNS provider, as long as you can make a script to add and delete records as needed. Finally you will need to add a CNAME record called `_acme-challenge` in the DNS under each hostname included in the certificates.
 
-To prepare, first you need to invent and delegate a zone to the DNS server on your Certgrinder server, say, acme.example.com. This zone will be used to house the challenges and will be served directly by your server. This means you need to create NS records to delegate the zone to your Certgrinder server, which needs to support dynamic updates. Then you create a `CNAME` record called `_acme-challenge.${DOMAIN}` pointing at `${DOMAIN}.${CERTGRINDERZONE}` for each domain in the `CSR`.
+To prepare, 1) you need to invent and delegate a zone to your DNS server, say, `acme.example.com`. The zone name needs to be configured in `csrgrinder.conf`. This zone will be used to serve the challenges, it will be updated automatically by `csrgrinder`. If you are running your own authoritative DNS server you need to create NS records in `example.com` zone to delegate the `acme.example.com` zone to it. Otherwise follow your providers instructions.
 
-Example: To get a certificate for `smtp.example.org` you would create `_acme-challenge.smtp.example.org CNAME smtp.example.org.acme.example.com` if your acme challenge zone was `acme.example.com`. csrgrinder will create smtp.example.org.acme.example.com TXT with the validation string, and delete if afterwards.
+Then you create a `CNAME` record called `_acme-challenge.${DOMAIN}` pointing at `${DOMAIN}.${CERTGRINDERZONE}` for each domain in the `CSR`. For example, to get a certificate for `smtp.example.org` you would create `_acme-challenge.smtp.example.org CNAME smtp.example.org.acme.example.com` if your acme challenge zone was `acme.example.com`. csrgrinder will create the `smtp.example.org.acme.example.com TXT` record containing the validation string, and delete if afterwards.
 
-The `manual-auth-hook` script creates the DNS record using `nsupdate` and an `rndc.key` file in the path `/usr/local/etc/namedb/rndc.key`. If you want to use another script you can configure it in `csrgrinder.conf`. The same goes for the cleanup script.
+The `manual-auth-hook` script creates the DNS record using `nsupdate` and an `rndc.key` file in the path `/usr/local/etc/namedb/rndc.key`. If you want to use another script for an external provider you can configure it in `csrgrinder.conf`. The same goes for the cleanup script.
 
 ## Additional Features
 Apart from the primary purpose of getting signed certificates the `certgrinder.py` script has a few other features that may be of use.
