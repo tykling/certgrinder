@@ -12,7 +12,7 @@ if [ -z "$CERTBOT_TOKEN" ]; then
         (echo "update add ${CERTBOT_DOMAIN}.${ACMEZONE}. 3600 TXT \"${CERTBOT_VALIDATION}\""; echo "send") | /usr/local/bin/nsupdate -k /usr/local/etc/namedb/rndc.key
 else
         # This is a HTTP-01 challenge
-        if [ -z "${WEBROOT}" || -z "${CERTBOT_TOKEN}" ]; then
+        if [ -z "${WEBROOT}" -o -z "${CERTBOT_TOKEN}" ]; then
             logger "Either WEBROOT or CERTBOT_TOKEN are empty, manual-auth-hook bailing out"
             exit 1
         fi
