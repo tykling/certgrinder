@@ -6,13 +6,16 @@ All notable changes to these roles will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [v0.9.6-dev][UNRELEASED]
+## [v0.10.0][2-mar-2018]
+### Added:
+- Move from webroot to manual Certbot authenticator, using hook scripts manual-auth-hook and manual-cleanup hook
+- Add DNS-01 support in hook scripts. DNS-01 is now the recommended challenge type.
+- csrgrinder got a config file
+- Describe new features in README
+- Many improvements to logging and error handling
+
 ### Fixed:
 - Language and typos and layout in README
-
-### Added:
-- Describe --showtlsa, --checktlsa and --showspki in README
-
 
 ## [v0.9.5][16-feb-2018]
 ### Fixed:
