@@ -58,11 +58,14 @@ Create a dedicated user, usually the username is just `certgrinder`. The user ne
 
 #### Get Certgrinder Code
 Get the code from Git, usually in a `certgrinder` folder in the Certgrinder users homedir. Get the latest release, `master` is not always in a usable state: https://github.com/tykling/certgrinder/releases
+
     git clone -b 'v0.9.6' --single-branch --depth 1 https://github.com/tykling/certgrinder ~/certgrinder
 
 #### Conyfigure SSH Access
 Certgrinder works using SSH. Each Certgrinder client must now generate an SSH key which is to be added to `~/.ssh/authorized_keys` on the Certgrinder server. Something like this works:
+
     from="2a01:3a0:1:1900:85:235:250:91",command="~/certgrinder/csrgrinder",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOegnR+qnK2FEoaSrVwHgCIxjFkVEbW4VO31/Hd2mAwk ansible-generated on webproxy2.servers.bornhack.org
+
 The `restrict` option to OpenSSH was added recently, might not be available everywhere.
 
 #### Install Certbot
@@ -79,6 +82,7 @@ I usually run Certgrinder under a seperate user on the Certgrinder clients. The 
 
 #### Get Certgrinder Code
 Get the code from Git, usually in a `certgrinder` folder in the Certgrinder users homedir. Get the latest release, `master` is not always in a usable state: https://github.com/tykling/certgrinder/releases
+
     git clone -b 'v0.9.6' --single-branch --depth 1 https://github.com/tykling/certgrinder ~/certgrinder
 
 #### Config File
@@ -86,6 +90,7 @@ Certgrinders config file is in yaml format. Certgrinder comes with a certgrinder
 
 #### Virtualenv
 Certgrinder is written in Python and comes with a `requirements.txt` file to install dependencies. First create a new virtualenv:
+
     [certgrinder@webproxy2 ~]$ virtualenv ~/virtualenv
     New python executable in /home/certgrinder/venv/bin/python2.7
     Also creating executable in /home/certgrinder/venv/bin/python
