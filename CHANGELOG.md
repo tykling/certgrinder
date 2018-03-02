@@ -5,6 +5,9 @@ All notable changes to these roles will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.10.1][2-mar-2018]
+### Fixed:
+- Version number was wrong in certgrinder.py
 
 ## [v0.10.0][2-mar-2018]
 ### Added:
