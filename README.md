@@ -173,7 +173,9 @@ The operation is pretty simple:
     [certgrinder@znc ~]$
 
 ## Files
-Certgrinder primarily consists of two scripts. Most of the functionality is in a Python script called `certgrinder.py` which runs on all the Certgrinder clients. The other one is written in Bourne sh, runs on the Certgrinder server (called over SSH by the clients), and is called "csrgrinder". A typical homedir for a Certgrinder user looks like this:
+Certgrinder primarily consists of two scripts. Most of the functionality is in a Python script called `certgrinder.py` which runs on all the Certgrinder clients. The other one is written in Bourne sh, runs on the Certgrinder server (called over SSH by the clients), and is called "csrgrinder".
+
+A typical homedir for a Certgrinder client user looks like this:
 
     [certgrinder@znc ~]$ ls -l
     total 43
