@@ -45,6 +45,7 @@ The `HTTP-01` and `DNS-01` hooks are documented here: https://certbot.eff.org/do
 This can be a bit of a mouthful so let us break it down into manageable chunks.
 
 ### Installing the Certgrinder Server
+This section explains the steps to install a Certgrinder server.
 
 #### Install Server
 Create a VM or Jail somewhere. This will be your Certgrinder server. It will need to have `Certbot` installed and `sshd` running. It also needs to be accessible over SSH from all your Certgrinder clients. Furthermore, if you intend to serve the challenges locally you also need port 53 and/or 80 open from the outside world (a portforward will work).
@@ -52,11 +53,61 @@ Create a VM or Jail somewhere. This will be your Certgrinder server. It will nee
 #### Create User
 Create a dedicated user, usually the username is just `certgrinder`. The user needs `sudo` access to run the `certbot` binary, and to set a couple of environment variables. This works:
 
-3. Get the code from Git, put it in a `certgrinder` folder in the Certgrinder users homedir. Get the latest release, `master` is not always in a usable state: https://github.com/tykling/certgrinder/releases
-4. Certgrinder works using SSH. Configure `~/.ssh/authorized_keys` for your Certgrinder clients. Something like this works:
-    from="2a01:3a0:1:1900:85:235:250:91",command="~/certgrinder/csrgrinder",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOegnR+qnK2FEoaSrVwHgCIxjFkVEbW4VO31/Hd2mAwk ansible-generated on webproxy2.servers.bornhack.org
+    certgrinder ALL=(ALL) NOPASSWD: /usr/local/bin/certbot
+    Defaults env_keep += "ACMEZONE WEBROOT"
 
-###
+#### Get Certgrinder Code
+Get the code from Git, usually in a `certgrinder` folder in the Certgrinder users homedir. Get the latest release, `master` is not always in a usable state: https://github.com/tykling/certgrinder/releases
+    git clone -b 'v0.9.6' --single-branch --depth 1 https://github.com/tykling/certgrinder ~/certgrinder
+
+#### Configure SSH Access
+Certgrinder works using SSH. Each Certgrinder client must now generate an SSH key which is to be added to `~/.ssh/authorized_keys` on the Certgrinder server. Something like this works:
+    from="2a01:3a0:1:1900:85:235:250:91",command="~/certgrinder/csrgrinder",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOegnR+qnK2FEoaSrVwHgCIxjFkVEbW4VO31/Hd2mAwk ansible-generated on webproxy2.servers.bornhack.org
+The `restrict` option to OpenSSH was added recently, might not be available everywhere.
+
+#### Install Certbot
+Finally Certbot needs to be installed, and an account needs to be created. TODO: Document how to do this, but basically it happens automatically the first time Certbot is run. On FreeBSD the account info lives under `/usr/local/etc/letsencrypt/accounts`.
+
+### Installing Certgrinder Clients
+This section explains the steps to install a Certgrinder client. Repeat these steps on each server in need of certificates!
+
+#### Create Certgrinder User
+I usually run Certgrinder under a seperate user on the Certgrinder clients. The user needs sudo access to be able to reload/restart services after renewing certificates. Sometimes it is also neccesary to add some system users to the certgrinder group so they can read certificated. More on that later.
+
+#### Get Certgrinder Code
+Get the code from Git, usually in a `certgrinder` folder in the Certgrinder users homedir. Get the latest release, `master` is not always in a usable state: https://github.com/tykling/certgrinder/releases
+    git clone -b 'v0.9.6' --single-branch --depth 1 https://github.com/tykling/certgrinder ~/certgrinder
+
+#### Config File
+Certgrinders config file is in yaml format. Certgrinder comes with a certgrinder.yml.dist file which should be fairly selfexplanatory. Certgrinder expects to find it in the homedir of the user. See also the Files section later in this README.
+
+#### Virtualenv
+Certgrinder is written in Python and comes with a `requirements.txt` file to install dependencies. First create a new virtualenv:
+    [certgrinder@webproxy2 ~]$ virtualenv ~/virtualenv
+    New python executable in /home/certgrinder/venv/bin/python2.7
+    Also creating executable in /home/certgrinder/venv/bin/python
+    Installing setuptools, pip, wheel...done.
+
+And then install the required packages:
+
+    [certgrinder@webproxy2 ~]$ ./virtualenv/bin/pip install -r certgrinder/requirements.txt
+    ...snip....
+
+Done.
+
+#### Challenges
+Finally you need to choose which challenge to use for this Certgrinder client. If DNS-01 you need to create a CNAME record pointing somewhere. If HTTP-01 you need to create an HTTP redirect. See the section on challenge types above.
+
+### Testing
+At this point you should be ready to test! Certgrinder has a `--test` switch which makes `csrgrinder` use the LetsEncrypt staging environment. Use this until everything works! Certgrinder outputs some info on what happens, but mainly you need to check syslog and letsencrypt.log on the Certgrinder server.
+
+### Crontab job
+I run Certgrinder daily, although it only attempts renewal when less than 30 days validity remains. When everything above works it is time to automate it by adding it to crontab. The following line works for me (I vary the times between servers):
+
+    48 2 * * * certgrinder /usr/home/certgrinder/virtualenv/bin/python /usr/home/certgrinder/certgrinder/certgrinder.py /usr/home/certgrinder/certgrinder.yml
+
+Note that it is neccesary to call the virtualenv python directly to make sure the correct environment is used!
+
 ## Additional Features
 Apart from the primary purpose of getting signed certificates the `certgrinder.py` script has a few other features that may be of use.
 
