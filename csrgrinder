@@ -29,7 +29,7 @@ BASEPATH=$(realpath $0 | rev | cut -d "/" -f 2- | rev)
 # define some defaults
 : ${AUTHHOOK:="${BASEPATH}/manual-auth-hook"}
 : ${CLEANUPHOOK:="${BASEPATH}/manual-cleanup-hook"}
-: ${WEBROOT}:="/usr/local/www/letsencrypt-auto"}
+: ${WEBROOT:="/usr/local/www/letsencrypt-auto"}
 
 # load config file (optional, but DNS-01 will be skipped if $ACMEZONE is not configured
 if [ -f "${BASEPATH}/csrgrinder.conf" ]; then
