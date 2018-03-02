@@ -11,7 +11,8 @@ if [ -z "$CERTBOT_TOKEN" ]; then
         (echo "update delete ${CERTBOT_DOMAIN}.${ACMEZONE}. TXT"; echo "send") | /usr/local/bin/nsupdate -k /usr/local/etc/namedb/rndc.key
 else
         # This is an HTTP-01 challenge
-        if [ -z "${WEBROOT}" -o -z ${CERTBOT_TOKEN} ]; then
+        if [ -z "${WEBROOT}" || -z "${CERTBOT_TOKEN}" ]; then
+            logger "Either WEBROOT or CERTBOT_TOKEN are empty, manual-auth-hook bailing out"
             exit 1
         fi
         rm -f "${WEBROOT}/.well-known/acme-challenge/${CERTBOT_TOKEN}"

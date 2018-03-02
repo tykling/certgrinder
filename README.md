@@ -4,7 +4,7 @@
 Certgrinder is a set of scripts to handle Letsencrypt certificate signing on a central host, rather than on the servers which need the certificates. Read more at https://blog.tyk.nu/blog/introducing-certgrinder-a-letsencrypt-ssh-proxy/
 
 ### Advantages
-The primary advantage of this approach is that the signing stack and LetsEncrypt credentials are never exposed on servers with untrusted users on them. Not rotating the RSA keypair is also an advantage since it makes TLSA and other pinning easy. It also simplifies geting certificates for stuff like loadbalanced hosts, where it can be difficult to predict which node the LetsEncrypt challenge checker will hit.
+One advantage of this approach is that the signing stack and LetsEncrypt credentials are never exposed on servers with untrusted users on them. Not rotating the RSA keypair is also an advantage since it makes TLSA and other pinning easy. It also simplifies geting certificates for stuff like loadbalanced hosts, where it can be difficult to predict which node the LetsEncrypt challenge checker will hit when using HTTP-01.
 
 ### Terminology
 The central host with the signing stack is called the "Certgrinder server". The individual servers (the ones that need certificates) are called "Certgrinder clients".
@@ -19,7 +19,7 @@ With the HTTP-01 challenge the Certgrinder server serves the challenge over plai
 
 To prepare, you first need to invent a hostname you will use to serve the challenges, say, `acme.example.com`. This hostname should be configured as a virtual host on a webserver somewhere, either locally on the Certgrinder server, or on some remote webserver.
 
-Each Certgrinder client then implements an HTTP redirect from `/.well-known/acme-challenge/` to the Certgrinder server like so:
+Each Certgrinder client then implements an HTTP redirect from `/.well-known/acme-challenge/` to the Certgrinder server like so (nginx syntax):
 
     location /.well-known/acme-challenge/ {
         return 301 http://acme.example.com$request_uri;
@@ -41,6 +41,22 @@ The `manual-auth-hook` script creates the DNS record using `nsupdate` and an `rn
 ### Certbot Documentation
 The `HTTP-01` and `DNS-01` hooks are documented here: https://certbot.eff.org/docs/using.html#hooks
 
+## Getting Started
+This can be a bit of a mouthful so let us break it down into manageable chunks.
+
+### Installing the Certgrinder Server
+
+#### Install Server
+Create a VM or Jail somewhere. This will be your Certgrinder server. It will need to have `Certbot` installed and `sshd` running. It also needs to be accessible over SSH from all your Certgrinder clients. Furthermore, if you intend to serve the challenges locally you also need port 53 and/or 80 open from the outside world (a portforward will work).
+
+#### Create User
+Create a dedicated user, usually the username is just `certgrinder`. The user needs `sudo` access to run the `certbot` binary, and to set a couple of environment variables. This works:
+
+3. Get the code from Git, put it in a `certgrinder` folder in the Certgrinder users homedir. Get the latest release, `master` is not always in a usable state: https://github.com/tykling/certgrinder/releases
+4. Certgrinder works using SSH. Configure `~/.ssh/authorized_keys` for your Certgrinder clients. Something like this works:
+    from="2a01:3a0:1:1900:85:235:250:91",command="~/certgrinder/csrgrinder",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOegnR+qnK2FEoaSrVwHgCIxjFkVEbW4VO31/Hd2mAwk ansible-generated on webproxy2.servers.bornhack.org
+
+###
 ## Additional Features
 Apart from the primary purpose of getting signed certificates the `certgrinder.py` script has a few other features that may be of use.
 
@@ -162,26 +178,7 @@ The certgrinder.py Python script is meant to be run under a dedicated user and h
       -v, --version         Show version and exit.
 
 ### csrgrinder
-The csrgrinder script lives on the Certgrinder server. It is very simple, just a couple of lines sh, and it is called over SSH by the Certgrinder clients. It takes a PEM formatted CSR on stdin as input, and outputs a signed PEM formatted certificate on stdout.
-
-## Theory of Operation
-The theory behind this system is simple. Each Certgrinder client does the following:
-
-0. Configure http redirect from /.well-known/acme-challenge/ to the Certgrinder server. The redirect must be functional for all domains you intend to put in the CSR.
-1. Generate an RSA keypair
-2. Generate a new CSR
-3. Cat the CSR over SSH to the Certgrinder server, Certgrinder server returns the signed certicate on stdout.
-4. Run post-renew hook (to reload services with the new cert)
-5. Repeat 2-4 daily (but skip if cert has more than 30 days validity).
-
-The Certgrinder server does the following:
-
-0. Has Certbot installed and configured
-1. Waits for SSH connections
-2. When clients connect they run the `csrgrinder` script, which receives the CSR from the client on stdin, runs Certbot, and outputs the signed certificate on stdout
-
-Each clients SSH key and IP must be configured on the Certgrinder server in .ssh/authorized_keys, for example:
-`from="192.0.2.134",command="~/certgrinder/csrgrinder",no-port-forwarding,no-x11-forwarding,no-agent-forwarding ssh-ed25519 AAAAC3........ user@hostname`
+The csrgrinder script lives on the Certgrinder server. It is called over SSH by the Certgrinder clients. It takes a PEM formatted CSR on stdin as input, and outputs a signed PEM formatted certificate on stdout. It calls on Certbot to do the actual ACME stuff, which in turn calls external `manual-auth-hook` and `manual-cleanup-hook` scripts to create and delete challenges as needed. It is written in Bourne/Posix sh, so are the hook scripts. `csrgrinder` has a config file called `csrgrinder.conf`.
 
 ## More info
 Read more at https://blog.tyk.nu/blog/introducing-certgrinder-a-letsencrypt-ssh-proxy/
