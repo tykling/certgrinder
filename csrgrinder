@@ -67,7 +67,7 @@ for CHALLENGE in dns http; do
         cat $FULLCHAINFILE
         break
     else
-        logger -s "Failed to get certificate using challenge type $challenge. Certbot exit code was $?. Certbot output was:"
+        logger -s "Failed to get certificate using challenge type $CHALLENGE. Certbot exit code was $?. Certbot output was:"
         cat $ERRORFILE | logger -s
     fi
 done
