@@ -5,6 +5,7 @@
 # The latest version can be found on Github at
 # https://github.com/tykling/certgrinder
 ####################################################
+VERSION="v0.10.2"
 
 # get CSR from stdin and write to a temp file
 STDIN=$(cat)
@@ -21,7 +22,7 @@ else
     MODE="production"
 fi
 
-logger "Wrote $(stat -f%z $CSRFILE) bytes CSR from client $SSH_CLIENT to temp file $CSRFILE (running in $MODE mode)"
+logger "csrgrinder ${VERSION} Wrote $(stat -f%z $CSRFILE) bytes CSR from client $SSH_CLIENT to temp file $CSRFILE (running in $MODE mode)"
 
 # get the directory we are running from
 BASEPATH=$(realpath $0 | rev | cut -d "/" -f 2- | rev)

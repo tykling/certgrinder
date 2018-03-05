@@ -5,6 +5,18 @@ All notable changes to these roles will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.10.2][5-mar-2018]
+### Added:
+- Support setting syslog_facility and syslog_socket in certgrinder.yml (defaults to "user" and "/var/run/log" to maintain backwards compat)
+- Warn in the last line when one or more selfsigned certificates has been created
+- Show a counter with the number of domainsets being processed
+
+### Fixed:
+- Typo in variable name in logoutput
+- Only log SSH output and exception info when in debug mode
+- Various improvements to logging
+
+
 ## [v0.10.1][2-mar-2018]
 ### Fixed:
 - Version number was wrong in certgrinder.py

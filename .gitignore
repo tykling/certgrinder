@@ -1,4 +1,5 @@
 certgrinder.yml
 venv/
 *.pyc
+certificates/
 

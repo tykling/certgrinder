@@ -3,14 +3,14 @@ import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, logging.handler
 from datetime import datetime
 from pid import PidFile
 logger = logging.getLogger("certgrinder.%s" % __name__)
-__version__ = "0.10.1"
+__version__ = "0.10.2"
 
 
 class Certgrinder:
     """
     The main Certgrinder client class.
     """
-    def __init__(self, configfile, test, showtlsa, checktlsa, nameserver, showspki):
+    def __init__(self, configfile, test, showtlsa, checktlsa, nameserver, showspki, debug):
         """
         The __init__ method just reads the config file and checks a few things
         """
@@ -21,13 +21,21 @@ class Certgrinder:
             logger.error("domainlist not found in conf")
             sys.exit(1)
 
+        # syslog related defaults
+        if 'syslog_facility' not in self.conf:
+            self.conf['syslog_facility'] = "user"
+        if 'syslog_socket' not in self.conf:
+            self.conf['syslog_socket'] = "/var/run/log"
+
         # initialise variables
         self.hook_needed = False
+        self.selfsigned_created = False
         self.test = test
         self.showtlsa = showtlsa
         self.checktlsa = checktlsa
         self.nameserver = nameserver
         self.showspki = showspki
+        self.debug = debug
         self.tlsatypes = ["3 1 0", "3 1 1", "3 1 2"]
         self.__version__ = __version__
 
@@ -208,7 +216,7 @@ class Certgrinder:
             logger.info("selfsigned_fallback is disabled in config")
             return False
 
-        logger.warning("WARNING: generating selfsigned certificate using csr %s" % self.csr_path)
+        logger.warning("Generating selfsigned certificate using csr %s" % self.csr_path)
         self.certificate = OpenSSL.crypto.X509()
         self.certificate.set_serial_number(int(time.time()))
         self.certificate.gmtime_adj_notBefore(0)
@@ -220,6 +228,9 @@ class Certgrinder:
         # set public key and sign
         self.certificate.set_pubkey(self.keypair)
         self.certificate.sign(self.keypair, "sha256")
+
+        # at least one selfsigned cert was created, warn the user at the end
+        self.selfsigned_created = True
 
         # all good
         return True
@@ -254,11 +265,22 @@ class Certgrinder:
         try:
             self.certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, stdout)
         except Exception as E:
-            logger.exception("Got an exception while parsing output from ssh call, a certificate was not returned by the certgrinder server. Exception %s:" % E)
-            logger.error("this is stdout from the ssh call:")
-            logger.error(stdout)
-            logger.error("this is stderr from the ssh call:")
-            logger.error(stderr)
+            logger.error("The SSH call to the Certgrinder server did not return a valid certificate.")
+
+            # output some more if we are in debug mode
+            if self.debug:
+                logger.debug("This was the exception encountered while trying to parse the certificate:")
+                logger.debug(E, exc_info=True)
+                # output stdout
+                if stdout:
+                    logger.debug("This is stdout from the ssh call:")
+                    logger.debug(stdout)
+                if stderr:
+                    logger.debug("this is stderr from the ssh call:")
+                    logger.debug(stderr)
+            else:
+                logger.error("Rerun in debug mode (-d / --debug) to see more information, or check the log on the Certgrinder server")
+
             if not self.get_new_selfsigned_certificate():
                 # we dont have a certificate
                 return False
@@ -306,7 +328,7 @@ class Certgrinder:
 
         # TODO: check if the certificates SubjectAltName contains all the domains our CSR has,
         # we cannot just compare the extension data because letsencrypt may change the order of the domains,
-        # so we have to parse the ASN.1 data and loop over both sets of domains and compare
+        # so we have to parse the ASN.1 data and loop over both sets of domains and compare.. sigh
 
         # all good
         return True
@@ -601,15 +623,16 @@ if __name__ == '__main__':
         parser.add_argument('-v', '--version', dest='version', default=False, action='store_true', help='Show version and exit.')
         args = parser.parse_args()
 
-        # configure logging at the requested loglevel
+        # configure the log format used for stdout depending on the requested loglevel
         if args.log_level==logging.DEBUG:
-            logformat = "%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s"
+            console_logformat = "%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s"
+            debug = True
         else:
-            logformat = "%(asctime)s %(levelname)s: %(message)s"
-
+            console_logformat = "%(asctime)s %(levelname)s: %(message)s"
+            debug = False
         logging.basicConfig(
             level=args.log_level,
-            format=logformat,
+            format=console_logformat,
             datefmt='%Y-%m-%d %H:%M:%S %z',
         )
 
@@ -618,12 +641,6 @@ if __name__ == '__main__':
             logger.info("Certgrinder version %s" % __version__)
             sys.exit(0)
 
-        # connect to syslog
-        try:
-            logger.addHandler(logging.handlers.SysLogHandler(address='/var/run/log'))
-        except Exception as E:
-            logger.exception("Unable to connect to syslog socket /var/run/log - syslog not enabled. Exception info:")
-
         # instatiate Certgrinder object
         certgrinder = Certgrinder(
             configfile=args.configfile,
@@ -631,22 +648,40 @@ if __name__ == '__main__':
             showtlsa=args.showtlsa,
             checktlsa=args.checktlsa,
             nameserver=args.nameserver,
-            showspki=args.showspki
+            showspki=args.showspki,
+            debug=debug
         )
+
+        # connect to syslog
+        syslog_handler = logging.handlers.SysLogHandler(
+            address=certgrinder.conf['syslog_socket'],
+            facility=certgrinder.conf['syslog_facility'],
+        )
+        syslog_format = logging.Formatter('Certgrinder: %(message)s')
+        syslog_handler.setFormatter(syslog_format)
+        try:
+            logger.addHandler(syslog_handler)
+        except Exception as E:
+            logger.exception("Unable to connect to syslog socket %s - syslog not enabled. Exception info:" % certgrinder.conf['syslog_socket'])
 
         # write pidfile and loop over domaintest
         with PidFile(piddir=certgrinder.conf['path']):
+            logger.info("Certgrinder %s running" % __version__)
+            counter = 0
             for domains in certgrinder.conf['domainlist']:
+                counter += 1
                 domainlist = domains.split(",")
-                logger.info("Processing domains: %s" % domains)
+                logger.info("-- Processing domainset %s of %s: %s" % (counter, len(certgrinder.conf['domainlist']), domains))
                 if certgrinder.grind(domainlist):
-                    logger.info("Done processing domains: %s" % domains)
+                    logger.info("-- Done processing domainset %s of %s: %s" % (counter, len(certgrinder.conf['domainlist']), domains))
                 else:
-                    logger.error("Error processing domains: %s" % domains)
+                    logger.error("-- Error processing domainset %s of %s: %s" % (counter, len(certgrinder.conf['domainlist']), domains))
 
             if certgrinder.hook_needed:
                 logger.info("At least one certificate was renewed, running post renew hook...")
                 certgrinder.run_post_renew_hooks()
+            if certgrinder.selfsigned_created:
+                logger.warning("At least one selfsigned certificate was created, this is probably not what you want.")
 
-            logger.debug("All done, exiting.")
+            logger.info("All done, exiting cleanly")
 

@@ -1,5 +1,5 @@
 ---
-# where to put keys and certificates
+# where to put keys and certificates and pidfile
 path: "/usr/home/certgrinder/certificates"
 
 # a list of sets of domains to get certificates for
@@ -29,4 +29,10 @@ selfsigned_fallback: True
 
 # the full path to the sudo binary, defaults to /usr/local/bin/sudo
 #sudo_path: '/usr/local/bin/sudo'
+
+# syslog facility defaults to 'user' but can be change to 'local0' or whatever
+# syslog_facility: 'user'
+
+# syslog_socket defaults to '/var/run/log'
+# syslog_socket: '/var/run/log'
 
