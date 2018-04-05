@@ -78,7 +78,7 @@ Finally you need to decide which challenge types to use, and how to handle them.
 This section explains the steps to install a Certgrinder client. Repeat these steps on each server in need of certificates!
 
 #### Create Certgrinder User
-I usually run Certgrinder under a seperate user on the Certgrinder clients. The user needs sudo access to be able to reload/restart services after renewing certificates. Sometimes it is also neccesary to add some system users to the certgrinder group so they can read certificated. More on that later.
+I usually run Certgrinder under a seperate user on the Certgrinder clients. The user needs sudo access to be able to reload/restart services after renewing certificates. Sometimes it is also neccesary to add some system users to the certgrinder group so they can read certificates. More on that later.
 
 #### Get Certgrinder Code
 Get the code from Git, usually in a `certgrinder` folder in the Certgrinder users homedir. Get the latest release, `master` is not always in a usable state: https://github.com/tykling/certgrinder/releases
