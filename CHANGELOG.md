@@ -5,7 +5,7 @@ All notable changes to these roles will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [v0.10.2][5-mar-2018]
+## [v0.10.2][5-apr-2018]
 ### Added:
 - Support setting syslog_facility and syslog_socket in certgrinder.yml (defaults to "user" and "/var/run/log" to maintain backwards compat)
 - Warn in the last line when one or more selfsigned certificates has been created
