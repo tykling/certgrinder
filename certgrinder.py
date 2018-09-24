@@ -124,7 +124,7 @@ class Certgrinder:
         setattr(self.csr.get_subject(), 'CN', domains[0])
 
         # add subjectAltName x598 extension
-        altnames = ','.join(['DNS:%s' % domain for domain in domains])
+        altnames = ','.join(['DNS:%s' % domain.encode('idna') for domain in domains])
         logger.debug("Adding subjectAltName extension with value %s" % altnames)
         self.csr.add_extensions([
             OpenSSL.crypto.X509Extension(
