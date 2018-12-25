@@ -8,10 +8,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.11.0][25-dec-2018]
 ### Added:
-- Support for setting SSH user: in certgrinder.yml config file
+- Support for setting SSH user: in certgrinder.yml config file.
 
 ### Changed:
 - Remove OpenSSL dependency for key and X509 operations, use cryptography directly instead.
+- Do not use shell=True for the subprocess.pOpen SSH call.
 
 ### Removed:
 - Support for selfsigned certificates.
