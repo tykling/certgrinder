@@ -1,7 +1,7 @@
 # Change Log
 This is the changelog for Certgrinder. The latest version of this file can always be found [on Github](https://github.com/tykling/certgrinder/blob/master/CHANGELOG.md)
 
-All notable changes to these roles will be documented in this file.
+All notable changes to Certgrinder will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Support for setting SSH user: in certgrinder.yml config file.
 
 ### Changed:
-- Remove OpenSSL dependency for key and X509 operations, use cryptography directly instead.
+- Remove OpenSSL dependency for key and X509 operations, use cryptography directly instead. This affects any method which deals with keys and/or X509.
 - Do not use shell=True for the subprocess.pOpen SSH call.
 
 ### Removed:
