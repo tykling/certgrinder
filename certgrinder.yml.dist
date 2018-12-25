@@ -14,8 +14,9 @@ server: "certgrinder.example.com"
 cert_renew_threshold_days: 30
 
 # the path of the csrgrinder binary on the remote server,
-# usually in the homedir of the certgrinder user
-csrgrinder_path: '~/certgrinder/csrgrinder'
+# usually in the homedir of the certgrinder user.
+# use an absolute path, relative ones will get resolved locally.
+csrgrinder_path: '/usr/home/certgrinder/certgrinder/csrgrinder'
 
 # issue selfsigned if something goes wrong?
 selfsigned_fallback: True

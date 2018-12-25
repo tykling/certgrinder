@@ -1,9 +1,15 @@
 #!/usr/bin/env python
-import yaml, os, subprocess, tempfile, shutil, OpenSSL, logging, logging.handlers, textwrap, time, sys, argparse, binascii, hashlib, dns.resolver, base64
+import yaml, os, subprocess, tempfile, shutil, logging, logging.handlers, textwrap, time, sys, argparse, binascii, hashlib, dns.resolver, base64
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes, serialization
 from datetime import datetime
 from pid import PidFile
 logger = logging.getLogger("certgrinder.%s" % __name__)
-__version__ = "0.10.2"
+__version__ = "0.11.0"
 
 
 class Certgrinder:
@@ -29,7 +35,6 @@ class Certgrinder:
 
         # initialise variables
         self.hook_needed = False
-        self.selfsigned_created = False
         self.test = test
         self.showtlsa = showtlsa
         self.checktlsa = checktlsa
@@ -70,7 +75,7 @@ class Certgrinder:
             keypair_string=open(self.keypair_path, 'r').read()
 
             # parse keypair
-            self.keypair=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, keypair_string)
+            self.keypair=load_pem_private_key(keypair_string, password=None, backend=default_backend())
         else:
             logger.debug("keypair %s not found, creating new keypair..." % self.keypair_path)
             self.create_keypair()
@@ -82,8 +87,11 @@ class Certgrinder:
         """
         Generates an RSA keypair in self.keypair and calls self.save_keypair() to write it to disk
         """
-        self.keypair = OpenSSL.crypto.PKey()
-        self.keypair.generate_key(OpenSSL.crypto.TYPE_RSA, 4096)
+        self.keypair = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=4096,
+            backend=default_backend()
+        )
         self.save_keypair()
 
 
@@ -92,7 +100,11 @@ class Certgrinder:
         Saves RSA keypair in self.keypair to disk in self.keypair_path
         """
         with open(self.keypair_path, 'w') as f:
-            f.write(OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.keypair))
+            f.write(self.keypair.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption()
+            ))
         os.chmod(self.keypair_path, 0o640)
         logger.debug("saved keypair to %s" % self.keypair_path)
 
@@ -101,7 +113,10 @@ class Certgrinder:
         """
         Returns the DER format public key
         """
-        return OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
+        return self.keypair.public_key().public_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
 
 
 ############# CSR METHODS ################################################
@@ -114,28 +129,23 @@ class Certgrinder:
         Add all domains in subjectAltName, including the one put into CN.
         Finally call self.save_csr() to write it to disk.
         """
-        logger.info("Generating CSR for domains: %s" % domains)
-        self.csr = OpenSSL.crypto.X509Req()
+        domainlist = []
+        # build list of x509.DNSName objects for SAN
+        for domain in domains:
+            domain = domain.encode('idna').decode('utf-8')
+            logger.debug("Adding %s to CSR..." % domain)
+            domainlist.append(x509.DNSName(domain))
 
-        # set public key 
-        self.csr.set_pubkey(self.keypair)
-
-        # set only CN in subject, since everything else is removed by letsencrypt
-        setattr(self.csr.get_subject(), 'CN', domains[0])
-
-        # add subjectAltName x598 extension
-        altnames = ','.join(['DNS:%s' % domain.encode('idna') for domain in domains])
-        logger.debug("Adding subjectAltName extension with value %s" % altnames)
-        self.csr.add_extensions([
-            OpenSSL.crypto.X509Extension(
-                type_name="subjectAltName",
-                critical=False, # TODO: should this be critical=True?!
-                value=altnames
-            )
-        ])
-
-        # sign the CSR
-        self.csr.sign(self.keypair, 'sha256')
+        # build the CSR
+        self.csr = x509.CertificateSigningRequestBuilder().subject_name(
+            x509.Name([
+                x509.NameAttribute(
+                    NameOID.COMMON_NAME, domains[0].encode('idna').decode('utf-8')
+                ),
+            ])).add_extension(
+                x509.SubjectAlternativeName(domainlist),
+                critical=False,
+            ).sign(self.keypair, hashes.SHA256(), default_backend())
 
         # write the csr to disk
         self.save_csr()
@@ -147,7 +157,7 @@ class Certgrinder:
         Save the PEM version of the CSR to the path in self.csr_path
         """
         with open(self.csr_path, 'w') as f:
-            f.write(OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, self.csr))
+            f.write(self.csr.public_bytes(serialization.Encoding.PEM))
         os.chmod(self.csr_path, 0o644)
         logger.debug("saved CSR to %s" % self.csr_path)
 
@@ -161,12 +171,8 @@ class Certgrinder:
         Reads PEM certificate from the path in self.certificate_path
         """
         if os.path.exists(self.certificate_path):
-            certificate_string=open(self.certificate_path, 'r').read()
-            try:
-                self.certificate=OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate_string)
-            except OpenSSL.crypto.Error:
-                logger.exception("Got an exception while reading the certificate %s" % self.certificate_path)
-                self.certificate = False
+            pem_data=open(self.certificate_path, 'r').read()
+            self.certificate=x509.load_pem_x509_certificate(pem_data, default_backend())
         else:
             logger.debug("certificate %s not found" % self.certificate_path)
             self.certificate = False
@@ -178,62 +184,26 @@ class Certgrinder:
         """
         Checks the validity of the certificate.
         Returns a simpe True or False based on self.conf['cert_renew_threshold_days'],
-        and whether the certificate is valid (not selfsigned)
+        and whether the certificate is valid (it. not selfsigned)
         """
         # check if selfsigned
-        if self.certificate.get_issuer() == self.certificate.get_subject():
+        if self.certificate.issuer == self.certificate.subject:
             logger.debug("This certificate is selfsigned, check_certificate_validity() returning False")
             return False
 
         # check if issued by staging
-        if self.certificate.get_issuer().CN == u'Fake LE Intermediate X1':
+        if self.certificate.issuer == u'Fake LE Intermediate X1':
             logger.debug("This certificate was issued by LE staging CA, check_certificate_validity() returning False")
             return False
 
-        # check expiration
-        notafter = self.certificate.get_notAfter()
-        try:
-            expiration = datetime.strptime(notafter, "%Y%m%d%H%M%SZ")
-        except Exception as E:
-            logger.exception("Got exception while parsing notAfter from x509: %s" % notafter)
-            return False
-
-        # find the timedelta between now and the expire_date
-        expiredelta = expiration - datetime.now()
+        # check expiration, find the timedelta between now and the expire_date
+        expiredelta = self.certificate.not_valid_after - datetime.now()
         if expiredelta.days < self.conf['cert_renew_threshold_days']:
             logger.debug("Less than %s days to expiry of certificate, check_certificate_validity() returning False" % self.conf['cert_renew_threshold_days'])
             return False
         else:
             logger.debug("More than %s days to expiry of certificate, check_certificate_validity() returning True" % self.conf['cert_renew_threshold_days'])
             return True
-
-
-    def get_new_selfsigned_certificate(self):
-        """
-        Create a selfsigned certificate
-        """
-        if not self.conf['selfsigned_fallback']:
-            logger.info("selfsigned_fallback is disabled in config")
-            return False
-
-        logger.warning("Generating selfsigned certificate using csr %s" % self.csr_path)
-        self.certificate = OpenSSL.crypto.X509()
-        self.certificate.set_serial_number(int(time.time()))
-        self.certificate.gmtime_adj_notBefore(0)
-        # make it last 90 days like the real LE certificates
-        self.certificate.gmtime_adj_notAfter(90*24*60*60)
-        self.certificate.set_subject(self.csr.get_subject())
-        self.certificate.set_issuer(self.certificate.get_subject())
-
-        # set public key and sign
-        self.certificate.set_pubkey(self.keypair)
-        self.certificate.sign(self.keypair, "sha256")
-
-        # at least one selfsigned cert was created, warn the user at the end
-        self.selfsigned_created = True
-
-        # all good
-        return True
 
 
     def get_new_certificate(self):
@@ -247,49 +217,51 @@ class Certgrinder:
             bind_ip="-b %s" % self.conf['bind_ip']
         else:
             bind_ip=""
-        command = 'ssh %(bind_ip)s %(server)s %(csrgrinder)s' % {
+
+        command = '/usr/bin/ssh %(bind_ip)s %(user)s@%(server)s %(csrgrinder)s' % {
             'bind_ip': bind_ip,
+            'user': 'certgrinder' if 'user' not in self.conf else self.conf['user'],
             'server': self.conf['server'],
             'csrgrinder': self.conf['csrgrinder_path']
         }
         if self.test:
             command += ' test'
 
+        # make command a list
         logger.debug("running ssh command: %s" % command)
-        p = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        command = [x for x in command.split(" ") if x]
+        p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # send the CSR to stdin and save stdout+stderr
-        stdout, stderr = p.communicate(input=OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, self.csr))
+        stdout, stderr = p.communicate(input=self.csr.public_bytes(serialization.Encoding.PEM))
 
-        # parse the certificate in stdout (which should now contain a valid signed PEM certificate)
+        # parse stdout (which should now contain a valid signed PEM certificate)
         try:
-            self.certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, stdout)
+            self.certificate = x509.load_pem_x509_certificate(stdout, default_backend())
         except Exception as E:
-            logger.error("The SSH call to the Certgrinder server did not return a valid certificate.")
+            logger.error("The SSH call to the Certgrinder server did not return a valid certificate. Exception %s" % E)
 
             # output some more if we are in debug mode
             if self.debug:
                 logger.debug("This was the exception encountered while trying to parse the certificate:")
                 logger.debug(E, exc_info=True)
-                # output stdout
+                # output stdout (if any)
                 if stdout:
                     logger.debug("This is stdout from the ssh call:")
-                    logger.debug(stdout)
+                    logger.debug(stdout.strip())
+                # output stderr (if any)
                 if stderr:
                     logger.debug("this is stderr from the ssh call:")
-                    logger.debug(stderr)
+                    logger.debug(stderr.strip())
             else:
                 logger.error("Rerun in debug mode (-d / --debug) to see more information, or check the log on the Certgrinder server")
 
-            if not self.get_new_selfsigned_certificate():
-                # we dont have a certificate
-                return False
+            # we dont have a certificate
+            return False
 
         # a few sanity checks of the certificate seems like a good idea
         if not self.check_certificate_sanity():
-            if not self.get_new_selfsigned_certificate():
-                # we dont have a certificate
-                return False
+            return False
 
         # save cert to disk, pass stdout to maintain chain,
         # as self.certificate only contains the server cert,
@@ -317,13 +289,13 @@ class Certgrinder:
         Return False if a problem is found, True if all is well
         """
         # check self.certificate has the same pubkey as the CSR
-        if OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, self.certificate.get_pubkey()) != OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, self.keypair):
+        if self.keypair.public_key().public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo) != self.certificate.public_key().public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo):
             logger.error("The certificate returned from the certgrinder server does not have the public key we expected")
             return False
 
         # check if certificate has the same subject as our CSR (which is CN only)
-        if self.certificate.get_subject() != self.csr.get_subject():
-            logger.error("The certificate returned from the certgrinder server does not have the same subject as our CSR")
+        if self.certificate.subject != self.csr.subject:
+            logger.error("The certificate returned from the certgrinder server does not have the same subject (%s) as our CSR has (%s)" % (self.certificate.subject, self.csr.subject))
             return False
 
         # TODO: check if the certificates SubjectAltName contains all the domains our CSR has,
@@ -334,16 +306,10 @@ class Certgrinder:
         return True
 
 
-    def save_certificate(self, stdout=None):
+    def save_certificate(self, stdout):
         """
-        Save the PEM certificate to the path self.certificate_path
+        Save the PEM certificate in stdout to the path self.certificate_path
         """
-        # TODO: make this use self.certificate for regular as well as selfsigned certs, 
-        # if it is possible to make OpenSSL.crypto.load_certificate() get the full chain including intermediate
-        if not stdout:
-            # stdout is empty, must be a selfsigned certificate
-            stdout = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, self.certificate)
-
         # save the file
         with open(self.certificate_path, 'w') as f:
             f.write(stdout)
@@ -507,7 +473,7 @@ class Certgrinder:
         Outputs the data needed to add/fix records when errors are found.
         """
         # get the public key in DER format
-        derkey = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_ASN1, self.keypair)
+        derkey = self.get_der_pubkey()
 
         # loop over the domains and fetch the TLSA records from the DNS,
         # and compare them to locally generated values
@@ -543,16 +509,16 @@ class Certgrinder:
         If it is time to get a new certificate a CSR is generated and used to get a new certificate.
         """
         # set paths
-        self.keypair_path = os.path.join(self.conf['path'], '%s.key' % domains[0])
+        self.keypair_path = os.path.join(self.conf['path'], '%s.key' % domains[0].encode('idna'))
         logger.debug("key path: %s" % self.keypair_path)
 
-        self.certificate_path = os.path.join(self.conf['path'], '%s.crt' % domains[0])
+        self.certificate_path = os.path.join(self.conf['path'], '%s.crt' % domains[0].encode('idna'))
         logger.debug("cert path: %s" % self.certificate_path)
 
         self.csr_path = os.path.join(self.conf['path'], '%s.csr' % domains[0])
         logger.debug("csr path: %s" % self.csr_path)
 
-        self.concat_path = os.path.join(self.conf['path'], '%s-concat.pem' % domains[0])
+        self.concat_path = os.path.join(self.conf['path'], '%s-concat.pem' % domains[0].encode('idna'))
         logger.debug("concat path: %s" % self.concat_path)
 
         # attempt to load/generate keypair for this set of domains
@@ -584,7 +550,7 @@ class Certgrinder:
                 logger.info("The certificate %s is valid for at least another %s days, skipping" % (self.certificate_path, self.conf['cert_renew_threshold_days']))
                 return True
             else:
-                logger.info("The certificate %s is valid for less than %s days, renewing..." % (self.certificate_path, self.conf['cert_renew_threshold_days']))
+                logger.info("The certificate %s is not valid, or expires in less than %s days, renewing..." % (self.certificate_path, self.conf['cert_renew_threshold_days']))
         else:
             logger.debug("Unable to load certificate %s" % self.certificate_path)
 
@@ -680,8 +646,6 @@ if __name__ == '__main__':
             if certgrinder.hook_needed:
                 logger.info("At least one certificate was renewed, running post renew hook...")
                 certgrinder.run_post_renew_hooks()
-            if certgrinder.selfsigned_created:
-                logger.warning("At least one selfsigned certificate was created, this is probably not what you want.")
 
             logger.info("All done, exiting cleanly")
 

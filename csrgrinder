@@ -5,7 +5,7 @@
 # The latest version can be found on Github at
 # https://github.com/tykling/certgrinder
 ####################################################
-VERSION="v0.10.2"
+VERSION="v0.11.0"
 
 # get CSR from stdin and write to a temp file
 STDIN=$(cat)
@@ -41,6 +41,7 @@ fi
 FULLCHAINFILE=$(mktemp)
 CHAINFILE=$(mktemp)
 CERTFILE=$(mktemp)
+# this does not work because permissions, rewriting csrgrinder in python soon, cba fixing it
 rm -f $CHAINFILE $FULLCHAINFILE $CERTFILE
 
 # get a temp filename to save any error output from certbot

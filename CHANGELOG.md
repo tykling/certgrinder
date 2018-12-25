@@ -5,6 +5,18 @@ All notable changes to these roles will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+
+## [v0.11.0][25-dec-2018]
+### Added:
+- Support for setting SSH user: in certgrinder.yml config file
+
+### Changed:
+- Remove OpenSSL dependency for key and X509 operations, use cryptography directly instead.
+
+### Removed:
+- Support for selfsigned certificates.
+
+
 ## [v0.10.2][5-apr-2018]
 ### Added:
 - Support setting syslog_facility and syslog_socket in certgrinder.yml (defaults to "user" and "/var/run/log" to maintain backwards compat)
