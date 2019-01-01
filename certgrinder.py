@@ -192,9 +192,10 @@ class Certgrinder:
             return False
 
         # check if issued by staging
-        if self.certificate.issuer == u'Fake LE Intermediate X1':
-            logger.debug("This certificate was issued by LE staging CA, check_certificate_validity() returning False")
-            return False
+        for x in self.certificate.issuer:
+            if x.oid == NameOID.COMMON_NAME and x.value == 'Fake LE Intermediate X1':
+                logger.debug("This certificate was issued by LE staging CA, check_certificate_validity() returning False")
+                return False
 
         # check expiration, find the timedelta between now and the expire_date
         expiredelta = self.certificate.not_valid_after - datetime.now()
