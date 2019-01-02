@@ -240,7 +240,7 @@ class Certgrinder:
         try:
             self.certificate = x509.load_pem_x509_certificate(stdout, default_backend())
         except Exception as E:
-            logger.error("The SSH call to the Certgrinder server did not return a valid certificate. Exception %s" % E)
+            logger.error("The SSH call to the Certgrinder server did not return a valid certificate. Exception: %s" % E)
 
             # output some more if we are in debug mode
             if self.debug:
