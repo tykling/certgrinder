@@ -51,7 +51,7 @@ class Certgrinder:
         """
         with open(configfile, "r") as f:
             try:
-                self.conf = yaml.load(f, Loader=yaml.FullLoader)
+                self.conf = yaml.load(f, Loader=yaml.BaseLoader)
                 return True
             except Exception as E:
                 logger.exception("Unable to read config")
