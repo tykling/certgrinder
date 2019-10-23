@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from datetime import datetime
 from pid import PidFile
 logger = logging.getLogger("certgrinder.%s" % __name__)
-__version__ = "0.11.0"
+__version__ = "0.12.0"
 
 
 class Certgrinder:
@@ -52,6 +52,7 @@ class Certgrinder:
         with open(configfile, "r") as f:
             try:
                 self.conf = yaml.load(f, Loader=yaml.BaseLoader)
+                logger.debug("Running with config: %s" % self.conf)
                 return True
             except Exception as E:
                 logger.exception("Unable to read config")
@@ -72,10 +73,10 @@ class Certgrinder:
                 os.chmod(self.keypair_path, 0o640)
 
             # read keypair
-            keypair_string=open(self.keypair_path, 'r').read()
+            keypair_bytes=open(self.keypair_path, 'rb').read()
 
             # parse keypair
-            self.keypair=load_pem_private_key(keypair_string, password=None, backend=default_backend())
+            self.keypair=load_pem_private_key(keypair_bytes, password=None, backend=default_backend())
         else:
             logger.debug("keypair %s not found, creating new keypair..." % self.keypair_path)
             self.create_keypair()
@@ -99,7 +100,7 @@ class Certgrinder:
         """
         Saves RSA keypair in self.keypair to disk in self.keypair_path
         """
-        with open(self.keypair_path, 'w') as f:
+        with open(self.keypair_path, 'wb') as f:
             f.write(self.keypair.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.TraditionalOpenSSL,
@@ -156,7 +157,7 @@ class Certgrinder:
         """
         Save the PEM version of the CSR to the path in self.csr_path
         """
-        with open(self.csr_path, 'w') as f:
+        with open(self.csr_path, 'wb') as f:
             f.write(self.csr.public_bytes(serialization.Encoding.PEM))
         os.chmod(self.csr_path, 0o644)
         logger.debug("saved CSR to %s" % self.csr_path)
@@ -171,7 +172,7 @@ class Certgrinder:
         Reads PEM certificate from the path in self.certificate_path
         """
         if os.path.exists(self.certificate_path):
-            pem_data=open(self.certificate_path, 'r').read()
+            pem_data=open(self.certificate_path, 'rb').read()
             self.certificate=x509.load_pem_x509_certificate(pem_data, default_backend())
         else:
             logger.debug("certificate %s not found" % self.certificate_path)
@@ -312,7 +313,7 @@ class Certgrinder:
         Save the PEM certificate in stdout to the path self.certificate_path
         """
         # save the file
-        with open(self.certificate_path, 'w') as f:
+        with open(self.certificate_path, 'wb') as f:
             f.write(stdout)
         os.chmod(self.certificate_path, 0o644)
         logger.info("saved new certificate chain to %s" % self.certificate_path)
@@ -322,10 +323,10 @@ class Certgrinder:
         """
         Creates a single file with the private key and the cert chain, in that order
         """
-        with open(self.concat_path, 'w') as concat:
-            with open(self.keypair_path) as infile:
+        with open(self.concat_path, 'wb') as concat:
+            with open(self.keypair_path, 'rb') as infile:
                 concat.write(infile.read())
-            with open(self.certificate_path) as infile:
+            with open(self.certificate_path, 'rb') as infile:
                 concat.write(infile.read())
         os.chmod(self.concat_path, 0o640)
         return True
@@ -510,16 +511,17 @@ class Certgrinder:
         If it is time to get a new certificate a CSR is generated and used to get a new certificate.
         """
         # set paths
-        self.keypair_path = os.path.join(self.conf['path'], '%s.key' % domains[0].encode('idna'))
+        filenamedomain = domains[0].encode('idna').decode("ascii")
+        self.keypair_path = os.path.join(self.conf['path'], '%s.key' % filenamedomain)
         logger.debug("key path: %s" % self.keypair_path)
 
-        self.certificate_path = os.path.join(self.conf['path'], '%s.crt' % domains[0].encode('idna'))
+        self.certificate_path = os.path.join(self.conf['path'], '%s.crt' % filenamedomain)
         logger.debug("cert path: %s" % self.certificate_path)
 
-        self.csr_path = os.path.join(self.conf['path'], '%s.csr' % domains[0])
+        self.csr_path = os.path.join(self.conf['path'], '%s.csr' % filenamedomain)
         logger.debug("csr path: %s" % self.csr_path)
 
-        self.concat_path = os.path.join(self.conf['path'], '%s-concat.pem' % domains[0].encode('idna'))
+        self.concat_path = os.path.join(self.conf['path'], '%s-concat.pem' % filenamedomain)
         logger.debug("concat path: %s" % self.concat_path)
 
         # attempt to load/generate keypair for this set of domains
