@@ -1,5 +1,5 @@
-PyYAML>=5.1.1
-pid>=2.2.3
+PyYAML>=5.1.2
+pid>=2.2.5
 dnspython>=1.16.0
-cryptography>=2.7
+cryptography>=2.8
 
