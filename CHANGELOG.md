@@ -5,6 +5,10 @@ All notable changes to Certgrinder will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.12.0][unreleased]
+### Fixed
+- pyyaml load deprecation warning: ./certgrinder.py:54: YAMLLoadWarning: calling yaml.load() without Loader=... is deprecated, as the default Loader is unsafe. Please read https://msg.pyyaml.org/load for full details.
+
 
 ## [v0.11.0][25-dec-2018]
 ### Added:
