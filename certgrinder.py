@@ -1,5 +1,15 @@
 #!/usr/bin/env python
-import yaml, os, subprocess, tempfile, shutil, logging, logging.handlers, textwrap, time, sys, argparse, binascii, hashlib, dns.resolver, base64
+import yaml
+import os
+import subprocess
+import logging
+import logging.handlers
+import sys
+import argparse
+import binascii
+import hashlib
+import dns.resolver
+import base64
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -57,11 +67,11 @@ class Certgrinder:
                 self.conf = yaml.load(f, Loader=yaml.BaseLoader)
                 logger.debug("Running with config: %s" % self.conf)
                 return True
-            except Exception as E:
+            except Exception:
                 logger.exception("Unable to read config")
                 return False
 
-    ############# RSA KEY METHODS ################################################
+    # RSA KEY METHODS
 
     def load_keypair(self):
         """
@@ -124,7 +134,7 @@ class Certgrinder:
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
-    ############# CSR METHODS ################################################
+    # CSR METHODS
 
     def generate_csr(self, domains):
         """
@@ -170,7 +180,7 @@ class Certgrinder:
         os.chmod(self.csr_path, 0o644)
         logger.debug("saved CSR to %s" % self.csr_path)
 
-    ############# CERTIFICATE METHODS ################################################
+    # CERTIFICATE METHODS
 
     def load_certificate(self):
         """
@@ -371,7 +381,7 @@ class Certgrinder:
         os.chmod(self.concat_path, 0o640)
         return True
 
-    ############# POST RENEW HOOK METHOD #######################################
+    # POST RENEW HOOK METHOD
 
     def run_post_renew_hooks(self):
         """
@@ -405,7 +415,7 @@ class Certgrinder:
         # all done
         return
 
-    ############# SPKI METHODS #######################################
+    # SPKI METHODS
 
     def generate_spki(self, derkey):
         """
@@ -422,7 +432,7 @@ class Certgrinder:
         spki = self.generate_spki(self.get_der_pubkey())
         logger.info('pin-sha256="%s"' % spki)
 
-    ############# TLSA METHODS #######################################
+    # TLSA METHODS
 
     def generate_tlsa(self, derkey, tlsatype):
         """
@@ -577,7 +587,7 @@ class Certgrinder:
                         )
                     )
 
-    ############# MAIN METHOD ################################################
+    # MAIN METHOD
 
     def grind(self, domains):
         """
@@ -778,7 +788,7 @@ if __name__ == "__main__":
     syslog_handler.setFormatter(syslog_format)
     try:
         logger.addHandler(syslog_handler)
-    except Exception as E:
+    except Exception:
         logger.exception(
             "Unable to connect to syslog socket %s - syslog not enabled. Exception info:"
             % certgrinder.conf["syslog_socket"]
