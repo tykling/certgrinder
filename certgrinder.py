@@ -64,7 +64,7 @@ class Certgrinder:
         """
         with open(configfile, "r") as f:
             try:
-                self.conf = yaml.load(f, Loader=yaml.BaseLoader)
+                self.conf = yaml.load(f, Loader=yaml.SafeLoader)
                 logger.debug("Running with config: %s" % self.conf)
                 return True
             except Exception:
