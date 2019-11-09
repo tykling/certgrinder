@@ -10,14 +10,17 @@ import binascii
 import hashlib
 import dns.resolver
 import base64
+import typing
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.backends.openssl.rsa import _RSAPrivateKey
+from cryptography.hazmat.backends.openssl.x509 import _CertificateSigningRequest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
 from datetime import datetime
-from pid import PidFile
+from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinder.%s" % __name__)
 __version__ = "0.12.0"
@@ -29,8 +32,15 @@ class Certgrinder:
     """
 
     def __init__(
-        self, configfile, test, showtlsa, checktlsa, nameserver, showspki, debug
-    ):
+        self,
+        configfile: str,
+        test: bool,
+        showtlsa: str,
+        checktlsa: str,
+        nameserver: str,
+        showspki: bool,
+        debug: bool,
+    ) -> None:
         """
         The __init__ method just reads the config file and checks a few things
         """
@@ -48,17 +58,21 @@ class Certgrinder:
             self.conf["syslog_socket"] = "/var/run/log"
 
         # initialise variables
-        self.hook_needed = False
+        self.hook_needed: bool = False
         self.test = test
         self.showtlsa = showtlsa
         self.checktlsa = checktlsa
         self.nameserver = nameserver
         self.showspki = showspki
         self.debug = debug
-        self.tlsatypes = ["3 1 0", "3 1 1", "3 1 2"]
+        self.tlsatypes: typing.List[typing.Tuple[int, int, int]] = [
+            (3, 1, 0),
+            (3, 1, 1),
+            (3, 1, 2),
+        ]
         self.__version__ = __version__
 
-    def read_config(self, configfile):
+    def read_config(self, configfile: str) -> bool:
         """
         Actually reads and parses the yaml config file
         """
@@ -73,7 +87,7 @@ class Certgrinder:
 
     # RSA KEY METHODS
 
-    def load_keypair(self):
+    def load_keypair(self) -> _RSAPrivateKey:
         """
         Checks if the keypair file exists on disk, and calls self.create_keypair() if not
         """
@@ -98,10 +112,9 @@ class Certgrinder:
                 "keypair %s not found, creating new keypair..." % self.keypair_path
             )
             self.create_keypair()
-
         return self.keypair
 
-    def create_keypair(self):
+    def create_keypair(self) -> None:
         """
         Generates an RSA keypair in self.keypair and calls self.save_keypair() to write it to disk
         """
@@ -110,7 +123,7 @@ class Certgrinder:
         )
         self.save_keypair()
 
-    def save_keypair(self):
+    def save_keypair(self) -> None:
         """
         Saves RSA keypair in self.keypair to disk in self.keypair_path
         """
@@ -125,18 +138,18 @@ class Certgrinder:
         os.chmod(self.keypair_path, 0o640)
         logger.debug("saved keypair to %s" % self.keypair_path)
 
-    def get_der_pubkey(self):
+    def get_der_pubkey(self) -> bytes:
         """
         Returns the DER format public key
         """
-        return self.keypair.public_key().public_bytes(
+        return self.keypair.public_key().public_bytes(  # type: ignore
             encoding=serialization.Encoding.DER,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
     # CSR METHODS
 
-    def generate_csr(self, domains):
+    def generate_csr(self, domains: typing.List[str]) -> _CertificateSigningRequest:
         """
         Generates a new CSR in self.csr based on the public key in self.keypair.
         Only sets CN since everything else is removed by LetsEncrypt in the certificate anyway.
@@ -171,7 +184,7 @@ class Certgrinder:
         self.save_csr()
         return self.csr
 
-    def save_csr(self):
+    def save_csr(self) -> None:
         """
         Save the PEM version of the CSR to the path in self.csr_path
         """
@@ -182,10 +195,11 @@ class Certgrinder:
 
     # CERTIFICATE METHODS
 
-    def load_certificate(self):
+    def load_certificate(self) -> typing.Any:
         """
         Reads PEM certificate from the path in self.certificate_path
         """
+        self.certificate: typing.Any
         if os.path.exists(self.certificate_path):
             pem_data = open(self.certificate_path, "rb").read()
             self.certificate = x509.load_pem_x509_certificate(
@@ -194,15 +208,17 @@ class Certgrinder:
         else:
             logger.debug("certificate %s not found" % self.certificate_path)
             self.certificate = False
-
         return self.certificate
 
-    def check_certificate_validity(self):
+    def check_certificate_validity(self) -> bool:
         """
         Checks the validity of the certificate.
         Returns a simpe True or False based on self.conf['cert_renew_threshold_days'],
         and whether the certificate is valid (it. not selfsigned)
         """
+        if self.certificate is False:
+            return False
+
         # check if selfsigned
         if self.certificate.issuer == self.certificate.subject:
             logger.debug(
@@ -233,7 +249,7 @@ class Certgrinder:
             )
             return True
 
-    def get_new_certificate(self):
+    def get_new_certificate(self) -> bool:
         """
         cat the csr over ssh to the certgrinder server.
         """
@@ -256,9 +272,9 @@ class Certgrinder:
 
         # make command a list
         logger.debug("running ssh command: %s" % command)
-        command = [x for x in command.split(" ") if x]
+        commandlist = [x for x in command.split(" ") if x]
         p = subprocess.Popen(
-            command,
+            commandlist,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -323,7 +339,7 @@ class Certgrinder:
 
         return True
 
-    def check_certificate_sanity(self):
+    def check_certificate_sanity(self) -> bool:
         """
         Performs a few sanity checks of the certificate obtained from the certgrinder server:
         - checks that the public key is correct
@@ -359,7 +375,7 @@ class Certgrinder:
         # all good
         return True
 
-    def save_certificate(self, stdout):
+    def save_certificate(self, stdout: bytes) -> None:
         """
         Save the PEM certificate in stdout to the path self.certificate_path
         """
@@ -369,9 +385,10 @@ class Certgrinder:
         os.chmod(self.certificate_path, 0o644)
         logger.info("saved new certificate chain to %s" % self.certificate_path)
 
-    def concat_certkey(self):
+    def concat_certkey(self) -> bool:
         """
         Creates a single file with the private key and the cert chain, in that order
+        Maybe catch some errors and return False somewhere here
         """
         with open(self.concat_path, "wb") as concat:
             with open(self.keypair_path, "rb") as infile:
@@ -383,7 +400,7 @@ class Certgrinder:
 
     # POST RENEW HOOK METHOD
 
-    def run_post_renew_hooks(self):
+    def run_post_renew_hooks(self) -> bool:
         """
         Loops over configured post_renew_hooks and runs them with sudo.
         The path for sudo defaults to /usr/local/bin/sudo but can be set in the config file
@@ -413,11 +430,11 @@ class Certgrinder:
                 logger.debug("Post renew hook %s ended with exit code 0, good." % hook)
 
         # all done
-        return
+        return True
 
     # SPKI METHODS
 
-    def generate_spki(self, derkey):
+    def generate_spki(self, derkey: bytes) -> bytes:
         """
         Generates and returns an pin-sha256 spki hpkp style pin for the provided public key.
         OpenSSL equivalent command is:
@@ -425,34 +442,38 @@ class Certgrinder:
         """
         return base64.b64encode(hashlib.sha256(derkey).digest())
 
-    def show_spki(self):
+    def show_spki(self) -> None:
         """
         Get and print the spki pin for the public key
         """
         spki = self.generate_spki(self.get_der_pubkey())
-        logger.info('pin-sha256="%s"' % spki)
+        logger.info('pin-sha256="%s"' % spki.decode("ASCII"))
 
     # TLSA METHODS
 
-    def generate_tlsa(self, derkey, tlsatype):
+    def generate_tlsa(
+        self, derkey: bytes, tlsatype: typing.Tuple[int, int, int]
+    ) -> typing.Union[str, bool]:
         """
         Generates and returns the data part of a TLSA record of the requested type,
         based on the DER format public key supplied.
         """
-        if tlsatype == "3 1 0":
+        if tlsatype == (3, 1, 0):
             # Generate DANE-EE Publickey Full (3 1 0) TLSA Record
-            return binascii.hexlify(derkey)
-        elif tlsatype == "3 1 1":
+            return binascii.hexlify(derkey).decode("ASCII")
+        elif tlsatype == (3, 1, 1):
             # Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record
             return hashlib.sha256(derkey).hexdigest()
-        elif tlsatype == "3 1 2":
+        elif tlsatype == (3, 1, 2):
             # Generate DANE-EE Publickey SHA512 (3 1 2) TLSA Record
             return hashlib.sha512(derkey).hexdigest()
         else:
-            logger.error("Unsupported TLSA type: %s" % tlsatype)
+            logger.error("Unsupported TLSA type: %s %s %s" % tlsatype)
         return False
 
-    def lookup_tlsa(self, tlsatype, service, domain):
+    def lookup_tlsa(
+        self, tlsatype: typing.Tuple[int, int, int], service: str, domain: str
+    ) -> typing.Union[typing.List[str], bool]:
         """
         Lookup TLSA records in DNS for the given service and domain.
         loop over the responses and look for the requested tlsatype.
@@ -464,7 +485,7 @@ class Certgrinder:
                     "Looking up TLSA record in DNS using DNS server %s: %s.%s %s"
                     % (self.nameserver, service, domain, tlsatype)
                 )
-                res = dns.resolver.Resolver(configure=False)
+                res = dns.resolver.Resolver(configure=False)  # type: ignore
                 res.nameservers = [self.nameserver]
             else:
                 logger.debug(
@@ -501,19 +522,20 @@ class Certgrinder:
             # is this reply of the right type?
             replytype = "%s %s %s" % (reply.usage, reply.selector, reply.mtype)
             logger.debug("Found TLSA record type %s" % replytype)
-            if tlsatype == replytype:
-                result.append(binascii.hexlify(reply.cert))
+            if " ".join(map(str, tlsatype)) == replytype:
+                result.append(binascii.hexlify(reply.cert).decode("ASCII"))
         if result:
             logger.debug(
                 "Returning %s TLSA records of type %s" % (len(result), tlsatype)
             )
         else:
             logger.debug(
-                "TLSA records found, but none of the type %s were found" % tlsatype
+                "TLSA records found, but none of the type %s %s %s were found"
+                % tlsatype
             )
         return result
 
-    def print_tlsa(self, service, domains):
+    def print_tlsa(self, service: str, domains: typing.List[str]) -> None:
         """
         Outputs the TLSA records for the given service and domain,
         as returned by self.generate_tlsa()
@@ -526,9 +548,12 @@ class Certgrinder:
             logger.info("TLSA records for %s.%s:" % (service, domain))
             for tlsatype in self.tlsatypes:
                 tlsadata = self.generate_tlsa(derkey, tlsatype)
-                logger.info("%s.%s %s %s" % (service, domain, tlsatype, tlsadata))
+                logger.info(
+                    "%s.%s %s %s"
+                    % (service, domain, " ".join(map(str, tlsatype)), tlsadata)
+                )
 
-    def check_tlsa(self, service, domains):
+    def check_tlsa(self, service: str, domains: typing.List[str]) -> None:
         """
         Loops over domains and checks the TLSA records in DNS.
         Outputs the data needed to add/fix records when errors are found.
@@ -541,11 +566,12 @@ class Certgrinder:
         for domain in domains:
             logger.info("Looking up TLSA records for %s.%s" % (service, domain))
             for tlsatype in self.tlsatypes:
+                tlsastr = " ".join(map(str, tlsatype))
                 dns_reply = self.lookup_tlsa(tlsatype, service, domain)
-                if dns_reply:
+                if not isinstance(dns_reply, bool):
                     logger.debug(
                         "Received DNS response for TLSA type %s: %s answers - checking data..."
-                        % (tlsatype, len(dns_reply))
+                        % (tlsastr, len(dns_reply))
                     )
                     # reply for this tlsatype found, check data
                     generated = self.generate_tlsa(derkey, tlsatype)
@@ -554,42 +580,42 @@ class Certgrinder:
                         if reply == generated:
                             logger.info(
                                 "TLSA record for name %s.%s type %s found in DNS matches the local key, good."
-                                % (service, domain, tlsatype)
+                                % (service, domain, tlsastr)
                             )
                             found = True
                             break
                     if not found:
                         logger.warning(
                             "None of the TLSA records found in DNS for the name %s.%s of type %s match the local key. DNS needs to be updated:"
-                            % (service, domain, tlsatype)
+                            % (service, domain, tlsastr)
                         )
                         logger.warning(
                             "%s.%s %s %s"
                             % (
                                 service,
                                 domain,
-                                tlsatype,
+                                tlsastr,
                                 self.generate_tlsa(derkey, tlsatype),
                             )
                         )
                 else:
                     logger.warning(
                         "No TLSA records for name %s.%s of type %s was found in DNS. This record needs to be added:"
-                        % (service, domain, tlsatype)
+                        % (service, domain, tlsastr)
                     )
                     logger.warning(
                         "%s.%s %s %s"
                         % (
                             service,
                             domain,
-                            tlsatype,
+                            tlsastr,
                             self.generate_tlsa(derkey, tlsatype),
                         )
                     )
 
     # MAIN METHOD
 
-    def grind(self, domains):
+    def grind(self, domains: typing.List[str]) -> bool:
         """
         The main engine of Certgrinder. Sets paths and loads the keypair (or generates one if needed).
         Runs showtlsa and checktlsa mode if requested. If not, the certificate is loaded.

@@ -3,4 +3,5 @@ venv/
 *.pyc
 certificates/
 *.swp
+.mypy_cache/
 

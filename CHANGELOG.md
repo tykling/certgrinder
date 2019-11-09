@@ -9,6 +9,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - Support python3 instead of (NOT in addition to) python2
 - Format code with Black
+- Check code with flake8
+- Add type annotations and check code with mypy --strict
 
 ### Fixed
 - pyyaml load deprecation warning: ./certgrinder.py:54: YAMLLoadWarning: calling yaml.load() without Loader=... is deprecated, as the default Loader is unsafe. Please read https://msg.pyyaml.org/load for full details.

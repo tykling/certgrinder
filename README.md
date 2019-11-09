@@ -1,5 +1,9 @@
 # Certgrinder
 
+[![Checked with mypy](badges/mypy_badge.svg)](http://mypy-lang.org/)
+[![Checked with flake8](badges/flake8-OK-green.svg)](http://flake8.pycqa.org/en/latest/)
+[![Codestyle black](badges/black.svg)](https://github.com/psf/black/)
+
 ## Background
 Certgrinder is a set of scripts to handle Letsencrypt certificate signing on a central host, rather than on the servers which need the certificates. Read more at https://blog.tyk.nu/blog/introducing-certgrinder-a-letsencrypt-ssh-proxy/
 
