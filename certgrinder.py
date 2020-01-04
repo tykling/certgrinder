@@ -13,17 +13,19 @@ import base64
 import typing
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.backends.openssl.rsa import _RSAPrivateKey
-from cryptography.hazmat.backends.openssl.x509 import _CertificateSigningRequest
+from cryptography.hazmat.backends.openssl.rsa import _RSAPrivateKey  # type: ignore
+from cryptography.hazmat.backends.openssl.x509 import (  # type: ignore
+    _CertificateSigningRequest,
+)
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography import x509
-from cryptography.x509.oid import NameOID
+from cryptography.x509.oid import NameOID  # type: ignore
 from cryptography.hazmat.primitives import hashes, serialization
 from datetime import datetime
 from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinder.%s" % __name__)
-__version__ = "0.12.0"
+__version__ = "0.12.1"
 
 
 class Certgrinder:
@@ -176,7 +178,9 @@ class Certgrinder:
                     ]
                 )
             )
-            .add_extension(x509.SubjectAlternativeName(domainlist), critical=False)
+            .add_extension(
+                x509.SubjectAlternativeName(domainlist), critical=False  # type: ignore
+            )
             .sign(self.keypair, hashes.SHA256(), default_backend())
         )
 

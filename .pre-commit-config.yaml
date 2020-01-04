@@ -8,9 +8,4 @@ repos:
     rev: "v2.3.0"
     hooks:
     - id: "flake8"
-  - repo: "https://github.com/pre-commit/mirrors-mypy"
-    rev: 'master'
-    hooks:
-    - id: "mypy"
-      args: ["--strict"]
 

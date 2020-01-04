@@ -63,7 +63,7 @@ Create a dedicated user, usually the username is just `certgrinder`. The user ne
 #### Get Certgrinder Code
 Get the code from Git, usually in a `certgrinder` folder in the Certgrinder users homedir. Get the latest release, `master` is not always in a usable state: https://github.com/tykling/certgrinder/releases
 
-    git clone -b 'v0.12.0' --single-branch --depth 1 https://github.com/tykling/certgrinder ~/certgrinder
+    git clone -b 'v0.12.1' --single-branch --depth 1 https://github.com/tykling/certgrinder ~/certgrinder
 
 #### Conyfigure SSH Access
 Certgrinder works using SSH. Each Certgrinder client must now generate an SSH key which is to be added to `~/.ssh/authorized_keys` on the Certgrinder server. Something like this works:
@@ -87,7 +87,7 @@ I usually run Certgrinder under a seperate user on the Certgrinder clients. The 
 #### Get Certgrinder Code
 Get the code from Git, usually in a `certgrinder` folder in the Certgrinder users homedir. Get the latest release, `master` is not always in a usable state: https://github.com/tykling/certgrinder/releases
 
-    git clone -b 'v0.12.0' --single-branch --depth 1 https://github.com/tykling/certgrinder ~/certgrinder
+    git clone -b 'v0.12.1' --single-branch --depth 1 https://github.com/tykling/certgrinder ~/certgrinder
 
 #### Config File
 Certgrinders config file is in yaml format. Certgrinder comes with a certgrinder.yml.dist file which should be fairly selfexplanatory. Certgrinder expects to find it in the homedir of the user. See also the Files section later in this README.
@@ -212,7 +212,7 @@ The certgrinder.py Python script is meant to be run under a dedicated user and h
                           [-p] [-d] [-q] [-v]
                           configfile
 
-    Certgrinder version 0.12.0. See the README.md file for more info.
+    Certgrinder version 0.12.1. See the README.md file for more info.
 
     positional arguments:
       configfile            The path to the certgrinder.yml config file to use,

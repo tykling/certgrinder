@@ -5,7 +5,19 @@ All notable changes to Certgrinder will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [v0.12.0][unreleased]
+## [v0.12.1][4-jan-2020]
+### Added
+- Add RELEASE.md so I don't forget how to do this
+
+### Fixed
+- Fixed release date for v0.12.0 in CHANGELOG.md
+- Add a few type: ignore for some of the cryptography imports and calls to make newer mypy happy
+
+### Changed
+- Update mypy to 0.761 and add to requirements-dev.txt
+
+
+## [v0.12.0][4-jan-2020]
 ### Changed
 - Support python3 instead of (NOT in addition to) python2
 - Format code with Black
