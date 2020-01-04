@@ -5,6 +5,11 @@ All notable changes to Certgrinder will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.13.0][unreleased]
+### Changed
+- Move client files into client/ and server files into server/
+
+
 ## [v0.12.1][4-jan-2020]
 ### Added
 - Add RELEASE.md so I don't forget how to do this

@@ -177,7 +177,7 @@ The operation is pretty simple:
     [certgrinder@znc ~]$
 
 ## Files
-Certgrinder primarily consists of two scripts. Most of the functionality is in a Python script called `certgrinder.py` which runs on all the Certgrinder clients. The other one is written in Bourne sh, runs on the Certgrinder server (called over SSH by the clients), and is called "csrgrinder".
+Certgrinder primarily consists of two scripts. Most of the functionality is in a Python script called `client/certgrinder.py` which runs on all the Certgrinder clients. The other one is written in Bourne sh, runs on the Certgrinder server (called over SSH by the clients), and is called "server/csrgrinder".
 
 A typical homedir for a Certgrinder client user looks like this:
 
@@ -207,7 +207,7 @@ The certgrinder.py Python script is meant to be run under a dedicated user and h
 
 `certgrinder.py` comes with a `requirements.txt` file which can be used to install the needed Python packages from pip. The script has a few different commandline options which are shown below:
 
-    [certgrinder@myserver ~]$ ./virtualenv/bin/python certgrinder/certgrinder.py -h
+    [certgrinder@myserver ~]$ ./virtualenv/bin/python certgrinder/client/certgrinder.py -h
     usage: certgrinder.py [-h] [-t] [-s SHOWTLSA] [-c CHECKTLSA] [-n NAMESERVER]
                           [-p] [-d] [-q] [-v]
                           configfile
