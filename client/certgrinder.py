@@ -800,7 +800,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # instantiate Certgrinder object
-    certgrinder = Certgrinder(**args)
+    certgrinder = Certgrinder(**dict(args))
 
     # connect to syslog
     syslog_handler = logging.handlers.SysLogHandler(
