@@ -703,9 +703,9 @@ class Certgrinder:
 
 if __name__ == "__main__":
     """
-        Main method. Parse arguments, configure logging, and then
-        loop over sets of domains in the config and call certgrinder.grind() for each.
-        """
+    Main method. Parse arguments, configure logging, and then
+    loop over sets of domains in the config and call certgrinder.grind() for each.
+    """
     # parse commandline arguments
     parser = argparse.ArgumentParser(
         description="Certgrinder version %s. See the README.md file for more info."
@@ -780,7 +780,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # configure the log format used for stdout depending on the requested loglevel
+    # define the log format used for stdout depending on the requested loglevel
     if args.log_level == logging.DEBUG:
         console_logformat = (
             "%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s"
@@ -789,6 +789,7 @@ if __name__ == "__main__":
     else:
         console_logformat = "%(asctime)s %(levelname)s: %(message)s"
         debug = False
+    # configure the log format used for stdout
     logging.basicConfig(
         level=args.log_level, format=console_logformat, datefmt="%Y-%m-%d %H:%M:%S %z"
     )
@@ -798,16 +799,8 @@ if __name__ == "__main__":
         logger.info("Certgrinder version %s" % __version__)
         sys.exit(0)
 
-    # instatiate Certgrinder object
-    certgrinder = Certgrinder(
-        configfile=args.configfile,
-        test=args.test,
-        showtlsa=args.showtlsa,
-        checktlsa=args.checktlsa,
-        nameserver=args.nameserver,
-        showspki=args.showspki,
-        debug=debug,
-    )
+    # instantiate Certgrinder object
+    certgrinder = Certgrinder(**args)
 
     # connect to syslog
     syslog_handler = logging.handlers.SysLogHandler(
