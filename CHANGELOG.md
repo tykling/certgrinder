@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - Move client files into client/ and server files into server/, future CHANGELOG.md entries will be prefixed with Client: or Server:
 - Client: Call Certgrinder class with ** instead of specifying the individual args
+- Client: Reorder commandline arguments alphabetically
 
 
 ## [v0.12.1][4-jan-2020]
