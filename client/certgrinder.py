@@ -25,7 +25,7 @@ from datetime import datetime
 from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinder.%s" % __name__)
-__version__ = "0.12.1"
+__version__ = "0.13.0"
 
 
 class Certgrinder:

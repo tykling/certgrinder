@@ -5,7 +5,7 @@
 # The latest version can be found on Github at
 # https://github.com/tykling/certgrinder
 ####################################################
-VERSION="v0.12.1"
+VERSION="v0.13.0"
 
 # get CSR from stdin and write to a temp file
 STDIN=$(cat)

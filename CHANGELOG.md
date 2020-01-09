@@ -7,7 +7,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.13.0][unreleased]
 ### Changed
-- Move client files into client/ and server files into server/
+- Move client files into client/ and server files into server/, future CHANGELOG.md entries will be prefixed with Client: or Server:
+- Client: Call Certgrinder class with ** instead of specifying the individual args
 
 
 ## [v0.12.1][4-jan-2020]
