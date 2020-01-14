@@ -11,6 +11,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Client: Call Certgrinder class with ** instead of specifying the individual args
 - Client: Reorder commandline arguments alphabetically
 
+### Added
+- Client: Add -C argument which simply checks if the certificates are present and valid and have more than 30 days validity left. Exit code 0 if all is well, exit code 1 if one or more certificates needs attention.
+
 
 ## [v0.12.1][4-jan-2020]
 ### Added

@@ -42,6 +42,7 @@ class Certgrinder:
         nameserver: str,
         showspki: bool,
         debug: bool,
+        check: bool,
     ) -> None:
         """
         The __init__ method just reads the config file and checks a few things
@@ -67,6 +68,7 @@ class Certgrinder:
         self.nameserver = nameserver
         self.showspki = showspki
         self.debug = debug
+        self.check: bool = check
         self.tlsatypes: typing.List[typing.Tuple[int, int, int]] = [
             (3, 1, 0),
             (3, 1, 1),
@@ -665,6 +667,11 @@ class Certgrinder:
             self.show_spki()
             return True
 
+        # are we running in check mode?
+        if self.check:
+            self.load_certificate()
+            return self.check_certificate_validity()
+
         # attempt to load certificate (if we even have one)
         if self.load_certificate():
             logger.debug(
@@ -722,6 +729,14 @@ if __name__ == "__main__":
         dest="checktlsa",
         default=False,
         help="Tell certgrinder to lookup TLSA records for the given service in the DNS and compare with what we have locally, for example: --checktlsa _853._tcp",
+    )
+    parser.add_argument(
+        "-C",
+        "--check",
+        dest="check",
+        default=False,
+        action="store_true",
+        help="Tell certgrinder check certificate validity and exit. If any certificates are missing or have less than 30 days validity the exit code will be 1.",
     )
     parser.add_argument(
         "-d",
@@ -800,7 +815,16 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # instantiate Certgrinder object
-    certgrinder = Certgrinder(**dict(args))
+    certgrinder = Certgrinder(
+        configfile=args.configfile,
+        test=args.test,
+        showtlsa=args.showtlsa,
+        checktlsa=args.checktlsa,
+        nameserver=args.nameserver,
+        showspki=args.showspki,
+        debug=debug,
+        check=args.check,
+    )
 
     # connect to syslog
     syslog_handler = logging.handlers.SysLogHandler(
@@ -821,6 +845,7 @@ if __name__ == "__main__":
     with PidFile(piddir=certgrinder.conf["path"]):
         logger.info("Certgrinder %s running" % __version__)
         counter = 0
+        error = False
         for domains in certgrinder.conf["domainlist"]:
             counter += 1
             domainlist = domains.split(",")
@@ -838,11 +863,18 @@ if __name__ == "__main__":
                     "-- Error processing domainset %s of %s: %s"
                     % (counter, len(certgrinder.conf["domainlist"]), domains)
                 )
+                error = True
 
         if certgrinder.hook_needed:
             logger.info(
                 "At least one certificate was renewed, running post renew hook..."
             )
             certgrinder.run_post_renew_hooks()
+
+        if error and certgrinder.check:
+            logger.error(
+                "One or more certificates are missing, not valid, or have less than 30 days validity left, exiting with code 1"
+            )
+            sys.exit(1)
 
         logger.info("All done, exiting cleanly")
