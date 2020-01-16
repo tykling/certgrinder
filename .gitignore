@@ -4,4 +4,8 @@ venv/
 certificates/
 *.swp
 .mypy_cache/
+build/
+dist/
+*.egg-info
+_build/
 
