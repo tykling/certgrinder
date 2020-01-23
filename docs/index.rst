@@ -7,6 +7,8 @@ Welcome to Certgrinder's documentation!
 
    introduction
    challenge-types
-   certgrinder-server
-   certgrinder-client
+   certgrinder
+   certgrinder-class
+   certgrinderd
+   certgrinderd-class
 

@@ -1,13 +1,18 @@
 # Change Log
-This is the changelog for certgrinder-server. The latest version of this file can always be found [on Github](https://github.com/tykling/certgrinder/blob/master/certgrinder-server/CHANGELOG.md)
+This is the changelog for certgrinder. The latest version of this file can always be found [on Github](https://github.com/tykling/certgrinder/blob/master/client/CHANGELOG.md)
 
-All notable changes to certgrinder-server will be documented in this file.
+All notable changes to certgrinder will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.13.0][unreleased]
+### Added
+- Create Python package `certgrinder` for the Certgrinder client
+- Add -C argument which simply checks if the certificates are present and valid and have more than 30 days validity left. Exit code 0 if all is well, exit code 1 if one or more certificates needs attention.
+
 ### Changed
-- Move client files into certgrinder-client/ and server files into certgrinder-server/, each with their own CHANGELOG.md
+- Move client files into client/ and server files into server/, each with their own CHANGELOG.md, in preparation for Python packaging.
+- Reorder commandline arguments alphabetically
 
 
 ## [v0.12.1][4-jan-2020]

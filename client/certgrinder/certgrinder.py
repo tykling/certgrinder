@@ -811,7 +811,7 @@ if __name__ == "__main__":
 
     # show version and exit?
     if args.version:
-        logger.info("Certgrinder version %s" % __version__)
+        logger.info("certgrinder version %s" % __version__)
         sys.exit(0)
 
     # instantiate Certgrinder object

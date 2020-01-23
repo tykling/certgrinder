@@ -1,0 +1,20 @@
+---
+####################################################
+# certgrinderd configuration file.
+# This file is part of Certgrinder.
+# The latest version can be found on Github at
+# https://github.com/tykling/certgrinder
+####################################################
+#acmezone: "acme.example.com"
+#authhook: "manual-auth-hook"
+#certbotpath: "/usr/local/bin/certbot"
+#cleanuphook: "manual-cleanup-hook"
+#debug: False
+#pidpath: "/tmp"
+#sudopath: "/usr/local/bin/sudo"
+#syslog_socket: "/var/run/log"
+#syslog_facility: "LOG_USER"
+#tempdir: "/tmp"
+#test: False
+#webroot: "/usr/local/www/wwwroot"
+

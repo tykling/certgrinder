@@ -9,6 +9,9 @@ This section explains the steps to install a Certgrinder server.
 
 Install Server
 ~~~~~~~~~~~~~~
+You can install certgrinderd from pip:
+``pip install certgrinderd``
+
 Create a VM or Jail or Docker thing or whatever somewhere. This will be your Certgrinder server. It will need to have ``Certbot`` installed and ``sshd`` running. It also needs to be accessible over SSH from all your Certgrinder clients. Furthermore, if you intend to serve the challenges locally you also need port 53 and/or 80 open from the outside world (a portforward will work).
 
 
@@ -18,13 +21,6 @@ Create a dedicated user, usually the username is just ``certgrinder``. The user 
 
     certgrinder ALL=(ALL) NOPASSWD: /usr/local/bin/certbot
     Defaults env_keep += "ACMEZONE WEBROOT"
-
-
-Get Certgrinder Code
-~~~~~~~~~~~~~~~~~~~~
-Get the code from Git, usually in a ``certgrinder`` folder in the Certgrinder users homedir. Get the latest release from https://github.com/tykling/certgrinder/releases since ``master`` is not always in a usable state::
-
-    git clone -b 'v0.13.0' --single-branch --depth 1 https://github.com/tykling/certgrinder ~/certgrinder
 
 
 Configure SSH Access
