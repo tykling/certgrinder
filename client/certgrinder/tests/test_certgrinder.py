@@ -24,7 +24,7 @@ def test_certgrinder(pebble_server, certgrinder_configfile, tmp_path_factory):
     )
     certgrinder.main()
 
-    # Pebble regenerates the CA root and intermediate on each run. Download and return them.
+    # Pebble regenerates the CA root and intermediate on each run
     print("downloading root cert ...")
     tls_context = ssl.create_default_context(
         cafile=pathlib.Path.home()
