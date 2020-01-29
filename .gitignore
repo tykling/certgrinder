@@ -8,4 +8,6 @@ build/
 dist/
 *.egg-info
 _build/
+.tox/
+*.pem
 

@@ -22,7 +22,6 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID  # type: ignore
 from cryptography.hazmat.primitives import hashes, serialization
 from datetime import datetime
-from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinder.%s" % __name__)
 __version__ = "0.13.0"
@@ -36,7 +35,7 @@ class Certgrinder:
     def __init__(
         self,
         configfile: str,
-        test: bool,
+        staging: bool,
         showtlsa: str,
         checktlsa: str,
         nameserver: str,
@@ -62,7 +61,7 @@ class Certgrinder:
 
         # initialise variables
         self.hook_needed: bool = False
-        self.test = test
+        self.staging = staging
         self.showtlsa = showtlsa
         self.checktlsa = checktlsa
         self.nameserver = nameserver
@@ -261,20 +260,9 @@ class Certgrinder:
         """
         logger.info("ready to get signed certificate using csr %s" % self.csr_path)
 
-        # put the ssh command together
-        if "bind_ip" in self.conf:
-            bind_ip = "-b %s" % self.conf["bind_ip"]
-        else:
-            bind_ip = ""
-
-        command = "/usr/bin/ssh %(bind_ip)s %(user)s@%(server)s %(csrgrinder)s" % {
-            "bind_ip": bind_ip,
-            "user": "certgrinder" if "user" not in self.conf else self.conf["user"],
-            "server": self.conf["server"],
-            "csrgrinder": self.conf["csrgrinder_path"],
-        }
-        if self.test:
-            command += " test"
+        command = self.conf["certgrinderd"]
+        if self.staging:
+            command += " staging"
 
         # make command a list
         logger.debug("running ssh command: %s" % command)
@@ -296,7 +284,7 @@ class Certgrinder:
             self.certificate = x509.load_pem_x509_certificate(stdout, default_backend())
         except Exception as E:
             logger.error(
-                "The SSH call to the Certgrinder server did not return a valid certificate. Exception: %s"
+                "The Certgrinder server did not return a valid certificate. Exception: %s"
                 % E
             )
 
@@ -309,11 +297,11 @@ class Certgrinder:
                 # output stdout (if any)
                 if stdout:
                     logger.debug("This is stdout from the ssh call:")
-                    logger.debug(stdout.strip())
+                    logger.debug(stdout.strip().decode("utf-8"))
                 # output stderr (if any)
                 if stderr:
                     logger.debug("this is stderr from the ssh call:")
-                    logger.debug(stderr.strip())
+                    logger.debug(stderr.strip().decode("utf-8"))
             else:
                 logger.error(
                     "Rerun in debug mode (-d / --debug) to see more information, or check the log on the Certgrinder server"
@@ -619,7 +607,47 @@ class Certgrinder:
                         )
                     )
 
-    # MAIN METHOD
+    # MAIN METHODS
+    def main(self) -> None:
+        """
+        Loop over sets of domains in the config and call self.grind() for each.
+        """
+        # loop over domains
+        logger.info("Certgrinder %s running" % __version__)
+        counter = 0
+        error = False
+        for domains in self.conf["domainlist"]:
+            counter += 1
+            domainlist = domains.split(",")
+            logger.info(
+                "-- Processing domainset %s of %s: %s"
+                % (counter, len(self.conf["domainlist"]), domains)
+            )
+            if self.grind(domainlist):
+                logger.info(
+                    "-- Done processing domainset %s of %s: %s"
+                    % (counter, len(self.conf["domainlist"]), domains)
+                )
+            else:
+                logger.error(
+                    "-- Error processing domainset %s of %s: %s"
+                    % (counter, len(self.conf["domainlist"]), domains)
+                )
+                error = True
+
+        if self.hook_needed:
+            logger.info(
+                "At least one certificate was renewed, running post renew hook..."
+            )
+            self.run_post_renew_hooks()
+
+        if error and self.check:
+            logger.error(
+                "One or more certificates are missing, not valid, or have less than 30 days validity left, exiting with code 1"
+            )
+            sys.exit(1)
+
+        logger.info("All done, exiting cleanly")
 
     def grind(self, domains: typing.List[str]) -> bool:
         """
@@ -710,8 +738,7 @@ class Certgrinder:
 
 if __name__ == "__main__":
     """
-    Main method. Parse arguments, configure logging, and then
-    loop over sets of domains in the config and call certgrinder.grind() for each.
+    Initialise script. Parse arguments, configure logging, and then call main() function
     """
     # parse commandline arguments
     parser = argparse.ArgumentParser(
@@ -778,12 +805,12 @@ if __name__ == "__main__":
         help="Tell certgrinder to generate and print TLSA records for the given service, for example: --showtlsa _853._tcp",
     )
     parser.add_argument(
-        "-t",
-        "--test",
-        dest="test",
+        "-S",
+        "--staging",
+        dest="staging",
         default=False,
         action="store_true",
-        help="Tell the certgrinder server to use LetsEncrypt staging servers, for test purposes.",
+        help="Tell the certgrinder server to use LetsEncrypt staging servers, for testing purposes.",
     )
     parser.add_argument(
         "-v",
@@ -817,7 +844,7 @@ if __name__ == "__main__":
     # instantiate Certgrinder object
     certgrinder = Certgrinder(
         configfile=args.configfile,
-        test=args.test,
+        staging=args.staging,
         showtlsa=args.showtlsa,
         checktlsa=args.checktlsa,
         nameserver=args.nameserver,
@@ -841,40 +868,5 @@ if __name__ == "__main__":
             % certgrinder.conf["syslog_socket"]
         )
 
-    # write pidfile and loop over domaintest
-    with PidFile(piddir=certgrinder.conf["path"]):
-        logger.info("Certgrinder %s running" % __version__)
-        counter = 0
-        error = False
-        for domains in certgrinder.conf["domainlist"]:
-            counter += 1
-            domainlist = domains.split(",")
-            logger.info(
-                "-- Processing domainset %s of %s: %s"
-                % (counter, len(certgrinder.conf["domainlist"]), domains)
-            )
-            if certgrinder.grind(domainlist):
-                logger.info(
-                    "-- Done processing domainset %s of %s: %s"
-                    % (counter, len(certgrinder.conf["domainlist"]), domains)
-                )
-            else:
-                logger.error(
-                    "-- Error processing domainset %s of %s: %s"
-                    % (counter, len(certgrinder.conf["domainlist"]), domains)
-                )
-                error = True
-
-        if certgrinder.hook_needed:
-            logger.info(
-                "At least one certificate was renewed, running post renew hook..."
-            )
-            certgrinder.run_post_renew_hooks()
-
-        if error and certgrinder.check:
-            logger.error(
-                "One or more certificates are missing, not valid, or have less than 30 days validity left, exiting with code 1"
-            )
-            sys.exit(1)
-
-        logger.info("All done, exiting cleanly")
+    # call main method
+    certgrinder.main()

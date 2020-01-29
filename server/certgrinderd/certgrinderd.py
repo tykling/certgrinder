@@ -7,7 +7,6 @@ import sys
 import subprocess
 import tempfile
 import typing
-from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinderd.%s" % __name__)
 __version__ = "0.13.0"
@@ -23,16 +22,20 @@ class Certgrinderd:
         "configfile": "~/certgrinderd.yml",
         "acmezone": "acme.example.com",
         "authhook": "manual-auth-hook",
-        "certbotpath": "/usr/local/bin/certbot",
+        "certbot_command": "/usr/local/bin/sudo /usr/local/bin/certbot",
         "cleanuphook": "manual-cleanup-hook",
         "debug": False,
         "pidpath": "/tmp",
-        "sudopath": "/usr/local/bin/sudo",
-        "syslog_socket": "/var/run/log",
-        "syslog_facility": "LOG_USER",
+        "syslog_socket": None,
+        "syslog_facility": None,
         "tempdir": "/tmp",
         "test": False,
         "webroot": "/usr/local/www/wwwroot",
+        "acmeserver_url": None,
+        "verify_acmeserver_cert": True,
+        "certbot_configdir": None,
+        "certbot_workdir": None,
+        "certbot_logsdir": None,
     }
 
     def __init__(self, config: typing.Dict[str, typing.Union[str, bool, None]]) -> None:
@@ -42,15 +45,18 @@ class Certgrinderd:
         self.conf.update(config)
         logger.debug("Running with config: %s" % self.conf)
 
-    def process_csr(self) -> None:
+    def process_csr(self, csrpath: str) -> None:
         """
         Loop over challenge types and run Certbot for each until we get a cert.
         """
         # put the certbot env together
-        env = {
-            "ACMEZONE": str(self.conf["acmezone"]),
-            "WEBROOT": str(self.conf["webroot"]),
-        }
+        env = os.environ.copy()
+        env.update(
+            {
+                "ACMEZONE": str(self.conf["acmezone"]),
+                "WEBROOT": str(self.conf["webroot"]),
+            }
+        )
 
         # loop over challengetypes and run certbot for each
         for challengetype in ["dns", "http"]:
@@ -68,11 +74,11 @@ class Certgrinderd:
             }
             # ignore in mypy for now https://github.com/python/typeshed/issues/3449
             certfh, certpath = tempfile.mkstemp(**kwargs)  # type: ignore
+            os.unlink(certpath)
 
             # put the command together
             command: typing.List[str] = [
-                str(self.conf["sudopath"]),
-                str(self.conf["certbotpath"]),
+                str(self.conf["certbot_command"]),
                 "certonly",
                 "--non-interactive",
                 "--quiet",
@@ -91,8 +97,31 @@ class Certgrinderd:
                 str(csrpath),
                 "--fullchain-path",
                 str(certpath),
+                "--agree-tos",
+                "--email",
+                str(self.conf["acme_email"]),
             ]
-            logger.debug("Running Certbot command: {command.join(' ')}")
+
+            if self.conf["acmeserver_url"]:
+                command.append("--server")
+                command.append(str(self.conf["acmeserver_url"]))
+
+            if not self.conf["verify_acmeserver_cert"]:
+                command.append("--no-verify-ssl")
+
+            if self.conf["certbot_configdir"]:
+                command.append("--config-dir")
+                command.append(str(self.conf["certbot_configdir"]))
+
+            if self.conf["certbot_workdir"]:
+                command.append("--work-dir")
+                command.append(str(self.conf["certbot_workdir"]))
+
+            if self.conf["certbot_logsdir"]:
+                command.append("--logs-dir")
+                command.append(str(self.conf["certbot_logsdir"]))
+
+            logger.debug(f"Running Certbot command: {' '.join(command)}")
 
             # call certbot
             p = subprocess.run(command, capture_output=True, env=env)
@@ -103,28 +132,28 @@ class Certgrinderd:
                 )
                 with open(certpath) as f:
                     print(f.read())
+                # TODO: this might fail since certbot runs as root..
+                os.remove(certpath)
                 # no need to try more challenges, we have a cert
                 break
             else:
                 logger.error(
                     f"Failed to get a certificate using challenge type {challengetype}. Certbot exit code was {p.returncode}. Certbot output was:"
                 )
-                logger.error(p.stderr)
+                logger.error(p.stderr.strip().decode("utf-8"))
 
 
-if __name__ == "__main__":
+def main(configpath: str) -> None:
     """
-    Main method. Read config and configure logging.
+    Main function. Read config and configure logging.
     Then get CSR from stdin and call Certbot once for each challenge type.
     """
-    with open("~/certgrinderd.yml", "r") as f:
+    with open(configpath, "r") as f:
         try:
             config = yaml.load(f, Loader=yaml.SafeLoader)
             logger.debug("Loaded config from file: %s" % config)
         except Exception:
-            logger.exception(
-                "Unable to read config file ~/certgrinderd.yml, bailing out."
-            )
+            logger.exception(f"Unable to read config file {configpath} - bailing out.")
             sys.exit(1)
 
     # instantiate Certgrinderd class
@@ -148,32 +177,36 @@ if __name__ == "__main__":
             )
             sys.exit(1)
 
-    # write pidfile in context
-    with PidFile(piddir=certgrinderd.conf["pidpath"]) as pidfile:
-        logger.info(f"certgrinderd {__version__} running with pid {pidfile}")
+    logger.info(f"certgrinderd {__version__} running")
 
-        stdin = sys.stdin.read()
-        csrfd, csrpath = tempfile.mkstemp(
-            suffix=".csr", prefix="certgrinderd-", dir=str(certgrinderd.conf["tempdir"])
-        )
-        with os.fdopen(csrfd) as csrfh:
-            csrfh.write(stdin)
-        logger.info(
-            f"Got {len(stdin)} bytes CSR from client {os.environ['SSH_CLIENT']} saved to {csrpath} (debug mode: {certgrinderd.conf['test']})"
-        )
+    stdin = sys.stdin.read()
+    csrfd, csrpath = tempfile.mkstemp(
+        suffix=".csr", prefix="certgrinderd-", dir=str(certgrinderd.conf["tempdir"])
+    )
+    with os.fdopen(csrfd, "w") as csrfh:
+        csrfh.write(stdin)
 
-        # TODO: use cryptography or openssl to check if the CSR is valid before calling certbot
+    # logger.info(f"Got {len(stdin)} bytes CSR from client {os.environ['SSH_CLIENT']} saved to {csrpath} (debug mode: {certgrinderd.conf['test']})")
 
-        # TODO: check if the list of names are permitted for this SSH key
+    # TODO: use cryptography or openssl to check if the CSR is valid before calling certbot
 
-        # alright, get the cert for this CSR
-        certgrinderd.process_csr()
+    # TODO: check if the list of names are permitted for this SSH key
 
-        # clean up temp files
-        if os.path.exists(str(certgrinderd.conf["csrpath"])):
-            os.remove(str(certgrinderd.conf["csrpath"]))
-        # TODO: this might fail since certbot runs as root..
-        if os.path.exists(str(certgrinderd.conf["certpath"])):
-            os.remove(str(certgrinderd.conf["certpath"]))
+    # alright, get the cert for this CSR
+    certgrinderd.process_csr(csrpath)
 
-        logger.info("All done, certgrinderd exiting cleanly.")
+    # clean up temp files
+    if os.path.exists(csrpath):
+        os.remove(csrpath)
+
+    logger.info("All done, certgrinderd exiting cleanly.")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 2:
+        configpath = sys.argv[1]
+    else:
+        configpath = "~/certgrinderd.yml"
+
+    # call the main method
+    main(configpath=configpath)

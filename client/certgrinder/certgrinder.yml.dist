@@ -1,25 +1,17 @@
 ---
 # where to put keys and certificates and pidfile
-path: "/usr/home/certgrinder/certificates"
+path: "~/certificates"
 
 # a list of sets of domains to get certificates for
 domainlist:
   - 'example.com'
   - 'example.org,example.net'
 
-# hostname of the certgrinder server
-server: "certgrinder.example.com"
+# command to reach the certgrinder server - command gets CSR on stdin
+certgrinderd: "ssh certgrinder@certgrinder.example.com"
 
-# renew certificate when this many days or fewer validity left
-cert_renew_threshold_days: 30
-
-# the path of the csrgrinder binary on the remote server,
-# usually in the homedir of the certgrinder user.
-# use an absolute path, relative ones will get resolved locally.
-csrgrinder_path: '/usr/home/certgrinder/certgrinder/csrgrinder'
-
-# issue selfsigned if something goes wrong?
-selfsigned_fallback: True
+# renew certificate when this many days or fewer validity left, default 30
+#cert_renew_threshold_days: 30
 
 # run these after renewal of one or more certificates
 #post_renew_hooks:

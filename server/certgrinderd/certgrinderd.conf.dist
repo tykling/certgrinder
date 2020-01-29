@@ -7,14 +7,18 @@
 ####################################################
 #acmezone: "acme.example.com"
 #authhook: "manual-auth-hook"
-#certbotpath: "/usr/local/bin/certbot"
+#acme_email: admin@example.com
+#certbot_command: "/usr/local/bin/sudo /usr/local/bin/certbot"
 #cleanuphook: "manual-cleanup-hook"
 #debug: False
 #pidpath: "/tmp"
-#sudopath: "/usr/local/bin/sudo"
 #syslog_socket: "/var/run/log"
 #syslog_facility: "LOG_USER"
 #tempdir: "/tmp"
 #test: False
 #webroot: "/usr/local/www/wwwroot"
-
+#acmeserver_url: "https://acme-v02.api.letsencrypt.org/directory"
+#verify_acmeserver_cert: True
+#certbot_configdir: None
+#certbot_workdir: None
+#certbot_logsdir: None
