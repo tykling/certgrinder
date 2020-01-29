@@ -4,7 +4,6 @@ import shutil
 import pathlib
 import yaml
 import sys
-import urllib.request
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -66,29 +65,6 @@ def pebble_server():
     print("Stopping pebble server...")
     proc.terminate()
     print("Teardown finished!")
-
-
-@pytest.fixture(scope="session", autouse=True)
-def pebble_ca_certs(tmp_path_factory, pebble_server):
-    """
-    Pebble regenerates the CA root and intermediate on each run.
-    Download and return them.
-    """
-    with urllib.request.urlopen(
-        "https://127.0.0.1:15000/roots/0",
-        cafile=pathlib.Path.home()
-        / "go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem",
-    ) as u:
-        root = u.read()
-
-    with urllib.request.urlopen(
-        "https://127.0.0.1:15000/intermediates/0",
-        cafile=pathlib.Path.home()
-        / "go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem",
-    ) as u:
-        intermediate = u.read()
-
-    return root, intermediate
 
 
 @pytest.fixture(scope="session", autouse=True)
