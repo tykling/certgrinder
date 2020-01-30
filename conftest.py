@@ -19,7 +19,7 @@ def pebble_server():
 
     print("Getting pebble sources ...")
     proc = subprocess.run(
-        args=["go", "get", "-u", "github.com/letsencrypt/pebble/..."],
+        args=[shutil.which("go"), "get", "-u", "github.com/letsencrypt/pebble/..."],
         env={
             "GOPATH": pathlib.Path.home() / "go",
             "PATH": str(pathlib.Path(shutil.which("git")).parent),

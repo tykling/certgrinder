@@ -4,6 +4,5 @@ python:
   - "3.7"
 before_install:
   - sudo apt-get -y install git
-  - mkdir ~/go
 install: pip install tox-travis
 script: tox
