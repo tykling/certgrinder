@@ -29,7 +29,7 @@ def pebble_server():
 
     print("Building pebble...")
     proc = subprocess.run(
-        args=["go", "install", "./..."],
+        args=[shutil.which("go"), "install", "./..."],
         env={"GOPATH": pathlib.Path.home() / "go"},
         cwd=pathlib.Path.home() / "go/src/github.com/letsencrypt/pebble",
     )
