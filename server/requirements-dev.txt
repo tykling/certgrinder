@@ -1,5 +1,6 @@
 -r requirements.txt
 black>=19.3b0
+codecov>=2.0.22
 flake8>=3.7.8
 pre-commit>==1.18.3
 mypy>=0.770
