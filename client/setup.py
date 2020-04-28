@@ -1,3 +1,4 @@
+# type: ignore
 import setuptools
 
 with open("README.md", "r") as fh:

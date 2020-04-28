@@ -73,6 +73,10 @@ class Certgrinderd:
                 "dir": str(self.conf["tempdir"]),
             }
             # ignore in mypy for now https://github.com/python/typeshed/issues/3449
+            fullchainfh, fullchainpath = tempfile.mkstemp(**kwargs)  # type: ignore
+            os.unlink(fullchainpath)
+            chainfh, chainpath = tempfile.mkstemp(**kwargs)  # type: ignore
+            os.unlink(chainpath)
             certfh, certpath = tempfile.mkstemp(**kwargs)  # type: ignore
             os.unlink(certpath)
 
@@ -96,11 +100,11 @@ class Certgrinderd:
                 "--csr",
                 str(csrpath),
                 "--fullchain-path",
-                str(certpath),
+                str(fullchainpath),
                 "--cert-path",
-                "/dev/null",
+                str(certpath),
                 "--chain-path",
-                "/dev/null",
+                str(chainpath),
                 "--agree-tos",
                 "--email",
                 str(self.conf["acme_email"]),
@@ -132,12 +136,13 @@ class Certgrinderd:
 
             if p.returncode == 0:
                 logger.info(
-                    f"Success. Certbot wrote {os.path.getsize(certpath)} bytes chain to {certpath} - sending to stdout and cleaning up temp files"
+                    f"Success. Certbot wrote {os.path.getsize(fullchainpath)} bytes chain to {fullchainpath} - sending to stdout and cleaning up temp files"
                 )
-                with open(certpath) as f:
+                with open(fullchainpath) as f:
                     print(f.read())
-                # TODO: this might fail since certbot runs as root..
-                os.remove(certpath)
+                os.unlink(certpath)
+                os.unlink(chainpath)
+                os.unlink(fullchainpath)
                 # no need to try more challenges, we have a cert
                 break
             else:
@@ -189,8 +194,6 @@ def main(configpath: str) -> None:
     )
     with os.fdopen(csrfd, "w") as csrfh:
         csrfh.write(stdin)
-
-    # logger.info(f"Got {len(stdin)} bytes CSR from client {os.environ['SSH_CLIENT']} saved to {csrpath} (debug mode: {certgrinderd.conf['test']})")
 
     # TODO: use cryptography or openssl to check if the CSR is valid before calling certbot
 

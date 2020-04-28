@@ -8,7 +8,7 @@ import sys
 import argparse
 import binascii
 import hashlib
-import dns.resolver
+import dns.resolver  # type: ignore
 import base64
 import typing
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
@@ -219,7 +219,7 @@ class Certgrinder:
         """
         Checks the validity of the certificate.
         Returns a simpe True or False based on self.conf['cert_renew_threshold_days'],
-        and whether the certificate is valid (it. not selfsigned)
+        and whether the certificate is valid (ie. not selfsigned)
         """
         if self.certificate is False:
             return False
@@ -479,7 +479,7 @@ class Certgrinder:
                     "Looking up TLSA record in DNS using DNS server %s: %s.%s %s"
                     % (self.nameserver, service, domain, tlsatype)
                 )
-                res = dns.resolver.Resolver(configure=False)  # type: ignore
+                res = dns.resolver.Resolver(configure=False)
                 res.nameservers = [self.nameserver]
             else:
                 logger.debug(
