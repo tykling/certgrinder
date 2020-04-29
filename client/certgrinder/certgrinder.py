@@ -11,7 +11,6 @@ import hashlib
 import dns.resolver  # type: ignore
 import base64
 import typing
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.backends.openssl.rsa import _RSAPrivateKey  # type: ignore
 from cryptography.hazmat.backends.openssl.x509 import (  # type: ignore
@@ -107,7 +106,7 @@ class Certgrinder:
             keypair_bytes = open(self.keypair_path, "rb").read()
 
             # parse keypair
-            self.keypair = load_pem_private_key(
+            self.keypair = serialization.load_pem_private_key(
                 keypair_bytes, password=None, backend=default_backend()
             )
         else:
@@ -428,20 +427,20 @@ class Certgrinder:
 
     # SPKI METHODS
 
-    def generate_spki(self, derkey: bytes) -> bytes:
+    def generate_spki(self, derkey: bytes) -> str:
         """
         Generates and returns an pin-sha256 spki hpkp style pin for the provided public key.
         OpenSSL equivalent command is:
         openssl x509 -in example.com.crt -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl base64
         """
-        return base64.b64encode(hashlib.sha256(derkey).digest())
+        return base64.b64encode(hashlib.sha256(derkey).digest()).decode("ASCII")
 
     def show_spki(self) -> None:
         """
         Get and print the spki pin for the public key
         """
         spki = self.generate_spki(self.get_der_pubkey())
-        logger.info('pin-sha256="%s"' % spki.decode("ASCII"))
+        logger.info('pin-sha256="%s"' % spki)
 
     # TLSA METHODS
 
@@ -454,13 +453,13 @@ class Certgrinder:
         """
         if tlsatype == (3, 1, 0):
             # Generate DANE-EE Publickey Full (3 1 0) TLSA Record
-            return binascii.hexlify(derkey).decode("ASCII")
+            return binascii.hexlify(derkey).decode("ASCII").upper()
         elif tlsatype == (3, 1, 1):
             # Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record
-            return hashlib.sha256(derkey).hexdigest()
+            return hashlib.sha256(derkey).hexdigest().upper()
         elif tlsatype == (3, 1, 2):
             # Generate DANE-EE Publickey SHA512 (3 1 2) TLSA Record
-            return hashlib.sha512(derkey).hexdigest()
+            return hashlib.sha512(derkey).hexdigest().upper()
         else:
             logger.error("Unsupported TLSA type: %s %s %s" % tlsatype)
         return False
@@ -571,7 +570,7 @@ class Certgrinder:
                     generated = self.generate_tlsa(derkey, tlsatype)
                     found = False
                     for reply in dns_reply:
-                        if reply == generated:
+                        if reply.upper() == generated:
                             logger.info(
                                 "TLSA record for name %s.%s type %s found in DNS matches the local key, good."
                                 % (service, domain, tlsastr)
