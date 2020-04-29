@@ -17,6 +17,5 @@ Read more at https://blog.tyk.nu/blog/introducing-certgrinder-a-letsencrypt-ssh-
 
 Terminology
 ===========
-The central host with the LetsEncrypt signing stack is called the "Certgrinder server". The individual servers (the ones that need the certificates) are called "Certgrinder clients". These match the two Python packages ``certgrinder_server`` and ``certgrinder_client``, respectively.
-
+The central host with the LetsEncrypt signing stack is called the "Certgrinder server". The individual servers (the ones that need the certificates) are called "Certgrinder clients". These match the two Python packages ``certgrinderd`` and ``certgrinder``, respectively.
 
