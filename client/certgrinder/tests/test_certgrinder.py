@@ -3,6 +3,7 @@ import urllib.request
 import pathlib
 import ssl
 import os
+import logging
 from certgrinder.certgrinder import Certgrinder
 from cryptography.hazmat.backends import default_backend
 from cryptography import x509
@@ -10,10 +11,13 @@ from cryptography.x509.oid import NameOID, ExtensionOID
 from cryptography.hazmat.primitives import serialization
 
 
-def test_get_certificate(pebble_server, certgrinder_configfile, tmp_path_factory):
+def test_get_certificate(
+    pebble_server, certgrinder_configfile, tmp_path_factory, certgrinderd_env, caplog
+):
     """
     Get a certificate and check that it looks right
     """
+    caplog.set_level(logging.DEBUG)
     certgrinder = Certgrinder(
         configfile=certgrinder_configfile,
         staging=False,

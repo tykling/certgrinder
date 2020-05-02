@@ -1,43 +1,64 @@
 Certgrinder Server
 ==================
-The Certgrinder server takes care of running Certbot serving challenges. It never acts on its own, it only does something when a Certgrinder client connects over SSH with a CSR.
+The Certgrinder server ``certgrinderd`` takes care of serving challenges and running Certbot. It never acts on its own, it only does something when a Certgrinder client calls it with a CSR on stdin, usually over SSH.
+
 
 Installing the Certgrinder Server
 ---------------------------------
 This section explains the steps to install a Certgrinder server.
 
 
-Install Server
-~~~~~~~~~~~~~~
-You can install certgrinderd from pip:
-``pip install certgrinderd``
+Install Certgrinderd
+~~~~~~~~~~~~~~~~~~~~
+Create a VM or Jail or Docker thing or whatever somewhere. This will be your Certgrinder server. Give it a hostname like ``certgrinder.example.com``. This will be the hostname your Certgrinder clients use to SSH into (if you use SSH), and the hostname you use to serve HTTP challenges (if you use HTTP challenges). Create DNS records for the new hostname and you should be ready to begin the install.
 
-Create a VM or Jail or Docker thing or whatever somewhere. This will be your Certgrinder server. It will need to have ``Certbot`` installed and ``sshd`` running. It also needs to be accessible over SSH from all your Certgrinder clients. Furthermore, if you intend to serve the challenges locally you also need port 53 and/or 80 open from the outside world (a portforward will work).
+You can install ``certgrinderd`` from pip with ``pip install certgrinderd``. It will pull in the dependencies it needs automatically. Create a venv for it if you don't want to pollute the global Python env.
+
+You can also checkout the Github repo and install the deps from requirements.txt by hand if you prefer.
+
+The Certgrinder server needs to be reachable from the outside world on port 53/80 if you plan to serve DNS/HTTP challenges locally. It also needs to be accessible over SSH from all your Certgrinder clients if you plan to use SSH.
 
 
 Create User
 ~~~~~~~~~~~
-Create a dedicated user, usually the username is just ``certgrinder``. The user needs ``sudo`` access to run the ``certbot`` binary, and to set a couple of environment variables. This works::
+Create a dedicated user to run the Certgrinder server, usually the username is just ``certgrinderd``. The user needs ``sudo`` access to run the ``certbot`` binary, and to set a couple of environment variables. This works::
 
-    certgrinder ALL=(ALL) NOPASSWD: /usr/local/bin/certbot
+    certgrinderd ALL=(ALL) NOPASSWD: /usr/local/bin/certbot
     Defaults env_keep += "ACMEZONE WEBROOT"
+
+
+Configuration File
+~~~~~~~~~~~~~~~~~~
+The ``certgrinderd`` configuration file is in YAML format. An example config named ``certgrinderd.conf.dist`` can be found in the distribution. Only changes to the defaults need to be specified.
+
+
+Restricting Client Hostnames
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To determine whether a Certgrinder client is authorised to get a certificate for a given list of hostnames ``certgrinderd`` checks the environment variable named ``CERTGRINDERD_DOMAINSETS`` which must contain a semicolon-seperated list of comma-seperated lists of hostnames permitted for the current client.
+
+For example, if the Certgrinder client was a webserver with two vhosts, one with the name ``example.net`` and another vhost with the two names ``example.com`` and ``www.example.com``. In this case the environment variable ``CERTGRINDERD_DOMAINSETS="example.net;example.com,www.example.com"`` would permit the client to get the two certificates it needs, and nothing else.
+
+The list of hostnames is case insensitive. IDNA names need to be in ascii format, meaning ``xn--plse-gra.example`` rather than ``pølse.example``. The order of the hostnames in the list does not matter.
 
 
 Configure SSH Access
 ~~~~~~~~~~~~~~~~~~~~
-Certgrinder works using SSH. Each Certgrinder client must now generate an SSH key which is to be added to ``~/.ssh/authorized_keys`` on the Certgrinder server. Something like this works::
+Usually Certgrinder clients connect to the Certgrinder server using SSH, but other connection methods can be used if needed. The rest of this section is about configuring SSH access for clients.
 
-    from="2a01:3a0:1:1900:85:235:250:91",command="~/certgrinder/csrgrinder",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOegnR+qnK2FEoaSrVwHgCIxjFkVEbW4VO31/Hd2mAwk ansible-generated on webproxy2.servers.bornhack.org
+Each Certgrinder client must generate an SSH key which is to be added to ``~/.ssh/authorized_keys`` on the Certgrinder server. Each entry must be restricted with:
 
-The ``restrict`` option to OpenSSH was added recently, might not be available everywhere.
+* A ``from=`` specifying the IP the Certgrinder client connects from (optional but recommended).
+* An ``environment=`` restricting which names it may ask for, see above (required).
+* ``command=`` to restrict the command it can run (optional but recommended).
+* The ``restrict`` keyword to limit tunneling and forwarding and such (optional but recommended). The ``restrict`` option was added to OpenSSH in version 7.4, it might not be available everywhere.
 
+Something like this works::
 
-Install Certbot
-~~~~~~~~~~~~~~~
-Certbot needs to be installed, and an account needs to be created. TODO: Document how to do this, but basically it happens automatically the first time Certbot is run. On FreeBSD the account info lives under ``/usr/local/etc/letsencrypt/accounts``.
+    from="2001:DB8::15",environment="CERTGRINDERD_DOMAINSETS=example.com,www.example.com;example.net",command="/path/to/certgrinderd",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOegnR+qnK2FEoaSrVwHgCIxjFkVEbW4VO31/Hd2mAwk ansible-generated on webproxy2.example.com
+
+To make the ``environment=`` foo work the option ``PermitUserEnvironment=CERTGRINDERD_DOMAINSETS`` needs to be added to ``sshd_config``.
 
 
 Install Webserver/DNS Server or Hook Scripts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Finally you need to decide which challenge types to use, and how to handle them. Read the section on challenge types above, and if you decide to use a local web/dns server then you need to install and configure it now. If you want to use a remote server instead, you need to create the hook scripts to handle creating and deleting challenges.
-

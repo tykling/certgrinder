@@ -132,3 +132,10 @@ GD7OUrxoP9QtBwV7q7YlnoECAwEAAQ==
     return load_pem_public_key(
         pem_public_key.encode("ascii"), backend=default_backend()
     )
+
+
+@pytest.fixture
+def certgrinderd_env(monkeypatch):
+    monkeypatch.setenv(
+        "CERTGRINDERD_DOMAINSETS", "example.com,www.example.com;example.net"
+    )

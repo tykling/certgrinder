@@ -7,6 +7,8 @@ import sys
 import subprocess
 import tempfile
 import typing
+from cryptography.hazmat.backends import default_backend
+from cryptography import x509
 
 logger = logging.getLogger("certgrinderd.%s" % __name__)
 __version__ = "0.13.0"
@@ -73,10 +75,13 @@ class Certgrinderd:
                 "dir": str(self.conf["tempdir"]),
             }
             # ignore in mypy for now https://github.com/python/typeshed/issues/3449
+            # get a temp path for the full chain (meaning intermediate+cert)
             fullchainfh, fullchainpath = tempfile.mkstemp(**kwargs)  # type: ignore
             os.unlink(fullchainpath)
+            # get a temp path for the chain (meaning intermediate only)
             chainfh, chainpath = tempfile.mkstemp(**kwargs)  # type: ignore
             os.unlink(chainpath)
+            # get a temp path for the cert
             certfh, certpath = tempfile.mkstemp(**kwargs)  # type: ignore
             os.unlink(certpath)
 
@@ -188,16 +193,65 @@ def main(configpath: str) -> None:
 
     logger.info(f"certgrinderd {__version__} running")
 
+    # get the CSR from stdin
     stdin = sys.stdin.read()
+
+    # load the CSR to check a few things before calling certbot
+    csr = x509.load_pem_x509_csr(stdin.encode("ascii"), default_backend())
+
+    # CSR is valid, write it to file
     csrfd, csrpath = tempfile.mkstemp(
         suffix=".csr", prefix="certgrinderd-", dir=str(certgrinderd.conf["tempdir"])
     )
     with os.fdopen(csrfd, "w") as csrfh:
         csrfh.write(stdin)
 
-    # TODO: use cryptography or openssl to check if the CSR is valid before calling certbot
+    # get the list of allowed names from env
+    allowed_names = os.environ.get("CERTGRINDERD_DOMAINSETS", None)
+    if not allowed_names:
+        logger.error("Environment var CERTGRINDERD_DOMAINSETS not found, bailing out")
+        sys.exit(1)
 
-    # TODO: check if the list of names are permitted for this SSH key
+    # get CommonName from CSR
+    cn_list = csr.subject.get_attributes_for_oid(x509.oid.NameOID.COMMON_NAME)
+    if len(cn_list) != 1:
+        # we have more or less than one CN, fuckery is afoot
+        logger.error("CSR is not valid (has more or less than 1 CN), bailing out")
+        sys.exit(1)
+    cn = cn_list[0].value
+
+    # get list of SubjectAltNames from CSR
+    san_list = [
+        name.lower()
+        # https://github.com/python/typeshed/issues/3519
+        for name in csr.extensions.get_extension_for_oid(  # type: ignore
+            x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+        ).value.get_values_for_type(x509.DNSName)
+    ]
+    if cn not in san_list:
+        # CSR CommonName is not in SAN list
+        logger.error(
+            f"CSR is not valid (CN {cn} not found in SAN list {san_list}), bailing out"
+        )
+        sys.exit(1)
+
+    # loop over domainsets until we find a match
+    for domainset in allowed_names.split(";"):
+        if cn not in domainset.split(","):
+            # cert CN is not in this domainset
+            continue
+        for san in san_list:
+            if san not in domainset.split(","):
+                # this name is not in this domainset
+                continue
+        # all names in the CSR are permitted for this client
+        break
+    else:
+        # this CSR contains names which are not permitted for this client
+        logger.error(
+            f"CSR contains one or more names which are not permitted for this client. Permitted names: {allowed_names}"
+        )
+        sys.exit(1)
 
     # alright, get the cert for this CSR
     certgrinderd.process_csr(csrpath)
