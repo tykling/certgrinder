@@ -1,14 +1,15 @@
 # type: ignore
-import urllib.request
+import logging
+import os
 import pathlib
 import ssl
-import os
-import logging
+import urllib.request
+
 from certgrinder.certgrinder import Certgrinder
-from cryptography.hazmat.backends import default_backend
 from cryptography import x509
-from cryptography.x509.oid import NameOID, ExtensionOID
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
+from cryptography.x509.oid import ExtensionOID, NameOID
 
 
 def test_get_certificate(

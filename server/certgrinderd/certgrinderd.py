@@ -1,14 +1,15 @@
 #!/usr/bin/env python
-import yaml
 import logging
 import logging.handlers
 import os
-import sys
 import subprocess
+import sys
 import tempfile
 import typing
-from cryptography.hazmat.backends import default_backend
+
+import yaml
 from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 logger = logging.getLogger("certgrinderd.%s" % __name__)
 __version__ = "0.13.0"

@@ -1,26 +1,22 @@
 #!/usr/bin/env python
-import yaml
-import os
-import subprocess
-import logging
-import logging.handlers
-import sys
 import argparse
+import base64
 import binascii
 import hashlib
-import dns.resolver  # type: ignore
-import base64
+import logging
+import logging.handlers
+import os
+import subprocess
+import sys
 import typing
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.backends.openssl.rsa import _RSAPrivateKey  # type: ignore
-from cryptography.hazmat.backends.openssl.x509 import (  # type: ignore
-    _CertificateSigningRequest,
-)
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography import x509
-from cryptography.x509.oid import NameOID  # type: ignore
-from cryptography.hazmat.primitives import hashes, serialization
 from datetime import datetime
+
+import cryptography.x509
+import dns.resolver  # type: ignore
+import yaml
+from cryptography.hazmat import primitives
+from cryptography.hazmat.backends import default_backend, openssl
+from cryptography.hazmat.backends.openssl import x509  # type: ignore
 
 logger = logging.getLogger("certgrinder.%s" % __name__)
 __version__ = "0.13.0"
@@ -89,7 +85,7 @@ class Certgrinder:
 
     # RSA KEY METHODS
 
-    def load_keypair(self) -> _RSAPrivateKey:
+    def load_keypair(self) -> openssl.rsa._RSAPrivateKey:
         """
         Checks if the keypair file exists on disk, and calls self.create_keypair() if not
         """
@@ -106,7 +102,7 @@ class Certgrinder:
             keypair_bytes = open(self.keypair_path, "rb").read()
 
             # parse keypair
-            self.keypair = serialization.load_pem_private_key(
+            self.keypair = primitives.serialization.load_pem_private_key(
                 keypair_bytes, password=None, backend=default_backend()
             )
         else:
@@ -120,7 +116,7 @@ class Certgrinder:
         """
         Generates an RSA keypair in self.keypair and calls self.save_keypair() to write it to disk
         """
-        self.keypair = rsa.generate_private_key(
+        self.keypair = primitives.asymmetric.rsa.generate_private_key(
             public_exponent=65537, key_size=4096, backend=default_backend()
         )
         self.save_keypair()
@@ -132,9 +128,9 @@ class Certgrinder:
         with open(self.keypair_path, "wb") as f:
             f.write(
                 self.keypair.private_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PrivateFormat.TraditionalOpenSSL,
-                    encryption_algorithm=serialization.NoEncryption(),
+                    encoding=primitives.serialization.Encoding.PEM,
+                    format=primitives.serialization.PrivateFormat.TraditionalOpenSSL,
+                    encryption_algorithm=primitives.serialization.NoEncryption(),
                 )
             )
         os.chmod(self.keypair_path, 0o640)
@@ -145,13 +141,15 @@ class Certgrinder:
         Returns the DER format public key
         """
         return self.keypair.public_key().public_bytes(  # type: ignore
-            encoding=serialization.Encoding.DER,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            encoding=primitives.serialization.Encoding.DER,
+            format=primitives.serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
     # CSR METHODS
 
-    def generate_csr(self, domains: typing.List[str]) -> _CertificateSigningRequest:
+    def generate_csr(
+        self, domains: typing.List[str]
+    ) -> x509._CertificateSigningRequest:
         """
         Generates a new CSR in self.csr based on the public key in self.keypair.
         Only sets CN since everything else is removed by LetsEncrypt in the certificate anyway.
@@ -159,29 +157,30 @@ class Certgrinder:
         Finally call self.save_csr() to write it to disk.
         """
         domainlist = []
-        # build list of x509.DNSName objects for SAN
+        # build list of cryptography.x509.DNSName objects for SAN
         for domain in domains:
             domain = domain.encode("idna").decode("utf-8")
             logger.debug("Adding %s to CSR..." % domain)
-            domainlist.append(x509.DNSName(domain))
+            domainlist.append(cryptography.x509.DNSName(domain))
 
         # build the CSR
         self.csr = (
-            x509.CertificateSigningRequestBuilder()
+            cryptography.x509.CertificateSigningRequestBuilder()
             .subject_name(
-                x509.Name(
+                cryptography.x509.Name(
                     [
-                        x509.NameAttribute(
-                            NameOID.COMMON_NAME,
+                        cryptography.x509.NameAttribute(
+                            cryptography.x509.oid.NameOID.COMMON_NAME,
                             domains[0].encode("idna").decode("utf-8"),
                         )
                     ]
                 )
             )
             .add_extension(
-                x509.SubjectAlternativeName(domainlist), critical=False  # type: ignore
+                cryptography.x509.SubjectAlternativeName(domainlist),  # type: ignore
+                critical=False,
             )
-            .sign(self.keypair, hashes.SHA256(), default_backend())
+            .sign(self.keypair, primitives.hashes.SHA256(), default_backend())
         )
 
         # write the csr to disk
@@ -193,7 +192,7 @@ class Certgrinder:
         Save the PEM version of the CSR to the path in self.csr_path
         """
         with open(self.csr_path, "wb") as f:
-            f.write(self.csr.public_bytes(serialization.Encoding.PEM))
+            f.write(self.csr.public_bytes(primitives.serialization.Encoding.PEM))
         os.chmod(self.csr_path, 0o644)
         logger.debug("saved CSR to %s" % self.csr_path)
 
@@ -206,7 +205,7 @@ class Certgrinder:
         self.certificate: typing.Any
         if os.path.exists(self.certificate_path):
             pem_data = open(self.certificate_path, "rb").read()
-            self.certificate = x509.load_pem_x509_certificate(
+            self.certificate = cryptography.x509.load_pem_x509_certificate(
                 pem_data, default_backend()
             )
         else:
@@ -232,7 +231,10 @@ class Certgrinder:
 
         # check if issued by staging
         for x in self.certificate.issuer:
-            if x.oid == NameOID.COMMON_NAME and x.value == "Fake LE Intermediate X1":
+            if (
+                x.oid == cryptography.x509.oid.NameOID.COMMON_NAME
+                and x.value == "Fake LE Intermediate X1"
+            ):
                 logger.debug(
                     "This certificate was issued by LE staging CA, check_certificate_validity() returning False"
                 )
@@ -275,12 +277,14 @@ class Certgrinder:
 
         # send the CSR to stdin and save stdout+stderr
         stdout, stderr = p.communicate(
-            input=self.csr.public_bytes(serialization.Encoding.PEM)
+            input=self.csr.public_bytes(primitives.serialization.Encoding.PEM)
         )
 
         # parse stdout (which should now contain a valid signed PEM certificate)
         try:
-            self.certificate = x509.load_pem_x509_certificate(stdout, default_backend())
+            self.certificate = cryptography.x509.load_pem_x509_certificate(
+                stdout, default_backend()
+            )
         except Exception as E:
             logger.error(
                 "The Certgrinder server did not return a valid certificate. Exception: %s"
@@ -342,11 +346,11 @@ class Certgrinder:
         """
         # check self.certificate has the same pubkey as the CSR
         if self.keypair.public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            encoding=primitives.serialization.Encoding.PEM,
+            format=primitives.serialization.PublicFormat.SubjectPublicKeyInfo,
         ) != self.certificate.public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            encoding=primitives.serialization.Encoding.PEM,
+            format=primitives.serialization.PublicFormat.SubjectPublicKeyInfo,
         ):
             logger.error(
                 "The certificate returned from the certgrinder server does not have the public key we expected"

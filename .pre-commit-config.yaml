@@ -19,3 +19,7 @@ repos:
       name: "mypy (server/certgrinderd)"
       args: ["--strict"]
       files: ^server/
+  - repo: "https://github.com/pre-commit/mirrors-isort"
+    rev: "v4.3.21"
+    hooks:
+    - id: "isort"
