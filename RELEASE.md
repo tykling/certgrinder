@@ -2,11 +2,12 @@ Creating a release
 ====================
 
 First, update the version numbers in needed files (meaning remove -dev):
-* Update release date in CHANGELOG.md for client & server
 * Update version in setup.py for client & server
 * Update version in certgrinder.py
 * Update version in certgrinderd.py
 * Update version numbers in docs
+
+Then update release date in CHANGELOG.md for client & server
 
 Commit the above and push.
 
