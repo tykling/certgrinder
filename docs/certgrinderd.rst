@@ -1,20 +1,21 @@
 Certgrinder Server
 ==================
-The Certgrinder server ``certgrinderd`` takes care of serving challenges and running Certbot. It never acts on its own, it only does something when a Certgrinder client calls it with a CSR on stdin, usually over SSH.
+The Certgrinder server ``certgrinderd`` takes care of receiving the ``CSR``, running Certbot, serving challenges, and finally outputs a certificate. It never acts on its own, it only does something when a Certgrinder client calls it with a CSR on stdin, usually over SSH.
 
 
 Installing the Certgrinder Server
 ---------------------------------
-This section explains the steps to install a Certgrinder server.
+This section explains the steps to install the Certgrinder server ``certgrinderd``.
 
 
 Install Certgrinderd
 ~~~~~~~~~~~~~~~~~~~~
-Create a VM or Jail or Docker thing or whatever somewhere. This will be your Certgrinder server. Give it a hostname like ``certgrinder.example.com``. This will be the hostname your Certgrinder clients use to SSH into (if you use SSH), and the hostname you use to serve HTTP challenges (if you use HTTP challenges). Create DNS records for the new hostname and you should be ready to begin the install.
+Create a VM or Jail or Docker thing or whatever somewhere. This will be your Certgrinder server. Give it a hostname like ``certgrinder.example.com``. This will be the hostname your Certgrinder clients use to SSH into (if you use SSH), and the hostname you use to serve HTTP challenges (if you use HTTP challenges). Create DNS records (A+AAAA and if you use SSH then an SSHFP record wouldn't hurt) for the new hostname and you should be ready to begin the install.
 
 You can install ``certgrinderd`` from pip with ``pip install certgrinderd``. It will pull in the dependencies it needs automatically. Create a venv for it if you don't want to pollute the global Python env.
 
-You can also checkout the Github repo and install the deps from requirements.txt by hand if you prefer.
+You can also checkout the Github repo and install the deps from requirements.txt by hand if you prefer. If you want to install with pip directly from Git the following may help:
+``pip install "git+https://github.com/tykling/certgrinder/#egg=certgrinderd&subdirectory=server"``
 
 The Certgrinder server needs to be reachable from the outside world on port 53/80 if you plan to serve DNS/HTTP challenges locally. It also needs to be accessible over SSH from all your Certgrinder clients if you plan to use SSH.
 

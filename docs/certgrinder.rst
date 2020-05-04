@@ -10,15 +10,9 @@ This section explains the steps to install a Certgrinder client. Repeat these st
 
 Install certgrinder
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-You can install certgrinder from pip:
+You can install certgrinder from pip with ``pip install certgrinder``. This will install the latest ``certgrinder`` release. It will pull in the dependencies it needs automatically.
 
-``pip install certgrinder``
-
-This will install the latest ``certgrinder`` release (the client). If you want a pre-release you have to specify ``--pre`` like so:
-
-``TODO``
-
-If you want to install directly from Git the following may help:
+You can also checkout the Github repo and install the deps from requirements.txt by hand if you prefer. If you want to install with pip directly from Git the following may help:
 ``pip install "git+https://github.com/tykling/certgrinder/#egg=certgrinder&subdirectory=client"``
 
 
@@ -31,12 +25,12 @@ The user also needs to run ``ssh-keygen`` and the SSH key needs to be added to t
 
 Config File
 ~~~~~~~~~~~
-The config file for ``certgrinder`` is in ``YAML`` format. ``certgrinder`` comes with asample ``certgrinder.yml.dist`` file which should be fairly self-explanatory.
+The config file for ``certgrinder`` is in ``YAML`` format. ``certgrinder`` comes with a sample ``certgrinder.yml.dist`` file which should be fairly self-explanatory.
 
 
 Challenges
 ~~~~~~~~~~
-Finally you need to choose which challenge type to use for this ``certgrinder``. If ``DNS-01`` you need to create one or more ``CNAME`` record pointing somewhere. If ``HTTP-01`` you need to create an HTTP redirect. See the section on challenge types.
+Finally you need to choose which challenge type to use for this ``certgrinder`` client. If ``DNS-01`` you need to create one or more ``CNAME`` record pointing somewhere. If ``HTTP-01`` you need to create an HTTP redirect. See the section on challenge types.
 
 
 Testing
