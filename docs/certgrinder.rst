@@ -127,7 +127,7 @@ The client has a few different commandline options which are shown below::
                                [-q] [-s SHOWTLSA] [-t] [-v]
                                configfile
 
-     Certgrinder version 0.13.0-alpha. See the README.md file for more info.
+     Certgrinder version 0.13.0-alpha2. See the README.md file for more info.
 
      positional arguments:
        configfile            The path to the certgrinder.yml config file to use,

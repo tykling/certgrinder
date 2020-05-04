@@ -5,6 +5,9 @@ All notable changes to certgrinderd will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.13.0-alpha2][unreleased]
+
+
 ## [v0.13.0-alpha][4-may-2020]
 ### Added
 - Create Python package `certgrinderd` for the Certgrinder server
