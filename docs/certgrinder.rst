@@ -11,7 +11,15 @@ This section explains the steps to install a Certgrinder client. Repeat these st
 Install certgrinder
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 You can install certgrinder from pip:
+
 ``pip install certgrinder``
+
+This will install the latest ``certgrinder`` release (the client). If you want a pre-release you have to specify ``--pre`` like so:
+
+``TODO``
+
+If you want to install directly from Git the following may help:
+``pip install "git+https://github.com/tykling/certgrinder/#egg=certgrinder&subdirectory=client"``
 
 
 Create Certgrinder User
@@ -119,7 +127,7 @@ The client has a few different commandline options which are shown below::
                                [-q] [-s SHOWTLSA] [-t] [-v]
                                configfile
 
-     Certgrinder version 0.13.0. See the README.md file for more info.
+     Certgrinder version 0.13.0-alpha. See the README.md file for more info.
 
      positional arguments:
        configfile            The path to the certgrinder.yml config file to use,

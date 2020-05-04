@@ -5,14 +5,18 @@ All notable changes to certgrinder will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [v0.13.0][unreleased]
+## [v0.13.0-alpha][4-may-2020]
 ### Added
 - Create Python package `certgrinder` for the Certgrinder client
-- Add -C argument which simply checks if the certificates are present and valid and have more than 30 days validity left. Exit code 0 if all is well, exit code 1 if one or more certificates needs attention.
+- Add isort to pre-commit so imports are kept neat
+- Tox and pytest and basic testsuite using Pebble as a mock ACME server
+- Travis and codecov.io integration
+- Add -C argument which simply checks if the certificates are present and valid and have more than 30 days validity left. Exit code 0 if all is well or exit code 1 if one or more certificates needs attention.
 
 ### Changed
 - Move client files into client/ and server files into server/, each with their own CHANGELOG.md, in preparation for Python packaging.
-- Reorder commandline arguments alphabetically
+- Reorder commandline arguments alphabetically.
+- Change a few imports to make mypy and isort happy
 
 
 ## [v0.12.1][4-jan-2020]

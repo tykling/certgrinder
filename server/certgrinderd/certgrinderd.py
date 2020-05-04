@@ -12,7 +12,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
 logger = logging.getLogger("certgrinderd.%s" % __name__)
-__version__ = "0.13.0"
+__version__ = "0.13.0-alpha"
 
 
 class Certgrinderd:
