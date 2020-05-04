@@ -4,8 +4,8 @@
 [![Checked with flake8](badges/flake8-OK-green.svg)](http://flake8.pycqa.org/en/latest/)
 [![Codestyle black](badges/black.svg)](https://github.com/psf/black/)
 
-This is the server part of the [Certgrinder project](https://certgrinder.readthedocs.io/en/latest/introduction.html). The server package is called ``certgrinderd``. It can be installed [from pypi](https://pypi.org/project/certgrinderd/)
+This is the server part of the [Certgrinder project](https://certgrinder.readthedocs.io/en/latest/introduction.html). The package is called ``certgrinderd``. It can be installed [from pypi](https://pypi.org/project/certgrinderd/).
 
-It is meant to be used with the [certgrinder client](https://pypi.org/project/certgrinder/)
+It is meant to be used with the [certgrinder](https://pypi.org/project/certgrinder/) client package.
 
-Certgrinder server documentation can be found at ReadTheDocs: https://certgrinder.readthedocs.io/en/latest/certgrinderd.html
+Documentation can be found at ReadTheDocs: https://certgrinder.readthedocs.io/en/latest/certgrinderd.html
