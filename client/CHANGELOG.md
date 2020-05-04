@@ -5,12 +5,17 @@ All notable changes to certgrinder will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [v0.13.0-alpha2][unreleased]
+## [v0.13.0-alpha2][4-may-2020]
+### Added
+- Install `certgrinder` binary using entry_points in setup.py
+
+### Changed
+- Wrap script initialisation in a main() function to support entry_points in setup.py better
 
 
 ## [v0.13.0-alpha][4-may-2020]
 ### Added
-- Create Python package `certgrinder` for the Certgrinder client
+- Create Python package `certgrinder` for the Certgrinder client, publish on pypi
 - Add isort to pre-commit so imports are kept neat
 - Tox and pytest and basic testsuite using Pebble as a mock ACME server
 - Travis and codecov.io integration
