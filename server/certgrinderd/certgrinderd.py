@@ -7,9 +7,10 @@ import sys
 import tempfile
 import typing
 
+import cryptography.x509
 import yaml
-from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.backends.openssl import x509  # type: ignore
 
 logger = logging.getLogger("certgrinderd.%s" % __name__)
 __version__ = "0.13.0-alpha2"
@@ -43,15 +44,104 @@ class Certgrinderd:
 
     def __init__(self, config: typing.Dict[str, typing.Union[str, bool, None]]) -> None:
         """
-        Merge config with defaults
+        Merge config with defaults and connect to syslog
         """
         self.conf.update(config)
+
+        # connect to syslog?
+        if self.conf["syslog_socket"] and self.conf["syslog_facility"]:
+            facility: int = getattr(
+                logging.handlers.SysLogHandler, str(self.conf["syslog_facility"])
+            )
+            syslog_handler = logging.handlers.SysLogHandler(
+                address=str(self.conf["syslog_socket"]), facility=facility
+            )
+            syslog_format = logging.Formatter("certgrinderd: %(message)s")
+            syslog_handler.setFormatter(syslog_format)
+            try:
+                logger.addHandler(syslog_handler)
+            except Exception:
+                logger.exception(
+                    f"Unable to connect to syslog socket {self.conf['syslog_socket']} - syslog not enabled. Exception info below:"
+                )
+                sys.exit(1)
+
+        logger.info(f"certgrinderd {__version__} running")
         logger.debug("Running with config: %s" % self.conf)
 
+    def load_csr(self, csrstring: str = "") -> None:
+        """ Parses the CSR using cryptography.x509.load_pem_x509_csr(), write to disk, returns the object """
+        if not csrstring:
+            # get the CSR from stdin
+            csrstring = sys.stdin.read()
+
+        # get temp path for the csr so we can save it to disk
+        csrfd, self.csrpath = tempfile.mkstemp(
+            suffix=".csr", prefix="certgrinderd-", dir=str(self.conf["tempdir"])
+        )
+        # save the csr to disk
+        with os.fdopen(csrfd, "w") as csrfh:
+            csrfh.write(csrstring)
+
+        # parse the csr
+        self.csr = cryptography.x509.load_pem_x509_csr(
+            csrstring.encode("ascii"), default_backend()
+        )
+
+    def check_csr(self, csr: x509._CertificateSigningRequest) -> None:
+        """ Check that this CSR is valid, all things considered """
+        # get the list of allowed names from env
+        allowed_names = os.environ.get("CERTGRINDERD_DOMAINSETS", None)
+        if not allowed_names:
+            logger.error(
+                "Environment var CERTGRINDERD_DOMAINSETS not found, bailing out"
+            )
+            sys.exit(1)
+
+        # get CommonName from CSR
+        cn_list = csr.subject.get_attributes_for_oid(
+            cryptography.x509.oid.NameOID.COMMON_NAME
+        )
+        if len(cn_list) != 1:
+            # we have more or less than one CN, fuckery is afoot
+            logger.error("CSR is not valid (has more or less than 1 CN), bailing out")
+            sys.exit(1)
+        cn = cn_list[0].value
+
+        # get list of SubjectAltNames from CSR
+        san_list = [
+            name.lower()
+            for name in csr.extensions.get_extension_for_oid(
+                cryptography.x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+            ).value.get_values_for_type(cryptography.x509.DNSName)
+        ]
+        if cn not in san_list:
+            # CSR CommonName is not in SAN list
+            logger.error(
+                f"CSR is not valid (CN {cn} not found in SAN list {san_list}), bailing out"
+            )
+            sys.exit(1)
+
+        # loop over domainsets until we find a match
+        for domainset in allowed_names.split(";"):
+            if cn not in domainset.split(","):
+                # cert CN is not in this domainset
+                continue
+            for san in san_list:
+                if san not in domainset.split(","):
+                    # this name is not in this domainset
+                    continue
+            # all names in the CSR are permitted for this client
+            break
+        else:
+            # this CSR contains names which are not permitted for this client
+            logger.error(
+                f"CSR contains one or more names which are not permitted for this client. Permitted names: {allowed_names}"
+            )
+            sys.exit(1)
+
     def process_csr(self, csrpath: str) -> None:
-        """
-        Loop over challenge types and run Certbot for each until we get a cert.
-        """
+        """ Loop over challenge types and run Certbot for each until we get a cert """
         # put the certbot env together
         env = os.environ.copy()
         env.update(
@@ -157,12 +247,34 @@ class Certgrinderd:
                 )
                 logger.error(p.stderr.strip().decode("utf-8"))
 
+    def grind(self) -> None:
+        """ Primary method, load the CSR, process it, and cleanup """
+        # get the CSR
+        self.load_csr()
 
-def main(configpath: str) -> None:
+        # check CSR creaminess
+        self.check_csr(self.csr)
+
+        # alright, get the cert for this CSR
+        self.process_csr(self.csrpath)
+
+        # clean up temp files
+        if os.path.exists(self.csrpath):
+            os.remove(self.csrpath)
+
+
+def main() -> None:
     """
     Main function. Read config and configure logging.
     Then get CSR from stdin and call Certbot once for each challenge type.
     """
+    # get config path from commandline or use default
+    if len(sys.argv) == 2:
+        configpath = sys.argv[1]
+    else:
+        configpath = "~/certgrinderd.yml"
+
+    # read and parse the config
     with open(configpath, "r") as f:
         try:
             config = yaml.load(f, Loader=yaml.SafeLoader)
@@ -173,102 +285,11 @@ def main(configpath: str) -> None:
 
     # instantiate Certgrinderd class
     certgrinderd = Certgrinderd(config=config)
+    certgrinderd.grind()
 
-    # connect to syslog?
-    if certgrinderd.conf["syslog_socket"] and certgrinderd.conf["syslog_facility"]:
-        facility: int = getattr(
-            logging.handlers.SysLogHandler, str(certgrinderd.conf["syslog_facility"])
-        )
-        syslog_handler = logging.handlers.SysLogHandler(
-            address=str(certgrinderd.conf["syslog_socket"]), facility=facility
-        )
-        syslog_format = logging.Formatter("certgrinderd: %(message)s")
-        syslog_handler.setFormatter(syslog_format)
-        try:
-            logger.addHandler(syslog_handler)
-        except Exception:
-            logger.exception(
-                f"Unable to connect to syslog socket {certgrinderd.conf['syslog_socket']} - syslog not enabled. Exception info below:"
-            )
-            sys.exit(1)
-
-    logger.info(f"certgrinderd {__version__} running")
-
-    # get the CSR from stdin
-    stdin = sys.stdin.read()
-
-    # load the CSR to check a few things before calling certbot
-    csr = x509.load_pem_x509_csr(stdin.encode("ascii"), default_backend())
-
-    # CSR is valid, write it to file
-    csrfd, csrpath = tempfile.mkstemp(
-        suffix=".csr", prefix="certgrinderd-", dir=str(certgrinderd.conf["tempdir"])
-    )
-    with os.fdopen(csrfd, "w") as csrfh:
-        csrfh.write(stdin)
-
-    # get the list of allowed names from env
-    allowed_names = os.environ.get("CERTGRINDERD_DOMAINSETS", None)
-    if not allowed_names:
-        logger.error("Environment var CERTGRINDERD_DOMAINSETS not found, bailing out")
-        sys.exit(1)
-
-    # get CommonName from CSR
-    cn_list = csr.subject.get_attributes_for_oid(x509.oid.NameOID.COMMON_NAME)
-    if len(cn_list) != 1:
-        # we have more or less than one CN, fuckery is afoot
-        logger.error("CSR is not valid (has more or less than 1 CN), bailing out")
-        sys.exit(1)
-    cn = cn_list[0].value
-
-    # get list of SubjectAltNames from CSR
-    san_list = [
-        name.lower()
-        # https://github.com/python/typeshed/issues/3519
-        for name in csr.extensions.get_extension_for_oid(  # type: ignore
-            x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
-        ).value.get_values_for_type(x509.DNSName)
-    ]
-    if cn not in san_list:
-        # CSR CommonName is not in SAN list
-        logger.error(
-            f"CSR is not valid (CN {cn} not found in SAN list {san_list}), bailing out"
-        )
-        sys.exit(1)
-
-    # loop over domainsets until we find a match
-    for domainset in allowed_names.split(";"):
-        if cn not in domainset.split(","):
-            # cert CN is not in this domainset
-            continue
-        for san in san_list:
-            if san not in domainset.split(","):
-                # this name is not in this domainset
-                continue
-        # all names in the CSR are permitted for this client
-        break
-    else:
-        # this CSR contains names which are not permitted for this client
-        logger.error(
-            f"CSR contains one or more names which are not permitted for this client. Permitted names: {allowed_names}"
-        )
-        sys.exit(1)
-
-    # alright, get the cert for this CSR
-    certgrinderd.process_csr(csrpath)
-
-    # clean up temp files
-    if os.path.exists(csrpath):
-        os.remove(csrpath)
-
+    # we are done here
     logger.info("All done, certgrinderd exiting cleanly.")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
-        configpath = sys.argv[1]
-    else:
-        configpath = "~/certgrinderd.yml"
-
-    # call the main method
-    main(configpath=configpath)
+    main()

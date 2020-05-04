@@ -739,7 +739,7 @@ class Certgrinder:
             return False
 
 
-if __name__ == "__main__":
+def main() -> None:
     """
     Initialise script. Parse arguments, configure logging, and then call main() function
     """
@@ -873,3 +873,7 @@ if __name__ == "__main__":
 
     # call main method
     certgrinder.main()
+
+
+if __name__ == "__main__":
+    main()

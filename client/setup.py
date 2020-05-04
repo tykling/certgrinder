@@ -15,7 +15,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/tykling/certgrinder",
     packages=["certgrinder"],
-    scripts=["certgrinder/certgrinder.py"],
+    entry_points={"console_scripts": ["certgrinder = certgrinder.certgrinder:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD License",
