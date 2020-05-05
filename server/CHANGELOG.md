@@ -5,6 +5,10 @@ All notable changes to certgrinderd will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.13.0-alpha4][unreleased]
+- No changes
+
+
 ## [v0.13.0-alpha3][5-may-2020]
 ### Added
 - Add missing PyYAML dependency in setup.py
