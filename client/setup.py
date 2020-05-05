@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="certgrinder",
-    version="0.13.0-alpha5-dev",
+    version="0.13.0-alpha5",
     author="Thomas Steen Rasmussen",
     author_email="thomas@gibfest.dk",
     description="The client part of the Certgrinder project. Use with 'certgrinderd' package on the serverside.",
@@ -23,4 +23,5 @@ setuptools.setup(
     ],
     python_requires=">=3.7",
     install_requires=["PyYAML", "dnspython", "cryptography", "pid"],
+    include_package_data=True,
 )

@@ -5,8 +5,10 @@ All notable changes to certgrinderd will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [v0.13.0-alpha5][unreleased]
-- No changes
+## [v0.13.0-alpha5][6-may-2020]
+### Added
+- -f and -S short options for --config-file and --staging
+- MANIFEST.in file to include sample config and hook scripts
 
 
 ## [v0.13.0-alpha4][5-may-2020]

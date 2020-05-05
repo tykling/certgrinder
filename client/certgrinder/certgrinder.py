@@ -19,7 +19,7 @@ from cryptography.hazmat.backends import default_backend, openssl
 from cryptography.hazmat.backends.openssl import x509  # type: ignore
 
 logger = logging.getLogger("certgrinder.%s" % __name__)
-__version__ = "0.13.0-alpha5-dev"
+__version__ = "0.13.0-alpha5"
 
 
 class Certgrinder:
@@ -785,7 +785,7 @@ def main() -> None:
         "--configfile",
         dest="configfile",
         help="The path to the certgrinder.yml config file to use, default ~/certgrinder.yml",
-        default="~/certgrinder.yml",
+        default="~/certgrinder.conf",
     )
     parser.add_argument(
         "-n",
