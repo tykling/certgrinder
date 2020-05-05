@@ -5,6 +5,10 @@ All notable changes to certgrinderd will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.13.0-alpha3][unreleased]
+- Fix so certgrinderd certbot_commands with spaces in them work as expected
+
+
 ## [v0.13.0-alpha2][4-may-2020]
 ### Added
 - Install `certgrinderd` binary using entry_points in setup.py

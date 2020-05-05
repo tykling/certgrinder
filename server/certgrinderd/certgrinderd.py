@@ -177,8 +177,7 @@ class Certgrinderd:
             os.unlink(certpath)
 
             # put the command together
-            command: typing.List[str] = [
-                str(self.conf["certbot_command"]),
+            command: typing.List[str] = str(self.conf["certbot_command"]).split(" ") + [
                 "certonly",
                 "--non-interactive",
                 "--quiet",
