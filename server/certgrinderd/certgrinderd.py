@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import argparse
 import logging
 import logging.handlers
 import os
@@ -23,38 +24,54 @@ class Certgrinderd:
 
     # default config
     conf: typing.Dict[str, typing.Union[str, bool, None]] = {
-        "configfile": "~/certgrinderd.yml",
-        "acmezone": "acme.example.com",
-        "authhook": "manual-auth-hook",
-        "certbot_command": "/usr/local/bin/sudo /usr/local/bin/certbot",
-        "cleanuphook": "manual-cleanup-hook",
+        "acme-email": None,  # required
+        "acme-server-url": "https://acme-v02.api.letsencrypt.org/directory",
+        "acme-zone": None,
+        "auth-hook": "manual-auth-hook.sh",
+        "certbot-command": "/usr/local/bin/sudo /usr/local/bin/certbot",
+        "certbot-config-dir": None,
+        "certbot-logs-dir": None,
+        "certbot-work-dir": None,
+        "cleanup-hook": "manual-cleanup-hook.sh",
+        "config-file": "~/certgrinderd.yml",
         "debug": False,
-        "pidpath": "/tmp",
-        "syslog_socket": None,
-        "syslog_facility": None,
-        "tempdir": "/tmp",
-        "test": False,
-        "webroot": "/usr/local/www/wwwroot",
-        "acmeserver_url": None,
-        "verify_acmeserver_cert": True,
-        "certbot_configdir": None,
-        "certbot_workdir": None,
-        "certbot_logsdir": None,
+        "pid-dir": "/tmp",
+        "skip-acme-server-cert-verify": False,
+        "staging": False,
+        "syslog-facility": None,
+        "syslog-socket": None,
+        "temp-dir": "/tmp",
+        "web-root": None,
     }
 
-    def __init__(self, config: typing.Dict[str, typing.Union[str, bool, None]]) -> None:
+    def __init__(
+        self, userconfig: typing.Dict[str, typing.Union[str, bool, None]]
+    ) -> None:
         """
-        Merge config with defaults and connect to syslog
+        Merge userconfig with defaults and connect to syslog
         """
-        self.conf.update(config)
+        self.conf.update(userconfig)
+
+        # define the log format used for stdout depending on the requested loglevel
+        if self.conf["debug"]:
+            console_logformat = "%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s"
+        else:
+            console_logformat = "%(asctime)s %(levelname)s: %(message)s"
+
+        # configure the log format used for console
+        logging.basicConfig(
+            level=logging.DEBUG if self.conf["debug"] else logging.INFO,
+            format=console_logformat,
+            datefmt="%Y-%m-%d %H:%M:%S %z",
+        )
 
         # connect to syslog?
-        if self.conf["syslog_socket"] and self.conf["syslog_facility"]:
+        if self.conf["syslog-socket"] and self.conf["syslog-facility"]:
             facility: int = getattr(
-                logging.handlers.SysLogHandler, str(self.conf["syslog_facility"])
+                logging.handlers.SysLogHandler, str(self.conf["syslog-facility"])
             )
             syslog_handler = logging.handlers.SysLogHandler(
-                address=str(self.conf["syslog_socket"]), facility=facility
+                address=str(self.conf["syslog-socket"]), facility=facility
             )
             syslog_format = logging.Formatter("certgrinderd: %(message)s")
             syslog_handler.setFormatter(syslog_format)
@@ -62,9 +79,11 @@ class Certgrinderd:
                 logger.addHandler(syslog_handler)
             except Exception:
                 logger.exception(
-                    f"Unable to connect to syslog socket {self.conf['syslog_socket']} - syslog not enabled. Exception info below:"
+                    f"Unable to connect to syslog socket {self.conf['syslog-socket']} - syslog not enabled. Exception info below:"
                 )
                 sys.exit(1)
+        else:
+            logger.debug("Not configuring syslog")
 
         logger.info(f"certgrinderd {__version__} running")
         logger.debug("Running with config: %s" % self.conf)
@@ -77,7 +96,7 @@ class Certgrinderd:
 
         # get temp path for the csr so we can save it to disk
         csrfd, self.csrpath = tempfile.mkstemp(
-            suffix=".csr", prefix="certgrinderd-", dir=str(self.conf["tempdir"])
+            suffix=".csr", prefix="certgrinderd-", dir=str(self.conf["temp-dir"])
         )
         # save the csr to disk
         with os.fdopen(csrfd, "w") as csrfh:
@@ -144,40 +163,32 @@ class Certgrinderd:
         """ Loop over challenge types and run Certbot for each until we get a cert """
         # put the certbot env together
         env = os.environ.copy()
-        env.update(
-            {
-                "ACMEZONE": str(self.conf["acmezone"]),
-                "WEBROOT": str(self.conf["webroot"]),
-            }
-        )
+        if self.conf["acme-zone"]:
+            env.update({"ACMEZONE": str(self.conf["acme-zone"])})
+        if self.conf["web-root"]:
+            env.update({"WEBROOT": str(self.conf["web-root"])})
 
         # loop over challengetypes and run certbot for each
         for challengetype in ["dns", "http"]:
-            if challengetype == "dns" and not self.conf["acmezone"]:
-                logger.info(
-                    "Not attempting challenge type DNS-01 because self.conf['acmezone'] is unset"
-                )
-                continue
-
             # Create a temp file for the signed certificate
             kwargs = {
                 "suffix": ".crt",
                 "prefix": "certgrinderd-",
-                "dir": str(self.conf["tempdir"]),
+                "dir": self.conf["temp-dir"],
             }
             # ignore in mypy for now https://github.com/python/typeshed/issues/3449
             # get a temp path for the full chain (meaning intermediate+cert)
             fullchainfh, fullchainpath = tempfile.mkstemp(**kwargs)  # type: ignore
-            os.unlink(fullchainpath)
+            os.unlink(str(fullchainpath))
             # get a temp path for the chain (meaning intermediate only)
             chainfh, chainpath = tempfile.mkstemp(**kwargs)  # type: ignore
-            os.unlink(chainpath)
+            os.unlink(str(chainpath))
             # get a temp path for the cert
             certfh, certpath = tempfile.mkstemp(**kwargs)  # type: ignore
-            os.unlink(certpath)
+            os.unlink(str(certpath))
 
-            # put the command together
-            command: typing.List[str] = str(self.conf["certbot_command"]).split(" ") + [
+            # put the certbot command together
+            command: typing.List[str] = str(self.conf["certbot-command"]).split(" ") + [
                 "certonly",
                 "--non-interactive",
                 "--quiet",
@@ -188,9 +199,9 @@ class Certgrinderd:
                 "--preferred-challenges",
                 challengetype,
                 "--manual-auth-hook",
-                str(self.conf["authhook"]),
+                str(self.conf["auth-hook"]),
                 "--manual-cleanup-hook",
-                str(self.conf["cleanuphook"]),
+                str(self.conf["cleanup-hook"]),
                 "--manual-public-ip-logging-ok",
                 "--csr",
                 str(csrpath),
@@ -201,43 +212,49 @@ class Certgrinderd:
                 "--chain-path",
                 str(chainpath),
                 "--agree-tos",
-                "--email",
-                str(self.conf["acme_email"]),
             ]
 
-            if self.conf["acmeserver_url"]:
-                command.append("--server")
-                command.append(str(self.conf["acmeserver_url"]))
+            if self.conf["acme-email"]:
+                command.append("--email")
+                command.append(str(self.conf["acme-email"]))
 
-            if not self.conf["verify_acmeserver_cert"]:
+            if self.conf["acme-server-url"]:
+                command.append("--server")
+                command.append(str(self.conf["acme-server-url"]))
+
+            if self.conf["skip-acme-server-cert-verify"]:
                 command.append("--no-verify-ssl")
 
-            if self.conf["certbot_configdir"]:
+            if self.conf["certbot-config-dir"]:
                 command.append("--config-dir")
-                command.append(str(self.conf["certbot_configdir"]))
+                command.append(str(self.conf["certbot-config-dir"]))
 
-            if self.conf["certbot_workdir"]:
+            if self.conf["certbot-work-dir"]:
                 command.append("--work-dir")
-                command.append(str(self.conf["certbot_workdir"]))
+                command.append(str(self.conf["certbot-work-dir"]))
 
-            if self.conf["certbot_logsdir"]:
+            if self.conf["certbot-logs-dir"]:
                 command.append("--logs-dir")
-                command.append(str(self.conf["certbot_logsdir"]))
+                command.append(str(self.conf["certbot-logs-dir"]))
+
+            if self.conf["staging"]:
+                command.append("--staging")
 
             logger.debug(f"Running Certbot command: {' '.join(command)}")
+            print(f"Running Certbot command: {' '.join(command)}")
 
             # call certbot
             p = subprocess.run(command, capture_output=True, env=env)
 
             if p.returncode == 0:
                 logger.info(
-                    f"Success. Certbot wrote {os.path.getsize(fullchainpath)} bytes chain to {fullchainpath} - sending to stdout and cleaning up temp files"
+                    f"Success. Certbot wrote {os.path.getsize(str(fullchainpath))} bytes chain to {fullchainpath} - sending to stdout and cleaning up temp files"
                 )
-                with open(fullchainpath) as f:
+                with open(str(fullchainpath)) as f:
                     print(f.read())
-                os.unlink(certpath)
-                os.unlink(chainpath)
-                os.unlink(fullchainpath)
+                os.unlink(str(certpath))
+                os.unlink(str(chainpath))
+                os.unlink(str(fullchainpath))
                 # no need to try more challenges, we have a cert
                 break
             else:
@@ -267,23 +284,143 @@ def main() -> None:
     Main function. Read config and configure logging.
     Then get CSR from stdin and call Certbot once for each challenge type.
     """
-    # get config path from commandline or use default
-    if len(sys.argv) == 2:
-        configpath = sys.argv[1]
-    else:
-        configpath = "~/certgrinderd.yml"
+    # parse commandline arguments
+    parser = argparse.ArgumentParser(
+        description="certgrinderd version %s. See the README.md file for more info."
+        % __version__
+    )
+    parser.add_argument(
+        "--acme-email",
+        dest="acme-email",
+        help="The email for the ACME account.",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--acme-server-url",
+        dest="acme-server-url",
+        help="The url for the ACME server to use",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--acme-zone",
+        dest="acme-zone",
+        help="The DNS zone to pass to the auth hook script as env. var. ACMEZONE. For DNS-01 challenges.",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--auth-hook",
+        dest="auth-hook",
+        help="The hook script to call to prepare auth challenges before calling Certbot",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--certbot-command",
+        dest="certbot-command",
+        help="The Certbot command to call between auth hook and cleanup hook",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--certbot-config-dir",
+        dest="certbot-config-dir",
+        help="The path to pass to Certbot as --config-dir",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--certbot-logs-dir",
+        dest="certbot-logs-dir",
+        help="The path to pass to Certbot as --logs-dir",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--certbot-work-dir",
+        dest="certbot-work-dir",
+        help="The path to pass to Certbot as --work-dir",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--cleanup-hook",
+        dest="cleanup-hook",
+        help="The hook script to call to clean up auth challenges after calling Certbot",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--config-file",
+        dest="config-file",
+        help="The path to the certgrinderd config file to use, in YML format.",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--debug",
+        dest="debug",
+        action="store_true",
+        help="Enable debug output",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--pid-dir",
+        dest="pid-dir",
+        help="The directory to store the PID file in",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--skip-acme-server-cert-verify",
+        dest="skip-acme-server-cert-verify",
+        action="store_true",
+        help="Do not verify the ACME servers certificate",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--staging",
+        dest="staging",
+        action="store_true",
+        help="Staging mode. Make Certbot use LetsEncrypt staging servers",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--syslog-facility",
+        dest="syslog-facility",
+        help="The facility to use for syslog messages",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--syslog-socket",
+        dest="syslog-socket",
+        help="The socket to use for syslog messages",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--temp-dir",
+        dest="temp-dir",
+        help="The directory to store temporary files in",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--web-root",
+        dest="web-root",
+        help="The path to pass to the auth hook script as env WEBROOT to use for HTTP-01 challenges.",
+        default=argparse.SUPPRESS,
+    )
+    args = parser.parse_args()
 
-    # read and parse the config
-    with open(configpath, "r") as f:
-        try:
-            config = yaml.load(f, Loader=yaml.SafeLoader)
-            logger.debug("Loaded config from file: %s" % config)
-        except Exception:
-            logger.exception(f"Unable to read config file {configpath} - bailing out.")
-            sys.exit(1)
+    # read and parse the config file
+    if hasattr(args, "config-file"):
+        with open(getattr(args, "config-file"), "r") as f:
+            try:
+                config = yaml.load(f, Loader=yaml.SafeLoader)
+            except Exception:
+                logger.exception(
+                    f"Unable to read config file {getattr(args, 'config-file')} - bailing out."
+                )
+                sys.exit(1)
+    else:
+        # we have no config file
+        config = {}
+
+    # command line arguments override config file settings
+    config.update(vars(args))
 
     # instantiate Certgrinderd class
-    certgrinderd = Certgrinderd(config=config)
+    certgrinderd = Certgrinderd(userconfig=config)
     certgrinderd.grind()
 
     # we are done here

@@ -77,17 +77,15 @@ def certgrinderd_configfile(tmp_path_factory):
     """
     confpath = tmp_path_factory.mktemp("conf") / "certgrinderd.yml"
     conf = {
-        "acmeserver_url": "https://127.0.0.1:14000/dir",
-        "verify_acmeserver_cert": False,
-        "authhook": "echo 'authhook faked OK!'",
-        "cleanuphook": "echo 'cleanuphook faked OK!'",
-        "certbot_command": str(pathlib.Path(sys.executable).parent / "certbot"),
-        "certbot_configdir": str(tmp_path_factory.mktemp("certbot") / "configdir"),
-        "certbot_workdir": str(tmp_path_factory.mktemp("certbot") / "workdir"),
-        "certbot_logsdir": str(tmp_path_factory.mktemp("certbot") / "logsdir"),
-        "acme_email": "certgrindertest@invalid",
-        "syslog_socket": None,
-        "syslog_facility": None,
+        "acme-server-url": "https://127.0.0.1:14000/dir",
+        "skip-acme-server-cert-verify": True,
+        "auth-hook": "echo 'authhook faked OK!'",
+        "cleanup-hook": "echo 'cleanuphook faked OK!'",
+        "certbot-command": str(pathlib.Path(sys.executable).parent / "certbot"),
+        "certbot-config-dir": str(tmp_path_factory.mktemp("certbot") / "configdir"),
+        "certbot-work-dir": str(tmp_path_factory.mktemp("certbot") / "workdir"),
+        "certbot-logs-dir": str(tmp_path_factory.mktemp("certbot") / "logsdir"),
+        "acme-email": "certgrindertest@invalid",
     }
     with open(confpath, "w") as f:
         yaml.dump(conf, f)
@@ -104,7 +102,7 @@ def certgrinder_configfile(tmpdir_factory, certgrinderd_configfile):
     conf = {
         "path": str(tmpdir_factory.mktemp("certificates")),
         "domainlist": ["example.com,www.example.com", "example.net"],
-        "certgrinderd": f"server/certgrinderd/certgrinderd.py {certgrinderd_configfile}",
+        "certgrinderd": f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile}",
     }
     with open(confpath, "w") as f:
         yaml.dump(conf, f)

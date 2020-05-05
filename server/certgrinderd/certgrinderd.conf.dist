@@ -1,24 +1,72 @@
 ---
 ####################################################
-# certgrinderd configuration file.
-# This file is part of Certgrinder.
-# The latest version can be found on Github at
-# https://github.com/tykling/certgrinder
+# certgrinderd configuration file, YAML format.
+# https://certgrinder.readthedocs.io/en/latest/certgrinderd.html#configuration-file
 ####################################################
-#acmezone: "acme.example.com"
-#authhook: "manual-auth-hook"
-#acme_email: admin@example.com
-#certbot_command: "/usr/local/bin/sudo /usr/local/bin/certbot"
-#cleanuphook: "manual-cleanup-hook"
+
+# ACCOUNT SETTINGS
+#acme-email: admin@example.com
+
+####################################################
+# HOOKS
+####################################################
+# This hook script is called to prepare challenges
+#auth-hook: "manual-auth-hook.sh"
+
+# DNS zone which the authhook will use for challenges
+#acme-zone: "acme.example.com"
+
+# webroot where authhook writes the challenge for HTTP-01
+#web-root: "/usr/local/www/wwwroot"
+
+# This hook script is called to clean up challenges
+#cleanup-hook: "manual-cleanup-hook.sh"
+
+
+####################################################
+# PATHS
+####################################################
+# The certbot command to run
+#certbot-command: "/usr/local/bin/sudo /usr/local/bin/certbot"
+
+# Path to store PID file
+#pid-dir: "/tmp"
+
+# Path to store temp files
+#temp-dir: "/tmp"
+
+
+####################################################
+# LOGGING
+####################################################
+# Syslog socket to connect to
+#syslog-socket: "/var/run/log"
+
+# Syslog facility to log to
+#syslog-facility: "LOG_USER"
+
+# Show debug output?
 #debug: False
-#pidpath: "/tmp"
-#syslog_socket: "/var/run/log"
-#syslog_facility: "LOG_USER"
-#tempdir: "/tmp"
-#test: False
-#webroot: "/usr/local/www/wwwroot"
-#acmeserver_url: "https://acme-v02.api.letsencrypt.org/directory"
-#verify_acmeserver_cert: True
-#certbot_configdir: None
-#certbot_workdir: None
-#certbot_logsdir: None
+
+
+#####################################################
+# STAGING
+####################################################
+# use LE staging servers
+#staging: False
+
+
+#####################################################
+# Advanced settings (you will likely not need these)
+####################################################
+
+# URL for the ACME server to use
+#acme-server-url: "https://acme-v02.api.letsencrypt.org/directory"
+
+# verify the ACME servers certificate?
+#verify-acme-server-cert: True
+
+# Certbot path overrides
+#certbot-config-dir: None
+#certbot-work-dir: None
+#certbot-logs-dir: None

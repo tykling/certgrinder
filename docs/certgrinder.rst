@@ -115,43 +115,38 @@ The operation is pretty simple::
 Command-line Options
 --------------------
 The client has a few different commandline options which are shown below::
+   usage: certgrinder.py [-h] [-c CHECKTLSA] [-C] [-d] [-f CONFIGFILE]
+                         [-n NAMESERVER] [-p] [-q] [-s SHOWTLSA] [-S] [-v]
 
-     (venv) user@computer:~ $ certgrinder -h
-     usage: certgrinder [-h] [-c CHECKTLSA] [-C] [-d] [-n NAMESERVER] [-p]
-                               [-q] [-s SHOWTLSA] [-t] [-v]
-                               configfile
+   Certgrinder version 0.13.0-alpha4-dev. See the README.md file for more info.
 
-     Certgrinder version 0.13.0-alpha4-dev. See the README.md file for more info.
-
-     positional arguments:
-       configfile            The path to the certgrinder.yml config file to use,
-                             default ~/certgrinder.yml
-
-     optional arguments:
-       -h, --help            show this help message and exit
-       -c CHECKTLSA, --checktlsa CHECKTLSA
-                             Tell certgrinder to lookup TLSA records for the given
-                             service in the DNS and compare with what we have
-                             locally, for example: --checktlsa _853._tcp
-       -C, --check           Tell certgrinder check certificate validity and exit.
-                             If any certificates are missing or have less than 30
-                             days validity the exit code will be 1.
-       -d, --debug           Debug output. Lots of output about the internal
-                             workings of certgrinder.
-       -n NAMESERVER, --nameserver NAMESERVER
-                             Tell certgrinder to use this DNS server IP to lookup
-                             TLSA records. Only relevant with -c / --checktlsa.
-                             Only v4/v6 IPs, no hostnames.
-       -p, --showspki        Tell certgrinder to generate and print the pin-sha256
-                             spki pins for the public keys it manages.
-       -q, --quiet           Quiet mode. No output at all if there is nothing to
-                             do.
-       -s SHOWTLSA, --showtlsa SHOWTLSA
-                             Tell certgrinder to generate and print TLSA records
-                             for the given service, for example: --showtlsa
-                             _853._tcp
-       -t, --test            Tell the certgrinder server to use LetsEncrypt staging
-                             servers, for test purposes.
-       -v, --version         Show version and exit.
-     (venv) user@computer:~ $ 
+   optional arguments:
+     -h, --help            show this help message and exit
+     -c CHECKTLSA, --checktlsa CHECKTLSA
+                           Tell certgrinder to lookup TLSA records for the given
+                           service in the DNS and compare with what we have
+                           locally, for example: --checktlsa _853._tcp
+     -C, --check           Tell certgrinder check certificate validity and exit.
+                           If any certificates are missing or have less than 30
+                           days validity the exit code will be 1.
+     -d, --debug           Debug output. Lots of output about the internal
+                           workings of certgrinder.
+     -f CONFIGFILE, --configfile CONFIGFILE
+                           The path to the certgrinder.yml config file to use,
+                           default ~/certgrinder.yml
+     -n NAMESERVER, --nameserver NAMESERVER
+                           Tell certgrinder to use this DNS server IP to lookup
+                           TLSA records. Only relevant with -c / --checktlsa.
+                           Only v4/v6 IPs, no hostnames.
+     -p, --showspki        Tell certgrinder to generate and print the pin-sha256
+                           spki pins for the public keys it manages.
+     -q, --quiet           Quiet mode. No output at all if there is nothing to
+                           do.
+     -s SHOWTLSA, --showtlsa SHOWTLSA
+                           Tell certgrinder to generate and print TLSA records
+                           for the given service, for example: --showtlsa
+                           _853._tcp
+     -S, --staging         Tell the certgrinder server to use LetsEncrypt staging
+                           servers, for testing purposes.
+     -v, --version         Show version and exit.
 
