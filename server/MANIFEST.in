@@ -1,0 +1,4 @@
+include certgrinderd/certgrinderd.conf.dist
+include certgrinderd/manual-auth-hook.sh
+include certgrinderd/manual-cleanup-hook.sh
+
