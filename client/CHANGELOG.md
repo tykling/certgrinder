@@ -5,7 +5,7 @@ All notable changes to certgrinder will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [v0.13.0-alpha4][unreleased]
+## [v0.13.0-alpha4][5-may-2020]
 ### Added
 - There is now a --log-level=LEVEL command line argument to set loglevel more flexibly. It can be set to one of DEBUG, INFO, WARNING, ERROR, or CRITICAL.
 
