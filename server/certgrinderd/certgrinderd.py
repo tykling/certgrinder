@@ -344,6 +344,7 @@ def main() -> None:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "-f",
         "--config-file",
         dest="config-file",
         help="The path to the certgrinderd config file to use, in YML format.",
@@ -380,6 +381,7 @@ def main() -> None:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "-S",
         "--staging",
         dest="staging",
         action="store_true",
