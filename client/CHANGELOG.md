@@ -6,7 +6,13 @@ All notable changes to certgrinder will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.13.0-alpha4][unreleased]
-- No changes
+### Added
+- There is now a --log-level=LEVEL command line argument to set loglevel more flexibly. It can be set to one of DEBUG, INFO, WARNING, ERROR, or CRITICAL.
+
+### Changed
+- Config file path should be given with the -f flag
+- Pass --staging and --debug flag to certgrinderd when given to certgrinder
+- Prefix syslog messages with "certgrinder" instead of "Certgrinder" to match the package name
 
 
 ## [v0.13.0-alpha3][5-may-2020]

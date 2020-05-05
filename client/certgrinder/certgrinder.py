@@ -261,13 +261,14 @@ class Certgrinder:
         """
         logger.info("ready to get signed certificate using csr %s" % self.csr_path)
 
-        command = self.conf["certgrinderd"]
+        # put the command together
+        commandlist = [x for x in self.conf["certgrinderd"].split(" ")]
         if self.staging:
-            command += " staging"
+            commandlist.append("--staging")
+        if self.debug:
+            commandlist.append("--debug")
 
-        # make command a list
-        logger.debug("running ssh command: %s" % command)
-        commandlist = [x for x in command.split(" ") if x]
+        logger.debug("running certgrinderd command: %s" % commandlist)
         p = subprocess.Popen(
             commandlist,
             stdin=subprocess.PIPE,
@@ -749,11 +750,6 @@ def main() -> None:
         % __version__
     )
     parser.add_argument(
-        "configfile",
-        help="The path to the certgrinder.yml config file to use, default ~/certgrinder.yml",
-        default="~/certgrinder.yml",
-    )
-    parser.add_argument(
         "-c",
         "--checktlsa",
         dest="checktlsa",
@@ -773,9 +769,23 @@ def main() -> None:
         "--debug",
         action="store_const",
         dest="log_level",
-        const=logging.DEBUG,
-        default=logging.INFO,
-        help="Debug output. Lots of output about the internal workings of certgrinder.",
+        const="DEBUG",
+        help="Debug mode. Equal to setting --log-level=DEBUG.",
+    )
+    parser.add_argument(
+        "-l",
+        "--log-level",
+        dest="log_level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Defaults to INFO.",
+    )
+    parser.add_argument(
+        "-f",
+        "--configfile",
+        dest="configfile",
+        help="The path to the certgrinder.yml config file to use, default ~/certgrinder.yml",
+        default="~/certgrinder.yml",
     )
     parser.add_argument(
         "-n",
@@ -826,17 +836,18 @@ def main() -> None:
     args = parser.parse_args()
 
     # define the log format used for stdout depending on the requested loglevel
-    if args.log_level == logging.DEBUG:
+    if args.log_level == "DEBUG":
         console_logformat = (
             "%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s"
         )
-        debug = True
     else:
         console_logformat = "%(asctime)s %(levelname)s: %(message)s"
-        debug = False
-    # configure the log format used for stdout
+
+    # configure the log format used for console logging
     logging.basicConfig(
-        level=args.log_level, format=console_logformat, datefmt="%Y-%m-%d %H:%M:%S %z"
+        level=getattr(logging, args.log_level),
+        format=console_logformat,
+        datefmt="%Y-%m-%d %H:%M:%S %z",
     )
 
     # show version and exit?
@@ -852,7 +863,7 @@ def main() -> None:
         checktlsa=args.checktlsa,
         nameserver=args.nameserver,
         showspki=args.showspki,
-        debug=debug,
+        debug=True if args.log_level == "DEBUG" else False,
         check=args.check,
     )
 
@@ -861,7 +872,7 @@ def main() -> None:
         address=certgrinder.conf["syslog_socket"],
         facility=certgrinder.conf["syslog_facility"],
     )
-    syslog_format = logging.Formatter("Certgrinder: %(message)s")
+    syslog_format = logging.Formatter("certgrinder: %(message)s")
     syslog_handler.setFormatter(syslog_format)
     try:
         logger.addHandler(syslog_handler)
