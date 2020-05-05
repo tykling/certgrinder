@@ -5,6 +5,10 @@ All notable changes to certgrinder will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.13.0-alpha6][unreleased]
+- No changes
+
+
 ## [v0.13.0-alpha5][6-may-2020]
 ### Added
 - MANIFEST.in file to include certgrinder.conf.dist in installs
