@@ -5,6 +5,10 @@ All notable changes to certgrinderd will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.13.0-alpha5][unreleased]
+- No changes
+
+
 ## [v0.13.0-alpha4][5-may-2020]
 ### Added
 - New --log-level option to set logging verbosity. Must be one of DEBUG, INFO, WARNING, ERROR, CRITICAL, corresponding to the levels in the Python logging framework.

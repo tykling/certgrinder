@@ -19,7 +19,7 @@ from cryptography.hazmat.backends import default_backend, openssl
 from cryptography.hazmat.backends.openssl import x509  # type: ignore
 
 logger = logging.getLogger("certgrinder.%s" % __name__)
-__version__ = "0.13.0-alpha4"
+__version__ = "0.13.0-alpha5-dev"
 
 
 class Certgrinder:
