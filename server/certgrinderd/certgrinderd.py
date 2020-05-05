@@ -242,7 +242,6 @@ class Certgrinderd:
                 command.append("--staging")
 
             logger.debug(f"Running Certbot command: {' '.join(command)}")
-            print(f"Running Certbot command: {' '.join(command)}")
 
             # call certbot
             p = subprocess.run(command, capture_output=True, env=env)
@@ -357,14 +356,15 @@ def main() -> None:
         dest="log-level",
         const="DEBUG",
         help="Debug mode. Equal to setting --log-level=DEBUG.",
+        default=argparse.SUPPRESS,
     )
     parser.add_argument(
         "-l",
         "--log-level",
         dest="log-level",
-        default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Logging level. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Defaults to INFO.",
+        default=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--pid-dir",
