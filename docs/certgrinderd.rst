@@ -2,39 +2,104 @@ Certgrinder Server
 ==================
 The Certgrinder server ``certgrinderd`` takes care of receiving the ``CSR``, running Certbot, serving challenges, and finally outputs a certificate. It never acts on its own, it only does something when a Certgrinder client calls it with a CSR on stdin, usually over SSH.
 
-
-Installing the Certgrinder Server
----------------------------------
-This section explains the steps to install the Certgrinder server ``certgrinderd``.
+The following sections explain the steps you need to setup a Certgrinder server.
 
 
-Install Certgrinderd
-~~~~~~~~~~~~~~~~~~~~
-Create a VM or Jail or Docker thing or whatever somewhere. This will be your Certgrinder server. Give it a hostname like ``certgrinder.example.com``. This will be the hostname your Certgrinder clients use to SSH into (if you use SSH), and the hostname you use to serve HTTP challenges (if you use HTTP challenges). Create DNS records (A+AAAA and if you use SSH then an SSHFP record wouldn't hurt) for the new hostname and you should be ready to begin the install.
+Install Certgrinder Server
+--------------------------
+Create a VM or Jail or Docker thing or whatever somewhere. This will be your Certgrinder server. Give it a hostname like ``certgrinder.example.com``.
 
-You can install ``certgrinderd`` from pip with ``pip install certgrinderd``. It will pull in the dependencies it needs automatically. Create a venv for it if you don't want to pollute the global Python env.
+This will be the hostname your Certgrinder clients use to SSH into (if you use SSH), and the hostname you use to serve HTTP challenges (if you use HTTP challenges).
 
-You can also checkout the Github repo and install the deps from requirements.txt by hand if you prefer. If you want to install with pip directly from Git the following may help:
-``pip install "git+https://github.com/tykling/certgrinder/#egg=certgrinderd&subdirectory=server"``
-
-The Certgrinder server needs to be reachable from the outside world on port 53/80 if you plan to serve DNS/HTTP challenges locally. It also needs to be accessible over SSH from all your Certgrinder clients if you plan to use SSH.
-
+Create DNS records (A+AAAA, and if you use SSH then an SSHFP record wouldn't hurt) for the new hostname and you should be ready to begin the install.
 
 Create User
-~~~~~~~~~~~
+-----------
 Create a dedicated user to run the Certgrinder server, usually the username is just ``certgrinderd``. The user needs ``sudo`` access to run the ``certbot`` binary, and to set a couple of environment variables. This works::
 
     certgrinderd ALL=(ALL) NOPASSWD: /usr/local/bin/certbot
     Defaults env_keep += "ACMEZONE WEBROOT"
 
+Install certgrinderd
+--------------------
+You can install ``certgrinderd`` from pip with ``pip install certgrinderd``. It will pull in the dependencies it needs automatically. Create a venv for it if you don't want to pollute the global Python env.
 
-Configuration File
-~~~~~~~~~~~~~~~~~~
-The ``certgrinderd`` configuration file is in YAML format. An example config named ``certgrinderd.conf.dist`` can be found in the distribution. Only changes to the defaults need to be specified.
+You can also checkout the Github repo and install the deps from ``requirements.txt`` by hand if you prefer. If you want to install with pip directly from Github the following may help:
+``pip install "git+https://github.com/tykling/certgrinder/#egg=certgrinderd&subdirectory=server"``
+
+The Certgrinder server needs to be reachable from the outside world on port 53/80 if you plan to serve DNS/HTTP challenges locally. It also needs to be accessible over SSH from all your Certgrinder clients if you plan to use SSH.
+
+Configuration
+-------------
+Configuration of ``certgrinderd`` can be done using command-line options, or a configuration file, or a combination of the two.
+
+The ``certgrinderd`` configuration file is in YAML format. An example config named ``certgrinderd.conf.dist`` can be found in the distribution. use ``--config-file`` or ``-f`` to specify the config file location.
+
+Each config item can be specified either in the YAML config file as a ``key: value`` pair, or on the commandline as ``--key value`` - the latter overriding the former if both are present.
+
+This is an alphabetical list of the configurable options:
+
+   ``acme-email``
+     The email to use for the ACME account creation. Only required for the first run. Default: `None`
+
+   ``acme-server-url``
+     The URL for the ACME server. Default: `https://acme-v02.api.letsencrypt.org/directory`
+
+   ``acme-zone``
+     The DNS zone to pass to auth-hook script as environment variable ACMEZONE. Default: `None`
+
+   ``auth-hook``
+     The script to run to prepare challenges before running Certbot. Default: `manual-auth-hook.sh`
+
+   ``certbot-command``
+     The Certbot command to run between the auth hook and the cleanup hook. Default: `/usr/local/bin/sudo /usr/local/bin/certbot`
+
+   ``certbot-config-dir``
+     The path to pass to Certbot as `--config-dir`. Default: `None`
+
+   ``certbot-logs-dir``
+     The path to pass to Certbot as `--logs-dir`. Default: `None`
+
+   ``certbot-work-dir``
+     The path to pass to Certbot as `--logs-dir`. Default: `None`
+
+   ``cleanup-hook``
+     The script to run to cleanup challenges after running Certbot. Default: `manual-cleanup-hook.sh`
+   ``config-file``
+     The path to the configuration file. The file is in YAML format. Default: `None`
+
+   ``debug``
+     Enables debug mode. This is the same as setting --log-level to DEBUG. Outputs lots info about the internal workings of certgrinderd. Default: `False`
+
+   ``log-level``
+     Sets the verbosity level for console and syslog logging. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Default: `INFO`
+
+   ``pid-dir``
+     The directory to place the certgrinderd PID file in. Default: `/tmp`
+
+   ``skip-acme-server-cert-verify``
+     Set to skip verification of the ACME servers TLS certificate. Used for testing, do not use in real world. Default: `False`
+
+   ``staging``
+     Enable staging mode. To make Certbot use the LetsEncrypt staging servers. Default: `False`
+
+   ``syslog-facility``
+     Set this and syslog-socket to enable logging to syslog. Default: `None`
+
+   ``syslog-socket``
+     Set this and syslog-facility to enable logging to syslog. Default: `None`
+
+   ``temp-dir``
+     Set this to the directory to use for temporary files (CSR and certificates). Default: `/tmp`
+
+   ``web-root``
+     The path to pass to the auth-hook script as environment variable WEBROOT. Default: `None`
+
+Finally the permitted domains for the current client must be specified as an environment variable (see next section).
 
 
 Restricting Client Hostnames
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 To determine whether a Certgrinder client is authorised to get a certificate for a given list of hostnames ``certgrinderd`` checks the environment variable named ``CERTGRINDERD_DOMAINSETS`` which must contain a semicolon-seperated list of comma-seperated lists of hostnames permitted for the current client.
 
 For example, if the Certgrinder client was a webserver with two vhosts, one with the name ``example.net`` and another vhost with the two names ``example.com`` and ``www.example.com``. In this case the environment variable ``CERTGRINDERD_DOMAINSETS="example.net;example.com,www.example.com"`` would permit the client to get the two certificates it needs, and nothing else.
@@ -43,7 +108,7 @@ The list of hostnames is case insensitive. IDNA names need to be in ascii format
 
 
 Configure SSH Access
-~~~~~~~~~~~~~~~~~~~~
+--------------------
 Usually Certgrinder clients connect to the Certgrinder server using SSH, but other connection methods can be used if needed. The rest of this section is about configuring SSH access for clients.
 
 Each Certgrinder client must generate an SSH key which is to be added to ``~/.ssh/authorized_keys`` on the Certgrinder server. Each entry must be restricted with:
@@ -60,6 +125,27 @@ Something like this works::
 To make the ``environment=`` foo work the option ``PermitUserEnvironment=CERTGRINDERD_DOMAINSETS`` needs to be added to ``sshd_config``.
 
 
-Install Webserver/DNS Server or Hook Scripts
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Finally you need to decide which challenge types to use, and how to handle them. Read the section on challenge types above, and if you decide to use a local web/dns server then you need to install and configure it now. If you want to use a remote server instead, you need to create the hook scripts to handle creating and deleting challenges.
+Challenges and Hooks
+--------------------
+Finally you need to decide which challenge types to use, and how to handle them. Read the section on LetsEncrypt Challenge Types, and if you decide to use a local web/dns server then you need to install and configure it now.
+
+Regardless of your choice web/dns local/remote you now need to create two hook scripts ``certgrinderd`` can call before and after calling Certbot.
+
+Both scripts get the same environment variables to work with:
+
+   ``$CERTBOT_DOMAIN``
+      The domain being authenticated, like www.example.com
+
+   ``$CERTBOT_VALIDATION``
+      The validation string (the secret which LE looks for)
+
+   ``$CERTBOT_TOKEN``
+      The filename containing the secret (only relevant for HTTP-01)
+
+   ``$ACMEZONE``
+      The DNS zone used for challenges (only relevant for DNS-01)
+
+   ``$WEBROOT``
+      The path to the webroot used for challenges (only relevant for HTTP-01)
+
+The web/dns server configuration depends on the local setup, just make sure that the configured ``auth-hook`` and ``cleanup-hook`` scripts work as expected. Check out the example scripts distributed with the project for inspiration.

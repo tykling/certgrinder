@@ -24,7 +24,7 @@ class Certgrinderd:
 
     # default config
     conf: typing.Dict[str, typing.Union[str, bool, None]] = {
-        "acme-email": None,  # required
+        "acme-email": None,
         "acme-server-url": "https://acme-v02.api.letsencrypt.org/directory",
         "acme-zone": None,
         "auth-hook": "manual-auth-hook.sh",
@@ -33,8 +33,9 @@ class Certgrinderd:
         "certbot-logs-dir": None,
         "certbot-work-dir": None,
         "cleanup-hook": "manual-cleanup-hook.sh",
-        "config-file": "~/certgrinderd.yml",
+        "config-file": None,
         "debug": False,
+        "log-level": "INFO",
         "pid-dir": "/tmp",
         "skip-acme-server-cert-verify": False,
         "staging": False,
@@ -48,19 +49,19 @@ class Certgrinderd:
         self, userconfig: typing.Dict[str, typing.Union[str, bool, None]]
     ) -> None:
         """
-        Merge userconfig with defaults and connect to syslog
+        Merge userconfig with defaults and configure logging
         """
         self.conf.update(userconfig)
 
         # define the log format used for stdout depending on the requested loglevel
-        if self.conf["debug"]:
+        if self.conf["log-level"] == "DEBUG":
             console_logformat = "%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s"
         else:
             console_logformat = "%(asctime)s %(levelname)s: %(message)s"
 
         # configure the log format used for console
         logging.basicConfig(
-            level=logging.DEBUG if self.conf["debug"] else logging.INFO,
+            level=getattr(logging, str(self.conf["log-level"])),
             format=console_logformat,
             datefmt="%Y-%m-%d %H:%M:%S %z",
         )
@@ -350,11 +351,20 @@ def main() -> None:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "-d",
         "--debug",
-        dest="debug",
-        action="store_true",
-        help="Enable debug output",
-        default=argparse.SUPPRESS,
+        action="store_const",
+        dest="log-level",
+        const="DEBUG",
+        help="Debug mode. Equal to setting --log-level=DEBUG.",
+    )
+    parser.add_argument(
+        "-l",
+        "--log-level",
+        dest="log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Defaults to INFO.",
     )
     parser.add_argument(
         "--pid-dir",

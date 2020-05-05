@@ -1,7 +1,7 @@
 ---
 ####################################################
 # certgrinderd configuration file, YAML format.
-# https://certgrinder.readthedocs.io/en/latest/certgrinderd.html#configuration-file
+# https://certgrinder.readthedocs.io/en/latest/certgrinderd.html#configuration
 ####################################################
 
 # ACCOUNT SETTINGS

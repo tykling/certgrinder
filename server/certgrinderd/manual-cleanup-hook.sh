@@ -3,8 +3,9 @@
 # $CERTBOT_VALIDATION is the validation string
 # $CERTBOT_TOKEN is the requested filename (for http-01 only)
 # $ACMEZONE is set by Certgrinder and contains the zone we are working with (only for DNS-01)
+# $WEBROOT is set by Certgrinder and contains the path to the webroot (only for HTTP-01)
 
-logger "Running manual-cleanup-hook - CERTBOT_DOMAIN: $CERTBOT_DOMAIN - CERTBOT_VALIDATION: $CERTBOT_VALIDATION - CERTBOT_TOKEN: $CERTBOT_TOKEN - ACMEZONE: $ACMEZONE"
+logger "Running $0 - CERTBOT_DOMAIN: ${CERTBOT_DOMAIN} - CERTBOT_VALIDATION: ${CERTBOT_VALIDATION} - CERTBOT_TOKEN: ${CERTBOT_TOKEN} - ACMEZONE: ${ACMEZONE} - WEBROOT: ${WEBROOT}"
 
 if [ -z "$CERTBOT_TOKEN" ]; then
         # This is a DNS-01 challenge
