@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="certgrinder",
-    version="0.13.0-alpha8-dev",
+    version="0.13.0-alpha8",
     author="Thomas Steen Rasmussen",
     author_email="thomas@gibfest.dk",
     description="The client part of the Certgrinder project. Use with 'certgrinderd' package on the serverside.",
