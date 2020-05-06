@@ -41,7 +41,7 @@ class Certgrinderd:
         "staging": False,
         "syslog-facility": None,
         "syslog-socket": None,
-        "temp-dir": "/tmp",
+        "temp-dir": None,
         "web-root": None,
     }
 
@@ -169,25 +169,13 @@ class Certgrinderd:
         if self.conf["web-root"]:
             env.update({"WEBROOT": str(self.conf["web-root"])})
 
+        # get temp paths for certbot
+        fullchainpath = os.path.join(str(self.conf["temp-dir"]), "fullchain.pem")
+        certpath = os.path.join(str(self.conf["temp-dir"]), "certificate.pem")
+        chainpath = os.path.join(str(self.conf["temp-dir"]), "chain.pem")
+
         # loop over challengetypes and run certbot for each
         for challengetype in ["dns", "http"]:
-            # Create a temp file for the signed certificate
-            kwargs = {
-                "suffix": ".crt",
-                "prefix": "certgrinderd-",
-                "dir": self.conf["temp-dir"],
-            }
-            # ignore in mypy for now https://github.com/python/typeshed/issues/3449
-            # get a temp path for the full chain (meaning intermediate+cert)
-            fullchainfh, fullchainpath = tempfile.mkstemp(**kwargs)  # type: ignore
-            os.unlink(str(fullchainpath))
-            # get a temp path for the chain (meaning intermediate only)
-            chainfh, chainpath = tempfile.mkstemp(**kwargs)  # type: ignore
-            os.unlink(str(chainpath))
-            # get a temp path for the cert
-            certfh, certpath = tempfile.mkstemp(**kwargs)  # type: ignore
-            os.unlink(str(certpath))
-
             # put the certbot command together
             command: typing.List[str] = str(self.conf["certbot-command"]).split(" ") + [
                 "certonly",
@@ -207,11 +195,11 @@ class Certgrinderd:
                 "--csr",
                 str(csrpath),
                 "--fullchain-path",
-                str(fullchainpath),
+                fullchainpath,
                 "--cert-path",
-                str(certpath),
+                certpath,
                 "--chain-path",
-                str(chainpath),
+                chainpath,
                 "--agree-tos",
             ]
 
@@ -252,9 +240,6 @@ class Certgrinderd:
                 )
                 with open(str(fullchainpath)) as f:
                     print(f.read())
-                os.unlink(str(certpath))
-                os.unlink(str(chainpath))
-                os.unlink(str(fullchainpath))
                 # no need to try more challenges, we have a cert
                 break
             else:
@@ -281,8 +266,9 @@ class Certgrinderd:
 
 def main() -> None:
     """
-    Main function. Read config and configure logging.
-    Then get CSR from stdin and call Certbot once for each challenge type.
+    Main function. Read config from file and/or commandline args.
+    Configure temporary path and configure logging.
+    Then instantiate the Certgrinderd class with the config and grind()
     """
     # parse commandline arguments
     parser = argparse.ArgumentParser(
@@ -431,9 +417,21 @@ def main() -> None:
     # command line arguments override config file settings
     config.update(vars(args))
 
-    # instantiate Certgrinderd class
-    certgrinderd = Certgrinderd(userconfig=config)
-    certgrinderd.grind()
+    # create tempfile directory if needed
+    if hasattr(config, "temp-dir") and config["temp-dir"]:
+        tempdir = tempfile.TemporaryDirectory(
+            prefix="certgrinderd-temp-", dir=config["temp-dir"]
+        )
+    else:
+        tempdir = tempfile.TemporaryDirectory(prefix="certgrinderd-temp-")
+    config["temp-dir"] = tempdir.name
+
+    try:
+        # instantiate Certgrinderd class
+        certgrinderd = Certgrinderd(userconfig=config)
+        certgrinderd.grind()
+    finally:
+        tempdir.cleanup()
 
     # we are done here
     logger.info("All done, certgrinderd exiting cleanly.")

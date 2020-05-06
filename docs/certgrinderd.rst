@@ -90,7 +90,7 @@ This is an alphabetical list of the configurable options:
      Set this and syslog-facility to enable logging to syslog. Default: `None`
 
    ``temp-dir``
-     Set this to the directory to use for temporary files (CSR and certificates). Default: `/tmp`
+     Set this to the directory to use for temporary files (CSR and certificates). Directory should be owned by the user running ``certgrinderd``. A directory will be created and deleted inside this temp-dir for each run. Leave blank to create one automatically. Default: `None`
 
    ``web-root``
      The path to pass to the auth-hook script as environment variable WEBROOT. Default: `None`
