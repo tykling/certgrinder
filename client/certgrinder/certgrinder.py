@@ -281,7 +281,10 @@ class Certgrinder:
             input=self.csr.public_bytes(primitives.serialization.Encoding.PEM)
         )
 
-        # parse stdout (which should now contain a valid signed PEM certificate)
+        # output stderr which contains all the logging from certgrinderd
+        print(stderr.strip().decode("utf-8"), sep="\n", file=sys.stderr)
+
+        # parse stdout (which should now contain a valid signed PEM certificate+intermediate)
         try:
             self.certificate = cryptography.x509.load_pem_x509_certificate(
                 stdout, default_backend()
@@ -291,26 +294,8 @@ class Certgrinder:
                 "The Certgrinder server did not return a valid certificate. Exception: %s"
                 % E
             )
-
-            # output some more if we are in debug mode
-            if self.debug:
-                logger.debug(
-                    "This was the exception encountered while trying to parse the certificate:"
-                )
-                logger.debug(E, exc_info=True)
-                # output stdout (if any)
-                if stdout:
-                    logger.debug("This is stdout from the ssh call:")
-                    logger.debug(stdout.strip().decode("utf-8"))
-                # output stderr (if any)
-                if stderr:
-                    logger.debug("this is stderr from the ssh call:")
-                    logger.debug(stderr.strip().decode("utf-8"))
-            else:
-                logger.error(
-                    "Rerun in debug mode (-d / --debug) to see more information, or check the log on the Certgrinder server"
-                )
-
+            logger.debug("This is stdout from the certgrinderd call:")
+            logger.debug(stdout.strip().decode("utf-8"))
             # we dont have a certificate
             return False
 
@@ -838,11 +823,9 @@ def main() -> None:
 
     # define the log format used for stdout depending on the requested loglevel
     if args.log_level == "DEBUG":
-        console_logformat = (
-            "%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s"
-        )
+        console_logformat = "%(asctime)s certgrinder %(levelname)s Certgrinder.%(funcName)s():%(lineno)i:  %(message)s"
     else:
-        console_logformat = "%(asctime)s %(levelname)s: %(message)s"
+        console_logformat = "%(asctime)s certgrinder %(levelname)s: %(message)s"
 
     # configure the log format used for console logging
     logging.basicConfig(

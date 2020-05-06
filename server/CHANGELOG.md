@@ -6,7 +6,7 @@ All notable changes to certgrinderd will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.13.0-alpha8][unreleased]
-- No changes
+- Changed logformat to prefix messages with certgrinderd: and Certgrinderd. instead of nothing and %(name)s, making it more clear which messages are from certgrinder and which are from certgrinderd.
 
 
 ## [v0.13.0-alpha7][6-may-2020]

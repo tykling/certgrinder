@@ -55,9 +55,9 @@ class Certgrinderd:
 
         # define the log format used for stdout depending on the requested loglevel
         if self.conf["log-level"] == "DEBUG":
-            console_logformat = "%(asctime)s %(levelname)s %(name)s:%(funcName)s():%(lineno)i:  %(message)s"
+            console_logformat = "%(asctime)s certgrinderd %(levelname)s Certgrinderd.%(funcName)s():%(lineno)i:  %(message)s"
         else:
-            console_logformat = "%(asctime)s %(levelname)s: %(message)s"
+            console_logformat = "%(asctime)s certgrinderd %(levelname)s: %(message)s"
 
         # configure the log format used for console
         logging.basicConfig(
