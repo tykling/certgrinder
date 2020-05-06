@@ -6,7 +6,8 @@ All notable changes to certgrinderd will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.13.0-alpha6][unreleased]
-- No changes
+### Changed
+- `certgrinderd` now creates a temporary directory for temporary CSR and CRT files per run. The directory and contents is at the end of each run. If --temp-dir is configured the temporary directory is created inside the path specified.
 
 
 ## [v0.13.0-alpha5][6-may-2020]
