@@ -91,7 +91,7 @@ class Certgrinder:
         """
         if os.path.exists(self.keypair_path):
             # check permissions for self.keypair_path
-            if oct(os.stat(self.keypair_path).st_mode)[4:] != "640":
+            if oct(os.stat(self.keypair_path).st_mode)[4:] != "0640":
                 logger.debug(
                     "keypair %s has incorrect permissions, fixing to 640..."
                     % self.keypair_path
@@ -771,6 +771,7 @@ def main() -> None:
         dest="log_level",
         const="DEBUG",
         help="Debug mode. Equal to setting --log-level=DEBUG.",
+        default=argparse.SUPPRESS,
     )
     parser.add_argument(
         "-l",

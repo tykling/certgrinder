@@ -6,7 +6,9 @@ All notable changes to certgrinder will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.13.0-alpha7][unreleased]
-- No changes
+### Fixed
+- Old bug where permissions of private key would be fixed to 640 even if it was already 640
+- --log-level didn't work without --debug
 
 
 ## [v0.13.0-alpha6][6-may-2020]
