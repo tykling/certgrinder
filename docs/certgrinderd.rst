@@ -1,5 +1,5 @@
-Certgrinder Server
-==================
+Certgrinderd (Server)
+=====================
 The Certgrinder server ``certgrinderd`` takes care of receiving the ``CSR``, running Certbot, serving challenges, and finally outputs a certificate. It never acts on its own, it only does something when a Certgrinder client calls it with a CSR on stdin, usually over SSH.
 
 The following sections explain the steps you need to setup a Certgrinder server.

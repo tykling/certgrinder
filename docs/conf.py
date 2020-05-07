@@ -8,11 +8,12 @@ sys.path.insert(0, os.path.abspath("../server/certgrinderd"))
 project = "Certgrinder"
 copyright = "2020, Thomas Steen Rasmussen"
 author = "Thomas Steen Rasmussen"
-extensions = ["sphinx.ext.autodoc"]
+extensions = ["sphinx.ext.autodoc", "sphinx_rtd_theme"]
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-# html_theme = "alabaster"
 html_static_path = ["_static"]
 master_doc = "index"
 autodoc_mock_imports = ["yaml", "cryptography", "dns"]
 version = "0.13.0-beta2-dev"
+html_theme = "sphinx_rtd_theme"
+html_theme_options = {"display_version": True}

@@ -1,5 +1,5 @@
-Certgrinder Client
-==================
+Certgrinder (Client)
+====================
 The ``certgrinder`` client is responsible for generating a keypair and a CSR, which it uses to contact the Certgrinder server ``certgrinderd`` over SSH to get a signed certificate. The following section explains how to install and configure it to get certificates from the Certgrinder server.
 
 

@@ -1,5 +1,5 @@
 Welcome to Certgrinder |version| Documentation!
-==========================================================
+===============================================
 
 .. toctree::
    :maxdepth: 2
@@ -7,8 +7,10 @@ Welcome to Certgrinder |version| Documentation!
 
    introduction
    challenge-types
-   certgrinder
-   certgrinder-class
    certgrinderd
-   certgrinderd-class
+   certgrinder
+   certgrinderd-autodoc
+   certgrinder-autodoc
+   certgrinderd-changelog
+   certgrinder-changelog
 
