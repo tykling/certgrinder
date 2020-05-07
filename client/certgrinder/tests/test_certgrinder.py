@@ -26,7 +26,6 @@ def test_get_certificate(
         checktlsa="",
         nameserver="",
         showspki=False,
-        debug=True,
         check=False,
     )
     certgrinder.main()
@@ -80,7 +79,6 @@ def test_generate_tlsa(certgrinder_configfile, known_public_key):
         checktlsa="",
         nameserver="",
         showspki=False,
-        debug=True,
         check=False,
     )
 
@@ -120,7 +118,6 @@ def test_generate_spki(certgrinder_configfile, known_public_key):
         checktlsa="",
         nameserver="",
         showspki=False,
-        debug=True,
         check=False,
     )
 

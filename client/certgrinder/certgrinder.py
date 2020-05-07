@@ -36,7 +36,7 @@ class Certgrinder:
         nameserver: str,
         showspki: bool,
         check: bool,
-        log_level: str,
+        log_level: str = "INFO",
     ) -> None:
         """
         The __init__ method just reads the config file and checks a few things
