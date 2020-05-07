@@ -1,5 +1,5 @@
-Welcome to Certgrinder's documentation!
-=======================================
+Welcome to Certgrinder |version| Documentation!
+==========================================================
 
 .. toctree::
    :maxdepth: 2
