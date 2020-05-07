@@ -35,8 +35,8 @@ class Certgrinder:
         checktlsa: str,
         nameserver: str,
         showspki: bool,
-        debug: bool,
         check: bool,
+        log_level: str,
     ) -> None:
         """
         The __init__ method just reads the config file and checks a few things
@@ -61,7 +61,6 @@ class Certgrinder:
         self.checktlsa = checktlsa
         self.nameserver = nameserver
         self.showspki = showspki
-        self.debug = debug
         self.check: bool = check
         self.tlsatypes: typing.List[typing.Tuple[int, int, int]] = [
             (3, 1, 0),
@@ -69,6 +68,7 @@ class Certgrinder:
             (3, 1, 2),
         ]
         self.__version__ = __version__
+        self.log_level = log_level
 
     def read_config(self, configfile: str) -> bool:
         """
@@ -263,10 +263,14 @@ class Certgrinder:
 
         # put the command together
         commandlist = [x for x in self.conf["certgrinderd"].split(" ")]
+
+        # pass the log-level to certgrinderd
+        commandlist.append("--log-level")
+        commandlist.append(self.log_level)
+
+        # do we want staging mode?
         if self.staging:
             commandlist.append("--staging")
-        if self.debug:
-            commandlist.append("--debug")
 
         logger.debug("running certgrinderd command: %s" % commandlist)
         p = subprocess.Popen(
@@ -793,8 +797,9 @@ def main() -> None:
         "--quiet",
         action="store_const",
         dest="log_level",
-        const=logging.WARNING,
-        help="Quiet mode. No output at all if there is nothing to do.",
+        const="WARNING",
+        help="Quiet mode. No output at all if there is nothing to do, and no errors are encountered.",
+        default=argparse.SUPPRESS,
     )
     parser.add_argument(
         "-s",
@@ -847,8 +852,8 @@ def main() -> None:
         checktlsa=args.checktlsa,
         nameserver=args.nameserver,
         showspki=args.showspki,
-        debug=True if args.log_level == "DEBUG" else False,
         check=args.check,
+        log_level=args.log_level,
     )
 
     # connect to syslog

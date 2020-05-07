@@ -6,7 +6,9 @@ All notable changes to certgrinder will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.13.0-alpha9][unreleased]
-- No changes
+### Fixed
+- Made -q / --quiet mode work
+- Made certgrinder always pass `--log-level LEVEL` to certgrinderd, so the effects of both `--quiet` and `--debug` are passed to the certgrinderd call.
 
 
 ## [v0.13.0-alpha8][6-may-2020]
