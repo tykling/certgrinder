@@ -118,7 +118,7 @@ The client has a few different commandline options which are shown below::
    usage: certgrinder.py [-h] [-c CHECKTLSA] [-C] [-d] [-f CONFIGFILE]
                          [-n NAMESERVER] [-p] [-q] [-s SHOWTLSA] [-S] [-v]
 
-   Certgrinder version 0.13.0-beta1. See the README.md file for more info.
+   Certgrinder version 0.13.0-beta2-dev. See the README.md file for more info.
 
    optional arguments:
      -h, --help            show this help message and exit
