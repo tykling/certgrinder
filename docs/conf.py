@@ -17,3 +17,20 @@ autodoc_mock_imports = ["yaml", "cryptography", "dns"]
 version = "0.13.0-beta2-dev"
 html_theme = "sphinx_rtd_theme"
 html_theme_options = {"display_version": True}
+man_pages = [
+    (
+        "certgrinder",
+        "certgrinder",
+        "Manpage for certgrinder",
+        ["Thomas Steen Rasmussen"],
+        8,
+    ),
+    (
+        "certgrinderd",
+        "certgrinderd",
+        "Manpage for certgrinderd",
+        ["Thomas Steen Rasmussen"],
+        8,
+    ),
+]
+manpages_url = "https://certgrinder.readthedocs.io/en/latest/{page}.html"

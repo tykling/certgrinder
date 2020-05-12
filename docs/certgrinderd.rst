@@ -35,65 +35,104 @@ Configuration of ``certgrinderd`` can be done using command-line options, or a c
 
 The ``certgrinderd`` configuration file is in YAML format. An example config named ``certgrinderd.conf.dist`` can be found in the distribution. use ``--config-file`` or ``-f`` to specify the config file location.
 
-Each config item can be specified either in the YAML config file as a ``key: value`` pair, or on the commandline as ``--key value`` - the latter overriding the former if both are present.
+Each config item can be specified either in the YAML config file as a ``key: value`` pair, or on the commandline as ``--key value`` - the latter overriding the former if both are present. For example, if the configfile has ``log-level: INFO`` and the command-line has ``log-level: DEBUG`` then the effective log-level would be ``DEBUG``.
 
 This is an alphabetical list of the configurable options:
 
-   ``acme-email``
-     The email to use for the ACME account creation. Only required for the first run. Default: `None`
+   `acme-email`
+     The email to use for the ACME account creation. Only required for the first run.
 
-   ``acme-server-url``
-     The URL for the ACME server. Default: `https://acme-v02.api.letsencrypt.org/directory`
+     Default: ``None``
 
-   ``acme-zone``
-     The DNS zone to pass to auth-hook script as environment variable ACMEZONE. Default: `None`
+   `acme-server-url`
+     The URL for the ACME server.
 
-   ``auth-hook``
-     The script to run to prepare challenges before running Certbot. Default: `manual-auth-hook.sh`
+     Default: ``https://acme-v02.api.letsencrypt.org/directory``
 
-   ``certbot-command``
-     The Certbot command to run between the auth hook and the cleanup hook. Default: `/usr/local/bin/sudo /usr/local/bin/certbot`
+   `acme-zone`
+     The DNS zone to pass to auth-hook script as environment variable ACMEZONE. Leave this unset to disable DNS-01 challenges.
 
-   ``certbot-config-dir``
-     The path to pass to Certbot as `--config-dir`. Default: `None`
+     Default: ``None``
 
-   ``certbot-logs-dir``
-     The path to pass to Certbot as `--logs-dir`. Default: `None`
+   `auth-hook`
+     The script to run to prepare challenges before running Certbot.
 
-   ``certbot-work-dir``
-     The path to pass to Certbot as `--logs-dir`. Default: `None`
+     Default: ``manual-auth-hook.sh``
 
-   ``cleanup-hook``
-     The script to run to cleanup challenges after running Certbot. Default: `manual-cleanup-hook.sh`
-   ``config-file``
-     The path to the configuration file. The file is in YAML format. Default: `None`
+   `certbot-command`
+     The Certbot command to run between the auth hook and the cleanup hook.
 
-   ``debug``
-     Enables debug mode. This is the same as setting --log-level to DEBUG. Outputs lots info about the internal workings of certgrinderd. Default: `False`
+     Default: ``/usr/local/bin/sudo /usr/local/bin/certbot``
 
-   ``log-level``
-     Sets the verbosity level for console and syslog logging. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Default: `INFO`
+   `certbot-config-dir`
+     The path to pass to Certbot as ``--config-dir``.
 
-   ``pid-dir``
-     The directory to place the certgrinderd PID file in. Default: `/tmp`
+     Default: ``None``
 
-   ``skip-acme-server-cert-verify``
-     Set to skip verification of the ACME servers TLS certificate. Used for testing, do not use in real world. Default: `False`
+   `certbot-logs-dir`
+     The path to pass to Certbot as ``--logs-dir``.
 
-   ``staging``
-     Enable staging mode. To make Certbot use the LetsEncrypt staging servers. Default: `False`
+     Default: ``None``
 
-   ``syslog-facility``
-     Set this and syslog-socket to enable logging to syslog. Default: `None`
+   `certbot-work-dir`
+     The path to pass to Certbot as ``--logs-dir``.
 
-   ``syslog-socket``
-     Set this and syslog-facility to enable logging to syslog. Default: `None`
+     Default: ``None``
 
-   ``temp-dir``
-     Set this to the directory to use for temporary files (CSR and certificates). Directory should be owned by the user running ``certgrinderd``. A directory will be created and deleted inside this temp-dir for each run. Leave blank to create one automatically. Default: `None`
+   `cleanup-hook`
+     The script to run to cleanup challenges after running Certbot.
 
-   ``web-root``
-     The path to pass to the auth-hook script as environment variable WEBROOT. Default: `None`
+     Default: ``manual-cleanup-hook.sh``
+
+   `config-file`
+     The path to the configuration file. The file is in YAML format.
+
+     Default: ``None``
+
+   `debug`
+     Enables debug mode. This is the same as setting --log-level to DEBUG. Outputs lots info about the internal workings of certgrinderd.
+
+     Default: ``False``
+
+   `log-level`
+     Sets the verbosity level for console and syslog logging. One of DEBUG, INFO, WARNING, ERROR, CRITICAL.
+
+     Default: ``INFO``
+
+   `pid-dir`
+     The directory to place the certgrinderd PID file in.
+
+     Default: ``/tmp``
+
+   `skip-acme-server-cert-verify`
+     Set to skip verification of the ACME servers TLS certificate. Used for testing, do not use in real world.
+
+     Default: ``False``
+
+   `staging`
+     Enable staging mode. To make Certbot use the LetsEncrypt staging servers.
+
+     Default: ``False``
+
+   `syslog-facility`
+     Set this and syslog-socket to enable logging to syslog.
+
+     Default: ``None``
+
+   `syslog-socket`
+     Set this and syslog-facility to enable logging to syslog.
+
+     Default: ``None``
+
+   `temp-dir`
+     Set this to the directory to use for temporary files (CSR and certificates). Directory should be owned by the user running ``certgrinderd``. A directory will be created and deleted inside this temp-dir for each run. Leave blank to create one automatically.
+
+     Default: ``None``
+
+   `web-root`
+     The path to pass to the auth-hook script as environment variable WEBROOT. Leave this blank to disable HTTP-01 challenges.
+
+     Default: ``None``
 
 Finally the permitted domains for the current client must be specified as an environment variable (see next section).
 
@@ -125,9 +164,9 @@ Something like this works::
 To make the ``environment=`` foo work the option ``PermitUserEnvironment=CERTGRINDERD_DOMAINSETS`` needs to be added to ``sshd_config``.
 
 
-Challenges and Hooks
---------------------
-Finally you need to decide which challenge types to use, and how to handle them. Read the section on LetsEncrypt Challenge Types, and if you decide to use a local web/dns server then you need to install and configure it now.
+Auth and Cleanup Hooks
+----------------------
+Finally you need to decide which challenge types to use, and how to handle them. Read the section on LetsEncrypt Challenge Types below, and if you decide to use a local web/dns server then you need to install and configure it now.
 
 Regardless of your choice web/dns local/remote you now need to create two hook scripts ``certgrinderd`` can call before and after calling Certbot.
 
@@ -148,4 +187,5 @@ Both scripts get the same environment variables to work with:
    ``$WEBROOT``
       The path to the webroot used for challenges (only relevant for HTTP-01)
 
+Both scripts must be able to handle the challenge types you use. The same script will be called firsttwice 
 The web/dns server configuration depends on the local setup, just make sure that the configured ``auth-hook`` and ``cleanup-hook`` scripts work as expected. Check out the example scripts distributed with the project for inspiration.

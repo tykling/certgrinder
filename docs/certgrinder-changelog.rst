@@ -16,10 +16,27 @@ Added
 ~~~~~
 
 - Dev requirements now has ``sphinx-rtd-theme`` which is the theme used on ReadTheDocs, so ``make html`` in ``docs/`` now produces the same-ish output.
+- Very preliminary support for EC keys in addition to RSA keys.
+- More tests
+- Better validation of returned certificate and intermediate
+- Save intermediate in seperate file, save certificate only in seperate file.
+- Documentation for all config settings
+- Manpage certgrinder.8
 
 Changed
 ~~~~~~~
 - Move CHANGELOG.md to rst format and into ``docs/``
+- Rework command-line options, add commands, rework configuration and configfile. This is a backwards incompatible change. Run ``/venv/bin/certgrinder periodic`` from cron, ``certgrinder help`` for more info.
+- Configuration is now a combination of command-line options (if any), config file (if any) and default config; in decreasing precedence order. A default setting will be overridden by a config file setting which will be overridden by a command-line setting.
+- Update ``certgrinder.conf.dist`` with new options and better comments
+- Mark most methods as ``@staticmethod`` or ``@classmethod``, refactor code as needed. This makes the code more reusable and easier to test.
+- Split certificate validity tests into seperate methods
+- Split parsing of ``certgrinderd`` output into seperate method ``parse_certgrinder_output()``
+- Split argparse stuff (which grew considerably with this change) into seperate ``get_parser()`` func
+- Support calling ``certgrinder.main()`` function and ``certgrinder.Certgrinder.grind()`` method with a list of mocked command-line args
+- Update existing tests to deal with all the new stuff
+- Make pytest logformat look like regular logging
+
 
 v0.13.0-beta1 (7-may-2020)
 ---------------------------

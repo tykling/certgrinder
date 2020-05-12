@@ -86,6 +86,7 @@ def certgrinderd_configfile(tmp_path_factory):
         "certbot-work-dir": str(tmp_path_factory.mktemp("certbot") / "workdir"),
         "certbot-logs-dir": str(tmp_path_factory.mktemp("certbot") / "logsdir"),
         "acme-email": "certgrindertest@invalid",
+        "web-root": str(tmp_path_factory.mktemp("certbot") / "webroot"),
     }
     with open(confpath, "w") as f:
         yaml.dump(conf, f)
@@ -98,11 +99,12 @@ def certgrinder_configfile(tmpdir_factory, certgrinderd_configfile):
     """
     Write a certgrinder.yml file for this test run
     """
-    confpath = tmpdir_factory.mktemp("conf") / "certgrinder.yml"
+    confpath = tmpdir_factory.mktemp("conf") / "certgrinder.conf"
     conf = {
         "path": str(tmpdir_factory.mktemp("certificates")),
-        "domainlist": ["example.com,www.example.com", "example.net"],
+        "domain-list": ["example.com,www.example.com", "example.net"],
         "certgrinderd": f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile}",
+        "debug": True,
     }
     with open(confpath, "w") as f:
         yaml.dump(conf, f)

@@ -160,93 +160,127 @@ class Certgrinderd:
             )
             sys.exit(1)
 
+    def get_certbot_command(
+        self,
+        challengetype: str,
+        csrpath: str,
+        fullchainpath: str,
+        certpath: str,
+        chainpath: str,
+    ) -> typing.List[str]:
+        """ put the certbot command together """
+        command: typing.List[str] = str(self.conf["certbot-command"]).split(" ") + [
+            "certonly",
+            "--non-interactive",
+            "--quiet",
+            "--rsa-key-size",
+            "4096",
+            "--authenticator",
+            "manual",
+            "--preferred-challenges",
+            challengetype,
+            "--manual-auth-hook",
+            str(self.conf["auth-hook"]),
+            "--manual-cleanup-hook",
+            str(self.conf["cleanup-hook"]),
+            "--manual-public-ip-logging-ok",
+            "--csr",
+            csrpath,
+            "--fullchain-path",
+            fullchainpath,
+            "--cert-path",
+            certpath,
+            "--chain-path",
+            chainpath,
+            "--agree-tos",
+        ]
+
+        if self.conf["acme-email"]:
+            command.append("--email")
+            command.append(str(self.conf["acme-email"]))
+
+        if self.conf["acme-server-url"]:
+            command.append("--server")
+            command.append(str(self.conf["acme-server-url"]))
+
+        if self.conf["skip-acme-server-cert-verify"]:
+            command.append("--no-verify-ssl")
+
+        if self.conf["certbot-config-dir"]:
+            command.append("--config-dir")
+            command.append(str(self.conf["certbot-config-dir"]))
+
+        if self.conf["certbot-work-dir"]:
+            command.append("--work-dir")
+            command.append(str(self.conf["certbot-work-dir"]))
+
+        if self.conf["certbot-logs-dir"]:
+            command.append("--logs-dir")
+            command.append(str(self.conf["certbot-logs-dir"]))
+
+        if self.conf["staging"]:
+            command.append("--staging")
+        return command
+
     def process_csr(self, csrpath: str) -> None:
         """ Loop over challenge types and run Certbot for each until we get a cert """
-        # put the certbot env together
-        env = os.environ.copy()
-        if self.conf["acme-zone"]:
-            env.update({"ACMEZONE": str(self.conf["acme-zone"])})
-        if self.conf["web-root"]:
-            env.update({"WEBROOT": str(self.conf["web-root"])})
-
         # get temp paths for certbot
         fullchainpath = os.path.join(str(self.conf["temp-dir"]), "fullchain.pem")
         certpath = os.path.join(str(self.conf["temp-dir"]), "certificate.pem")
         chainpath = os.path.join(str(self.conf["temp-dir"]), "chain.pem")
 
-        # loop over challengetypes and run certbot for each
-        for challengetype in ["dns", "http"]:
-            # put the certbot command together
-            command: typing.List[str] = str(self.conf["certbot-command"]).split(" ") + [
-                "certonly",
-                "--non-interactive",
-                "--quiet",
-                "--rsa-key-size",
-                "4096",
-                "--authenticator",
-                "manual",
-                "--preferred-challenges",
-                challengetype,
-                "--manual-auth-hook",
-                str(self.conf["auth-hook"]),
-                "--manual-cleanup-hook",
-                str(self.conf["cleanup-hook"]),
-                "--manual-public-ip-logging-ok",
-                "--csr",
-                str(csrpath),
-                "--fullchain-path",
-                fullchainpath,
-                "--cert-path",
-                certpath,
-                "--chain-path",
-                chainpath,
-                "--agree-tos",
-            ]
+        # try DNS-01 first, if we have an acme zone
+        if self.conf["acme-zone"]:
+            logger.debug(f"Attempting DNS-01 with zone {self.conf['acme-zone']} ...")
+            env = os.environ.copy()
+            env.update({"ACMEZONE": str(self.conf["acme-zone"])})
+            command = self.get_certbot_command(
+                challengetype="dns",
+                csrpath=csrpath,
+                fullchainpath=fullchainpath,
+                certpath=certpath,
+                chainpath=chainpath,
+            )
+            result = self.run_certbot(command, env, fullchainpath)
+            # no need to continue if we got a certificate with DNS-01
+            if result:
+                logger.info("Success, got a new certificate")
+                return
 
-            if self.conf["acme-email"]:
-                command.append("--email")
-                command.append(str(self.conf["acme-email"]))
+        # then try HTTP-01, if we have a web-root
+        if self.conf["web-root"]:
+            logger.debug(f"Attempting HTTP-01 with zone {self.conf['web-root']} ...")
+            env = os.environ.copy()
+            env.update({"WEBROOT": str(self.conf["web-root"])})
+            command = self.get_certbot_command(
+                challengetype="http",
+                csrpath=csrpath,
+                fullchainpath=fullchainpath,
+                certpath=certpath,
+                chainpath=chainpath,
+            )
+            result = self.run_certbot(command, env, fullchainpath)
+            if result:
+                logger.info("Success, got a new certificate")
+                return
 
-            if self.conf["acme-server-url"]:
-                command.append("--server")
-                command.append(str(self.conf["acme-server-url"]))
+        # we are done here
+        logger.error("No more challenge types to try, unable to get certificate")
 
-            if self.conf["skip-acme-server-cert-verify"]:
-                command.append("--no-verify-ssl")
-
-            if self.conf["certbot-config-dir"]:
-                command.append("--config-dir")
-                command.append(str(self.conf["certbot-config-dir"]))
-
-            if self.conf["certbot-work-dir"]:
-                command.append("--work-dir")
-                command.append(str(self.conf["certbot-work-dir"]))
-
-            if self.conf["certbot-logs-dir"]:
-                command.append("--logs-dir")
-                command.append(str(self.conf["certbot-logs-dir"]))
-
-            if self.conf["staging"]:
-                command.append("--staging")
-
-            logger.debug(f"Running Certbot command: {' '.join(command)}")
-
-            # call certbot
-            p = subprocess.run(command, capture_output=True, env=env)
-
-            if p.returncode == 0:
-                logger.info(
-                    f"Success. Certbot wrote {os.path.getsize(str(fullchainpath))} bytes chain to {fullchainpath} - sending to stdout and cleaning up temp files"
-                )
-                with open(str(fullchainpath)) as f:
-                    print(f.read())
-                # no need to try more challenges, we have a cert
-                break
-            else:
-                logger.error(
-                    f"Failed to get a certificate using challenge type {challengetype}. Certbot exit code was {p.returncode}. Certbot output was:"
-                )
-                logger.error(p.stderr.strip().decode("utf-8"))
+    def run_certbot(
+        self, command: typing.List[str], env: typing.Dict[str, str], fullchainpath: str
+    ) -> bool:
+        """ Call certbot, check exitcode, return True if we got a cert """
+        # call certbot
+        p = subprocess.run(command, capture_output=True, env=env)
+        if p.returncode == 0:
+            # success, output chain to stdout
+            with open(str(fullchainpath)) as f:
+                print(f.read())
+            # no need to try more challenges, we have a cert
+            return True
+        else:
+            return False
 
     def grind(self) -> None:
         """ Primary method, load the CSR, process it, and cleanup """
@@ -288,12 +322,14 @@ def main() -> None:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "-z",
         "--acme-zone",
         dest="acme-zone",
         help="The DNS zone to pass to the auth hook script as env. var. ACMEZONE. For DNS-01 challenges.",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "-A",
         "--auth-hook",
         dest="auth-hook",
         help="The hook script to call to prepare auth challenges before calling Certbot",
@@ -324,6 +360,7 @@ def main() -> None:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "-C",
         "--cleanup-hook",
         dest="cleanup-hook",
         help="The hook script to call to clean up auth challenges after calling Certbot",
@@ -354,6 +391,7 @@ def main() -> None:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "-p",
         "--pid-dir",
         dest="pid-dir",
         help="The directory to store the PID file in",
@@ -367,7 +405,7 @@ def main() -> None:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
-        "-S",
+        "-s",
         "--staging",
         dest="staging",
         action="store_true",
@@ -387,12 +425,14 @@ def main() -> None:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "-t",
         "--temp-dir",
         dest="temp-dir",
         help="The directory to store temporary files in",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "-w",
         "--web-root",
         dest="web-root",
         help="The path to pass to the auth hook script as env WEBROOT to use for HTTP-01 challenges.",
@@ -407,7 +447,7 @@ def main() -> None:
                 config = yaml.load(f, Loader=yaml.SafeLoader)
             except Exception:
                 logger.exception(
-                    f"Unable to read config file {getattr(args, 'config-file')} - bailing out."
+                    f"Unable to parse YAML config file {getattr(args, 'config-file')} - bailing out."
                 )
                 sys.exit(1)
     else:

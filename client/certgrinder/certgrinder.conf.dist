@@ -1,31 +1,63 @@
 ---
-# where to put keys and certificates and pidfile
-path: "~/certificates"
+####################################################
+# certgrinder configuration file, YAML format.
+# https://certgrinder.readthedocs.io/en/latest/certgrinder.html#configuration
+####################################################
 
-# a list of sets of domains to get certificates for
-domainlist:
-  - 'example.com'
-  - 'example.org,example.net'
+####################################################
+# REQUIRED SETTINGS
+####################################################
+
+# where to put keys, certificates and pidfile
+#path: "~/certificates"
+
+# A list of comma-seperated sets of domains to get certificates for
+#domain-list:
+#  - 'example.com,www.example.com'
+#  - 'example.org'
+#  - 'example.net'
 
 # command to reach the certgrinder server - command gets CSR on stdin
-certgrinderd: "ssh certgrinder@certgrinder.example.com"
+#certgrinderd: "ssh certgrinderd@certgrinder.example.com -T"
 
-# renew certificate when this many days or fewer validity left, default 30
-#cert_renew_threshold_days: 30
+####################################################
+# OPTIONAL SETTINGS
+####################################################
 
-# run these after renewal of one or more certificates
-#post_renew_hooks:
-#  - '/usr/sbin/service nginx reload'
+# renew certificate if it has less than this many days of validity left
+#cert-renew-threshold-days: 30
 
-# set this if the ssh source ip is important
-#bind_ip: "192.0.2.23"
+# a list of CA CommonNames we don't trust
+#invalid-ca-cn-list:
+#  - "Fake LE Intermediate X1"
+#  - "Fake LE Intermediate X2"
 
-# the full path to the sudo binary, defaults to /usr/local/bin/sudo
-#sudo_path: '/usr/local/bin/sudo'
+#Log messages at this severity and above. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Defaults to INFO.
+#log-level: "INFO"
 
-# syslog facility defaults to 'user' but can be change to 'local0' or whatever
-# syslog_facility: 'user'
+# the DNS server to use instead of system resolver
+#name-server 91.239.100.100
 
-# syslog_socket defaults to '/var/run/log'
-# syslog_socket: '/var/run/log'
+# the directory to store the pid-file in
+#pid-dir: /tmp
 
+# run these commands after renewal of one or more certificates
+#post-renew-hooks:
+#  - '/usr/local/bin/sudo /usr/sbin/service nginx reload'
+
+# staging mode. Makes certgrinder append --staging to the certgrinderd command. Use this until everything works to avoid LE throttling!
+#staging: True
+
+# The syslog facility to log to
+#syslog-facility: 'user'
+
+# The syslog socket to connect to
+#syslog-socket: '/var/run/log'
+
+# used for check/show tlsa
+#tlsa-port: "443"
+#tlsa-protocol: "tcp"
+#tlsa-type-list:
+#  - "310"
+#  - "311"
+#  - "312"

@@ -16,10 +16,18 @@ Added
 ~~~~~
 
 - Dev requirements now has ``sphinx-rtd-theme`` which is the theme used on ReadTheDocs, so ``make html`` in ``docs/`` now produces the same-ish output.
+- Short command-line options for a bunch of things.
+- Manpage certgrinderd.8
 
 Changed
 ~~~~~~~
 - Move CHANGELOG.md to rst format and into ``docs/``
+- Split certbot-command related stuff into new methods get_certbot_command() and run_certbot()
+
+Fixed
+~~~~~
+- Only try challenge types if we have the needed info (acme-zone for DNS-01, www-root for HTTP-01)
+
 
 v0.13.0-beta1 (7-may-2020)
 ---------------------------

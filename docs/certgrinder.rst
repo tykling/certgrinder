@@ -23,10 +23,90 @@ Since ``certgrinder`` is designed to be run under a seperate system user one sho
 The user also needs to run ``ssh-keygen`` and the SSH key needs to be added to the ``authorized_keys`` file on the Certgrinder server. Make sure to test the SSH access works (hint: check firewalls, v4 vs v6 etc).
 
 
-Config File
-~~~~~~~~~~~
-The config file for ``certgrinder`` is in ``YAML`` format. ``certgrinder`` comes with a sample ``certgrinder.yml.dist`` file which should be fairly self-explanatory.
+Configuration
+~~~~~~~~~~~~~
+Configuration of ``certgrinder`` can be done using command-line options, or a configuration file, or a combination of the two.
 
+The ``certgrinder`` configuration file is in YAML format. An example config named ``certgrinder.conf.dist`` can be found in the distribution. use ``--config-file`` or ``-f`` to specify the config file location.
+
+Each config item can be specified either in the YAML config file as a ``key: value`` pair, or on the commandline as ``--key value`` - the latter overriding the former if both are present. For example, if the configfile has ``log-level: INFO`` and the command-line has ``--log-level: DEBUG`` then the effective log-level would be ``DEBUG``.
+
+This is an alphabetical list of the configurable options:
+
+   `certgrinderd`
+     The command to run as ``certgrinderd``. Usually this will be something like ``ssh certgrinderd@certgrinder.example.com -T``, possibly also with a ``--config-file`` for ``certgrinderd`` if needed.
+
+     Default: ``None``
+
+   `cert-renew-threshold-days`
+     A certificate will be renewed when it has less than this many days of lifetime left.
+
+     Default: ``30``
+
+   `domain-list`
+     Comma-seperated lists of domains for the certificates. Can be specified multiple times on the command-line, ``--domain-list example.com,www.example.com --domain-list example.net`` means two certificates, the first with two names, the second with one name.
+
+     Default: ``None``
+
+   `invalid-ca-cn-list`
+     List of CommonName of certificate issuers to consider invalid. This is not a regular CA certificate validity check, it is used to detect certificates issued by LetsEncrypt staging servers as invalid.
+
+     Default: ``["Fake LE Intermediate X1", "Fake LE Intermediate X2"]``
+
+   `log-level`
+     Sets the verbosity level for console and syslog logging. One of DEBUG, INFO, WARNING, ERROR, CRITICAL.
+
+     Default: ``INFO``
+
+   `name-server`
+     Set this to a DNS server IP (v4 or v6, no hostnames) to use that DNS server instead of the system resolver.
+
+     Default: ``None``
+
+   `path`
+     The directory used for keys, CSRs and certificates. Must exist and be writable by the user running Certgrinder.
+
+     Default: ``None``
+
+   `pid-dir`
+     The directory to place the certgrinderd PID file in.
+
+     Default: ``/tmp``
+
+   `post-renew-hooks`
+     A list of commands which ``certgrinder`` must run after renewing one or more certificates. Use this to reload/restart services which need to be poked after the certificate changes. Can be specified multiple times on the command-line. Remember to include sudo or whatever if needed.
+
+     Default: ``None``
+
+   `staging`
+     Enable staging mode. Adds ``--staging`` to the ``certgrinderd`` command, and sees certificates issued by LE staging servers as valid.
+
+     Default: ``False``
+
+   `syslog-facility`
+     Set this and syslog-socket to enable logging to syslog.
+
+     Default: ``None``
+
+   `syslog-socket`
+     Set this and syslog-facility to enable logging to syslog.
+
+     Default: ``None``
+
+   `tlsa-port`
+     Set this to the port (like ``443``) when using ``show tlsa`` or ``check tlsa`` subcommands.
+
+     Default: ``None``
+
+   `tlsa-protocol`
+     Set this to the protocol (like ``tcp``) when using ``show tlsa`` or ``check tlsa`` subcommands.
+
+     Default: ``None``
+
+   `tlsa-type-list`
+     Set this to enable a TLSA type (can be specified multiple times). The TLSA type must be specified as three integers, one of: ``310``, ``311`` or ``312``. Default: is all three pubkey types.
+
+     Default: ``["310", "311", "312"]``
 
 Challenges
 ~~~~~~~~~~
@@ -115,38 +195,99 @@ The operation is pretty simple::
 Command-line Options
 --------------------
 The client has a few different commandline options which are shown below::
-   usage: certgrinder.py [-h] [-c CHECKTLSA] [-C] [-d] [-f CONFIGFILE]
-                         [-n NAMESERVER] [-p] [-q] [-s SHOWTLSA] [-S] [-v]
 
-   Certgrinder version 0.13.0-beta2-dev. See the README.md file for more info.
+   $ certgrinder help
+   usage: certgrinder.py [-h] [--certgrinderd CERTGRINDERD]
+                         [--cert-renew-threshold-days CERT-RENEW-THRESHOLD-DAYS]
+                         [-d] [-D DOMAIN-LIST]
+                         [--invalid-ca-cn-list INVALID-CA-CN-LIST]
+                         [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-f CONFIGFILE]
+                         [-n NAME-SERVER] [--path PATH] [-p PID-DIR]
+                         [--post-renew-hooks POST-RENEW-HOOKS] [-q] [-s]
+                         [--syslog-facility SYSLOG-FACILITY]
+                         [--syslog-socket SYSLOG-SOCKET] [--tlsa-port TLSA-PORT]
+                         [--tlsa-protocol TLSA-PROTOCOL]
+                         [--tlsa-type-list {310,311,312}]
+                         {check,show,get,version,help,periodic} ...
+
+   Certgrinder version 0.13.0-beta2-dev. See the manpage or ReadTheDocs for more
+   info.
+
+   positional arguments:
+     {check,show,get,version,help,periodic}
+                           Command (required)
+       check               Use the "check" command to check certificates, OCSP
+                           responses and TLSA records. Returns exit code 0 if all
+                           is well, and 1 if something needs attention.
+       show                Use the "show" command to show certificates, TLSA
+                           records, SPKI pins or configuration.
+       get                 Use the "get" command to get certificates and OCSP
+                           responses
+       version             The "version" command just outputs the version of
+                           Certgrinder
+       help                The "help" command just outputs the usage help
+       periodic            The "periodic" command checks certificates and renews
+                           them as needed. It is meant to be run daily.
 
    optional arguments:
      -h, --help            show this help message and exit
-     -c CHECKTLSA, --checktlsa CHECKTLSA
-                           Tell certgrinder to lookup TLSA records for the given
-                           service in the DNS and compare with what we have
-                           locally, for example: --checktlsa _853._tcp
-     -C, --check           Tell certgrinder check certificate validity and exit.
-                           If any certificates are missing or have less than 30
-                           days validity the exit code will be 1.
-     -d, --debug           Debug output. Lots of output about the internal
-                           workings of certgrinder.
-     -f CONFIGFILE, --configfile CONFIGFILE
+     --certgrinderd CERTGRINDERD
+                           The command to reach the certgrinderd server, will get
+                           the CSR on stdin. Usually something like 'ssh
+                           certgrinderd@server -T'
+     --cert-renew-threshold-days CERT-RENEW-THRESHOLD-DAYS
+                           A certificate is renewed when it has less than this
+                           many days of lifetime left. Default: `30`
+     -d, --debug           Debug mode. Equal to setting --log-level=DEBUG.
+     -D DOMAIN-LIST, --domain-list DOMAIN-LIST
+                           Comma seperated list of domains for a certificate. Can
+                           be specified multiple times.
+     --invalid-ca-cn-list INVALID-CA-CN-LIST
+                           The CommonName of an issuer (CA intermediate) to
+                           consider invalid. Can be specified multiple times.
+     -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                           Logging level. One of DEBUG, INFO, WARNING, ERROR,
+                           CRITICAL. Defaults to INFO.
+     -f CONFIGFILE, --config-file CONFIGFILE
                            The path to the certgrinder.yml config file to use,
                            default ~/certgrinder.yml
-     -n NAMESERVER, --nameserver NAMESERVER
+     -n NAME-SERVER, --name-server NAME-SERVER
                            Tell certgrinder to use this DNS server IP to lookup
                            TLSA records. Only relevant with -c / --checktlsa.
                            Only v4/v6 IPs, no hostnames.
-     -p, --showspki        Tell certgrinder to generate and print the pin-sha256
-                           spki pins for the public keys it manages.
+     --path PATH           Tell certgrinder to use the specified directory for
+                           keys, CSRs and certificates. The directory must exist
+                           and be writeable by the user running certgrinder.
+     -p PID-DIR, --pid-dir PID-DIR
+                           The directory to store the PID file in
+     --post-renew-hooks POST-RENEW-HOOKS
+                           The list of commands to run after one or more
+                           certificates are renewed. Most such commands will need
+                           root access to run, remember to prefix the command
+                           with 'sudo' as needed. Can be specified multiple
+                           times. Default: `None`
      -q, --quiet           Quiet mode. No output at all if there is nothing to
-                           do.
-     -s SHOWTLSA, --showtlsa SHOWTLSA
-                           Tell certgrinder to generate and print TLSA records
-                           for the given service, for example: --showtlsa
-                           _853._tcp
-     -S, --staging         Tell the certgrinder server to use LetsEncrypt staging
-                           servers, for testing purposes.
-     -v, --version         Show version and exit.
+                           do, and no errors are encountered. Equal to setting
+                           --log-level=WARNING.
+     -s, --staging         Pass --staging to the certgrinderd command to tell the
+                           Certgrinder server to use LetsEncrypt staging servers
+                           (use for testing purposes).
+     --syslog-facility SYSLOG-FACILITY
+                           The syslog facility to use. Set this and syslog-socket
+                           to enable logging to syslog.
+     --syslog-socket SYSLOG-SOCKET
+                           The syslog socket to connect to. Set this and syslog-
+                           facility to enable logging to syslog.
+     --tlsa-port TLSA-PORT
+                           The service port number (like 443) for TLSA
+                           operations.
+     --tlsa-protocol TLSA-PROTOCOL
+                           The service protocol (like tcp) for TLSA operations.
+     --tlsa-type-list {310,311,312}
+                           Enables a TLSA type for TLSA operations. Can be
+                           specified multiple times.
 
+
+See Also
+--------
+:manpage:`certgrinderd(8)`
