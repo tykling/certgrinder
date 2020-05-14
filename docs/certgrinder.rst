@@ -115,7 +115,7 @@ Finally you need to choose which challenge type to use for this ``certgrinder`` 
 
 Testing
 ~~~~~~~
-At this point you should be ready to test! Start by checking with SSH manually to see that the SSH key is installed properly on the Certgrinder server, and firewalls are open. Certgrinder has a ``--test`` switch which makes ``certgrinderd`` use the LetsEncrypt staging environment. Use this until everything works! ``certgrinder`` outputs some info on what happens, and can output more with ``-d / --debug``, but often you need to check syslog on the Certgrinder server.
+At this point you should be ready to test! Start by checking with SSH manually to see that the SSH key is installed properly on the Certgrinder server, and firewalls are open. Certgrinder has a ``--staging`` switch which makes ``certgrinderd`` use the LetsEncrypt staging environment. Use this until everything works! ``certgrinder`` outputs some info on what happens, and can output more with ``-d / --debug``, but sometimes you need to check syslog on the Certgrinder server.
 
 
 Crontab job

@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+"""Certgrinder v0.13.0-beta2-dev module.
+
+See https://certgrinder.readthedocs.io/en/latest/certgrinder.html
+and https://github.com/tykling/certgrinder for more.
+"""
 import argparse
 import base64
 import binascii
@@ -25,9 +30,7 @@ __version__ = "0.13.0-beta2-dev"
 
 
 class Certgrinder:
-    """
-    The Certgrinder client class.
-    """
+    """The Certgrinder client class."""
 
     # save version as a class attribute
     __version__ = __version__
@@ -72,9 +75,16 @@ class Certgrinder:
         self,
         userconfig: typing.Dict[str, typing.Union[str, int, bool, typing.List[str]]],
     ) -> None:
-        """
-        The configure() method merges the supplied userconfig dict with the default config,
+        """Merge and check configuration and configure logging.
+
+        Merge the supplied userconfig dict with the default config,
         checks for missing required settings, and configures logging and syslog.
+
+        Args:
+            userconfig: dict of the config to be merged with the default config
+
+        Returns:
+            None
         """
         # merge default config with userconfig
         self.conf.update(userconfig)
@@ -144,7 +154,16 @@ class Certgrinder:
     def load_keypair(
         path: str
     ) -> typing.Union[openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey]:
-        """ Load keypair bytes from disk, load key and return the object """
+        """Load keypair bytes from disk, load key and return the object.
+
+        Fixes keypair permissions to 640 if they are not 640.
+
+        Args:
+            path: The path to load the keypair from
+
+        Returns:
+            The keypair object
+        """
         # check permissions for self.keypair_path and fix to 640 if needed
         if oct(os.stat(path).st_mode)[4:] != "0640":
             logger.debug(f"Keypair {path} has incorrect permissions, fixing to 640...")
@@ -162,7 +181,17 @@ class Certgrinder:
     def generate_private_key(
         keytype: str = "rsa"
     ) -> typing.Union[openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey]:
-        """ Generate and returns a private key """
+        """Generate and returns a private key.
+
+        Args:
+            keytype: "rsa" for RSA key, "ed25519" for EC
+
+        Returns:
+            The keypair object
+
+        Raises:
+            ValueError: For unsupported keytypes
+        """
         if keytype == "rsa":
             return primitives.asymmetric.rsa.generate_private_key(
                 public_exponent=65537, key_size=4096, backend=default_backend()
@@ -179,7 +208,15 @@ class Certgrinder:
         ],
         path: str,
     ) -> None:
-        """ Saves keypair to disk """
+        """Save keypair to disk.
+
+        Args:
+            keypair: The keypair to save
+            path: The path to save the keypair in
+
+        Returns:
+            None
+        """
         with open(path, "wb") as f:
             f.write(
                 keypair.private_bytes(
@@ -196,7 +233,14 @@ class Certgrinder:
             openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey
         ]
     ) -> bytes:
-        """ Returns the DER formatted publickey """
+        """Return the DER formatted publickey.
+
+        Args:
+            keypair: The keypair which contains the public key
+
+        Returns:
+            The bytes representing the DER formatted public key
+        """
         derbytes: bytes = keypair.public_key().public_bytes(
             encoding=primitives.serialization.Encoding.DER,
             format=primitives.serialization.PublicFormat.SubjectPublicKeyInfo,
@@ -212,10 +256,17 @@ class Certgrinder:
         ],
         domains: typing.List[str],
     ) -> x509._CertificateSigningRequest:
-        """
-        Generates and returns a new CSR based on the public key and list of domains.
-        Only sets CN since everything else is removed by LetsEncrypt in the certificate anyway.
+        """Generate and return a new CSR based on the public key and list of domains.
+
+        Only set CN since everything else is removed by LetsEncrypt in the certificate anyway.
         Add all domains in subjectAltName, including the one put into CN.
+
+        Args:
+            keypair: The keypair to base the CSR on
+            domains: A list of domains to put in the CSR. First in the list will be cert CN.
+
+        Returns:
+            The CSR object
         """
         # build list of cryptography.x509.DNSName objects for SAN
         x509_name_list: typing.List[cryptography.x509.GeneralName] = []
@@ -248,7 +299,17 @@ class Certgrinder:
 
     @staticmethod
     def save_csr(csr: x509._CertificateSigningRequest, path: str) -> None:
-        """ Save the PEM version of the CSR to the path """
+        """Save the PEM version of the CSR to the path.
+
+        chmods the file 644 after writing.
+
+        Args:
+            csr: The CSR to be saved
+            path: The path to save the CSR to
+
+        Returns:
+            None
+        """
         with open(path, "wb") as f:
             f.write(csr.public_bytes(primitives.serialization.Encoding.PEM))
         os.chmod(path, 0o644)
@@ -257,7 +318,14 @@ class Certgrinder:
 
     @staticmethod
     def load_certificate(path: str) -> cryptography.x509.Certificate:
-        """ Reads PEM certificate data from the path and returns the object """
+        """Reads PEM certificate data from the path and returns the object.
+
+        Args:
+            path: The path to read the certificate from
+
+        Returns:
+            The certificate object
+        """
         pem_data = open(path, "rb").read()
         return cryptography.x509.load_pem_x509_certificate(pem_data, default_backend())
 
@@ -265,9 +333,14 @@ class Certgrinder:
     def check_certificate_issuer(
         certificate: cryptography.x509.Certificate, invalid_ca_cn_list: typing.List[str]
     ) -> bool:
-        """
-        Checks the issuer of the certificate. Returns False if the certificate
-        was issued by any CA CN in invalid_ca_cn_list, True otherwise.
+        """Check the issuer of the certificate.
+
+        Args:
+            certificate: The certificate to check
+            invalid_ca_cn_list: The list of CA CommonName strings to consider invalid
+
+        Returns:
+            True if the certificate issuer CN is not in invalid_ca_cn_list
         """
         # Return False if the certificate was issued by itself
         if certificate.issuer == certificate.subject:
@@ -295,7 +368,15 @@ class Certgrinder:
     def check_certificate_expiry(
         certificate: cryptography.x509.Certificate, threshold_days: int
     ) -> bool:
-        """ Checks the expiration of the certificate, return True if remaining validity is > threshold_days """
+        """Check the remaining validity of the certificate.
+
+        Args:
+            certificate: The certificate to check
+            threshold_days: The lowest number of remaining days of validity that is considered valid
+
+        Returns:
+            True if remaining certificate lifetime is >= threshold_days, False if not
+        """
         expiredelta = certificate.not_valid_after - datetime.now()
         if expiredelta.days < threshold_days:
             return False
@@ -309,7 +390,15 @@ class Certgrinder:
             openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey
         ],
     ) -> bool:
-        """ Make sure certificate has the specified public key """
+        """Make sure certificate has the specified public key.
+
+        Args:
+            certificate: The certificate to check
+            keypair: The keypair which contains the public key
+
+        Returns:
+            True if the public key matches, False if not
+        """
         # compare the PEM representation of the two public keys and return the result
         return bool(
             keypair.public_key().public_bytes(
@@ -326,14 +415,30 @@ class Certgrinder:
     def check_certificate_subject(
         certificate: cryptography.x509.Certificate, subject: str
     ) -> bool:
-        """ Make sure the certificate has the specified subject """
+        """Make sure the certificate has the specified subject.
+
+        Args:
+            certificate: The certificate to check
+            subject: The subject to expect
+
+        Returns:
+            True if the subject matches the cert, False if not
+        """
         return str(certificate.subject) == str(subject)
 
     @staticmethod
     def check_certificate_san_names(
         certificate: cryptography.x509.Certificate, san_names: typing.List[str]
     ) -> bool:
-        """ Make sure the certificate has the provided list of names as SAN """
+        """Make sure the certificate has the provided list of names as SAN.
+
+        Args:
+            certificate: The certificate to check
+            san_names: A list of the names to expect
+
+        Returns:
+            True if all san_names were found in the cert, and no others.
+        """
         cert_san = certificate.extensions.get_extension_for_oid(
             cryptography.x509.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
         ).value
@@ -356,14 +461,23 @@ class Certgrinder:
         ],
         subject: str = "",
     ) -> bool:
-        """
-        Performs a few sanity checks of the certificate.
-        - checks that the issuer is valid
-        - checks that the certificate expiry is not exceeded
-        - checks that the public key is correct
-        - checks that the subject is correct
-        - checks that the SubjectAltName data is correct (TODO)
-        Return False if a problem is found, True if all is well
+        """Perform a few sanity checks of the certificate.
+
+        - Check that the issuer is valid
+        - Check that the certificate expiry is not exceeded
+        - Check that the public key is correct
+        - Check that the subject is correct
+        - Check that the SubjectAltName data is correct
+
+        Args:
+            certificate: The certificate to check
+            invalid_ca_cn_list: A list of CA CommonNames to consider invalid
+            threshold_days: The minimum number of remaining days lifetime to considered valid.
+            san_names: A list of domain names to expect in SubjectAltName of the certificate.
+            keypair: The keypair the certificate is for.
+
+        Returns:
+            False if a problem is found, True if all is well.
         """
         if not cls.check_certificate_issuer(certificate, invalid_ca_cn_list):
             logger.error(
@@ -373,14 +487,14 @@ class Certgrinder:
         if not cls.check_certificate_expiry(certificate, threshold_days):
             logger.error(f"Certificate expires in less than {threshold_days} days")
             return False
-        if not cls.check_certificate_san_names(certificate, san_names):
-            logger.error("Certificate SAN name list is different from the expected")
-            return False
         if keypair and not cls.check_certificate_public_key(certificate, keypair):
             logger.error("Certificate public key is different from the expected")
             return False
         if subject and not cls.check_certificate_subject(certificate, subject):
             logger.error("Certificate subject is different from the expected")
+            return False
+        if not cls.check_certificate_san_names(certificate, san_names):
+            logger.error("Certificate SAN name list is different from the expected")
             return False
         logger.debug("Certificate is OK, returning True")
         return True
@@ -391,7 +505,16 @@ class Certgrinder:
         path: str,
         intermediate: typing.Optional[cryptography.x509.Certificate] = None,
     ) -> None:
-        """ Save the PEM certificate to the path """
+        """Save the PEM certificate to the path, optionally with an intermediate.
+
+        Args:
+            certificate: The certificate to save
+            path: The path to save the certificate in
+            intermediate: The intermediate to write after the certificate (if any)
+
+        Returns:
+            None
+        """
         with open(path, "wb") as f:
             f.write(certificate.public_bytes(primitives.serialization.Encoding.PEM))
             if intermediate:
@@ -410,7 +533,17 @@ class Certgrinder:
         intermediate: cryptography.x509.Certificate,
         path: str,
     ) -> None:
-        """ Creates a single file with the private key, the cert and the intermediate, in that order """
+        """Create a single file with the private key, the cert and the intermediate, in that order.
+
+        Args:
+            keypair: The keypair to save in the concat file
+            certificate: The certificate to save in the concat file
+            intermediate: The intermediate to save in the concat file
+            path: The path to save the concat file in
+
+        Returns:
+            None
+        """
         cls.save_keypair(keypair, path)
         with open(path, "ab") as f:
             f.write(certificate.public_bytes(primitives.serialization.Encoding.PEM))
@@ -418,7 +551,13 @@ class Certgrinder:
         os.chmod(path, 0o640)
 
     def get_certgrinderd_command(self) -> typing.List[str]:
-        """ Return the certgrinderd command to run """
+        """Return the certgrinderd command to run.
+
+        Adds ``--log-level`` with the current ``self.conf["log-level"]``, and ``--staging`` as needed.
+
+        Returns:
+            A list of the elements which make up the ``certgrinderd`` command
+        """
         # put the command together
         command = str(self.conf["certgrinderd"])
         commandlist = [str(x) for x in command.split(" ")]
@@ -437,7 +576,14 @@ class Certgrinder:
     def run_certgrinderd(
         self, csr: x509._CertificateSigningRequest
     ) -> typing.Optional[bytes]:
-        """ Run the configured certgrinderd command with the CSR on stdin """
+        """Run the configured ``self.conf["certgrinderd"]`` command with the CSR on stdin.
+
+        Args:
+            csr: The CSR to pass to the certgrinderd command
+
+        Returns:
+            The bytes representing the stdout from the subprocess call
+        """
         commandlist = self.get_certgrinderd_command()
         logger.debug("Running certgrinderd command: %s" % commandlist)
         p = subprocess.Popen(
@@ -461,7 +607,15 @@ class Certgrinder:
     ) -> typing.Optional[
         typing.Tuple[cryptography.x509.Certificate, cryptography.x509.Certificate]
     ]:
-        """ Split output chain into cert and intermediate """
+        """Split output chain into cert and intermediate.
+
+        Args:
+            certgrinderd_stdout: The bytes of the stdout from the certgrinderd call
+            csr: The CSR this certificate was issued from
+
+        Returns:
+            A tuple of certificate, intermediate if the certificate chain is valid, None otherwise
+        """
         # decode stdout as ASCII and split into lines
         chain_list = certgrinderd_stdout.decode("ASCII").split("\n")
 
@@ -536,10 +690,14 @@ class Certgrinder:
         return certificate, intermediate
 
     def get_certificate(self) -> bool:
-        """
-        This method gets a new certificate for self.domainset, without considering
-        the existing certificate. It is called by self.periodic() as needed.
-        It can also be called by the 'get certificate' subcommand.
+        """Get a new certificate for self.domainset.
+
+        This methods gets a new certificate regardless of the status of any
+        existing certificate. It is called by ``self.periodic()`` as needed.
+        It can also be called by the ``get certificate`` subcommand.
+
+        Returns:
+            None
         """
         logger.info(f"Getting new certificate for domainset {self.domainset} ...")
         # get and save CSR
@@ -590,11 +748,18 @@ class Certgrinder:
             typing.Union[openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey]
         ] = None,
     ) -> bool:
-        """
-        This method checks certificate validity and returns True or False.
-        It is called by self.grind() once per domainset when the "check certificate"
+        """Check certificate validity and returns True or False.
+
+        This method is called by self.grind() once per domainset when the "check certificate"
         subcommand is invoked.
-        Reads the certificate from self.certificate_path if there is no certificate arg
+        It reads the certificate from self.certificate_path if there is no certificate arg
+
+        Args:
+            certificate: The certificate to be checked
+            keypair: The keypair the certificate is based on
+
+        Returns:
+            True if everything is OK, False otherwise
         """
         # load certificate from disk?
         if not certificate:
@@ -627,9 +792,12 @@ class Certgrinder:
     # POST RENEW HOOK METHOD
 
     def run_post_renew_hooks(self) -> bool:
-        """
-        Loops over configured post_renew_hooks and runs them.
-        If the hook needs sudo or doas or similar that must be included in the command
+        """Loops over configured post_renew_hooks and runs them.
+
+        If the hook needs sudo or doas or similar that must be included in the command.
+
+        Returns:
+            None
         """
         if "post-renew-hooks" not in self.conf or not self.conf["post-renew-hooks"]:
             logger.debug("no post-renew-hooks found in config, not doing anything")
@@ -655,21 +823,40 @@ class Certgrinder:
 
     @staticmethod
     def generate_spki(derkey: bytes) -> str:
-        """
-        Generates and returns an pin-sha256 spki hpkp style pin for the provided public key.
+        """Generate and return a pin-sha256 spki hpkp style pin for the provided public key.
+
         OpenSSL equivalent command is:
-        openssl x509 -in example.com.crt -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl base64
+            openssl x509 -in example.com.crt -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl base64
+
+        Args:
+            derkey: The bytes representing the public key in DER format
+
+        Returns:
+            A string of the SPKI pin
         """
         return base64.b64encode(hashlib.sha256(derkey).digest()).decode("ASCII")
 
     @classmethod
     def output_spki(cls, derkey: bytes) -> None:
-        """ Get and print the spki pin for the supplied DER public key """
+        """Get and print the spki pin for the supplied DER public key.
+
+        Args:
+            derkey: The bytes representation of the DER formatted public key
+
+        Returns:
+            None
+        """
         spki = cls.generate_spki(derkey)
         logger.info(f"pin-sha256='{spki}'")
 
     def show_spki(self) -> None:
-        """ 'show spki' subcommand method, called for each domainset by self.grind() """
+        """The ``show spki`` subcommand method, called for each domainset by ``self.grind()``.
+
+        Call ``self.output_spki()`` with the DER formatted public key and output the result.
+
+        Returns:
+            None
+        """
         logger.debug(
             f"Generated SPKI pin-sha256 for public key for domainset {self.domainset}:"
         )
@@ -679,10 +866,20 @@ class Certgrinder:
 
     @staticmethod
     def generate_tlsa_record(derkey: bytes, tlsatype: str) -> str:
-        """
-        Generates and returns the data part of a TLSA record of the requested type,
-        based on the DER formatted public key supplied.
+        """Generate and return the data part of a TLSA record of the requested type.
+
+        TLSA record is generated from the DER formatted public key supplied.
         Returns an uppercase hex string.
+
+        Args:
+            derkey: The bytes representing the public key in DER format
+            tlsatype: The TLSA type (like "310")
+
+        Returns:
+            String of the TLSA data
+
+        Raises:
+            ValueError: If an unknown TLSA type is passed
         """
         if tlsatype == "310":
             # Generate DANE-EE Publickey Full (3 1 0) TLSA Record
@@ -704,13 +901,22 @@ class Certgrinder:
         tlsatype: typing.Optional[str] = None,
         nameserver: str = "",
     ) -> typing.Optional[typing.List[str]]:
-        """
-        Lookup TLSA records in DNS for the configured domain, port, and protocol.
-        Loop over any responses and look for the requested tlsatype.
-        Return a list of results, optionally limited to the specified tlsatype, or None if none were found.
-        Use system resolver unless nameserver is specified.
-        """
+        """Lookup TLSA records in DNS for the configured domain, port, and protocol.
 
+        Loop over any responses and look for the requested tlsatype.
+        Return a list of results, optionally limited to the specified tlsatype, or None.
+        Use system resolver unless nameserver is specified.
+
+        Args:
+            domain: The service domain name (like ``mail.example.com``)
+            port: The service port (like ``443``)
+            protocol: The service protocol (like ``tcp``)
+            tlsatype: The TLSA type (like ``312``)
+            nameserver: The DNS server IP to use instead of system resolver (optional)
+
+        Returns:
+            A list of records or None
+        """
         record = f"_{port}._{protocol}.{domain}"
         nameserverstr = (
             f"configured DNS server {nameserver}" if nameserver else "system resolver"
@@ -781,8 +987,20 @@ class Certgrinder:
         tlsatype: str,
         warning: bool = False,
     ) -> None:
-        """
-        Outputs the TLSA record for the given DER key, domain, port, protocol and tlsatype, as returned by self.generate_tlsa()
+        """Output the TLSA record for the given DER key, domain, port, protocol and tlsatype.
+
+        Call ``self.generate_tlsa()`` and output the result formatted as a DNS record
+
+        Args:
+            derkey: The bytes representation the public key in DER format
+            domain: The service domain name (like ``mail.example.com``)
+            port: The service port (like ``443``)
+            protocol: The service protocol (like ``tcp``)
+            tlsatype: The TLSA type (like ``312``)
+            warning: Set True to output at level ``WARNING`` (default ``INFO``)
+
+        Returns:
+            None
         """
         tlsarecord = f"_{port}._{protocol}.{domain}"
         tlsadata = cls.generate_tlsa_record(derkey, tlsatype)
@@ -802,9 +1020,20 @@ class Certgrinder:
         tlsatype: str,
         nameserver: str = "",
     ) -> None:
-        """
-        Checks the TLSA records for the port/protocol/domain and DER key in the DNS.
-        Outputs the info needed to fix things when missing records are found.
+        """Check the TLSA records for the port/protocol/domain and DER key in the DNS.
+
+        Output the info needed to fix things when missing records are found.
+
+        Args:
+            derkey: The bytes representation the public key in DER format
+            domain: The service domain name (like ``mail.example.com``)
+            port: The service port (like ``443``)
+            protocol: The service protocol (like ``tcp``)
+            tlsatype: The TLSA type (like ``312``)
+            nameserver: The DNS server IP to use instead of system resolver (optional)
+
+        Return:
+            None
         """
         tlsarecord = f"_{port}._{protocol}.{domain}"
         tlsadata = cls.generate_tlsa_record(derkey, tlsatype)
@@ -858,7 +1087,11 @@ class Certgrinder:
             )
 
     def show_tlsa(self) -> None:
-        """ 'show tlsa' subcommand method, called for each domainset by self.grind() """
+        """The 'show tlsa' subcommand method, called for each domainset by ``self.grind()``.
+
+        Returns:
+            None
+        """
         for domain in self.domainset:
             logger.debug(
                 f"Generated TLSA records for {domain} port {self.conf['tlsa-port']} protocol {self.conf['tlsa-protocol']}:"
@@ -877,7 +1110,14 @@ class Certgrinder:
                 )
 
     def check_tlsa(self) -> None:
-        """ 'check tlsa' subcommand method, called for each domainset by self.grind() """
+        """The 'check tlsa' subcommand method, called for each domainset by ``self.grind()``.
+
+        Loops over the configured TLSA types and calls ``self.verify_tlsa_record()`` which
+        does the heavy lifting.
+
+        Returns:
+            None
+        """
         for domain in self.domainset:
             logger.debug(
                 f"Checking DNS for TLSA records for {domain} port {self.conf['tlsa-port']} protocol {self.conf['tlsa-protocol']}:"
@@ -902,9 +1142,9 @@ class Certgrinder:
     # MAIN METHODS
 
     def periodic(self) -> bool:
-        """
-        The periodic method performs maintenance tasks and is meant to be called
-        by the 'periodic' command from cron or similar.
+        """The periodic method performs periodic maintenance tasks.
+
+        This method is called by the 'periodic' command, from cron or similar.
         """
         # check if we have a valid certificate
         if not self.check_certificate():
@@ -919,7 +1159,14 @@ class Certgrinder:
         return True
 
     def load_domainset(self, domainset: typing.List[str]) -> None:
-        """ Prepare paths and create/load private key """
+        """Prepare paths and create/load private key.
+
+        Args:
+            domainset: The list of domains to load
+
+        Returns:
+            None
+        """
         logger.debug(f"Loading domainset {domainset}")
         self.domainset = domainset
         assert isinstance(self.conf["path"], str)
@@ -967,7 +1214,7 @@ class Certgrinder:
             logger.debug(f"Created new keypair, saved to {self.keypair_path}")
 
     def grind(self, args: argparse.Namespace) -> None:
-        """ Loop over domainsets in self.conf["domain-list"] and call args.method for each """
+        """Loop over domainsets in ``self.conf["domain-list"]`` and call args.method for each."""
         logger.info(f"Certgrinder {__version__} running")
 
         # loop over domains
@@ -1004,7 +1251,7 @@ class Certgrinder:
 def parse_args(
     mockargs: typing.Optional[typing.List[str]] = None
 ) -> typing.Tuple[argparse.ArgumentParser, argparse.Namespace]:
-    """ Create an argparse monster and parse mockargs or sys.argv[1:] """
+    """Create an argparse monster and parse mockargs or sys.argv[1:]."""
     parser = argparse.ArgumentParser(
         description=f"Certgrinder version {__version__}. See the manpage or ReadTheDocs for more info."
     )
@@ -1244,13 +1491,11 @@ def parse_args(
 
 
 def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
-    """
-    Initialise script. Instantiate Certgrinder() object, parse command-line arguments,
-    read config file if needed, configure logging, and then call certgrinder.grind() method
-    """
-    # instantiate Certgrinder object now to enable argparse to run methods directly with func=certgrinder.foo
-    certgrinder = Certgrinder()
+    """Initialise script and ``Certgrinder()`` object, then call ``certgrinder.grind()``.
 
+    Parse command-line arguments, read config file if needed, configure logging,
+    and then call ``certgrinder.grind()`` method.
+    """
     # get parser and parse args
     parser, args = parse_args(mockargs)
 
@@ -1285,6 +1530,7 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
     del config["subcommand"]
 
     # configure certgrinder
+    certgrinder = Certgrinder()
     certgrinder.configure(userconfig=config)
 
     if args.command == "show" and args.subcommand in [

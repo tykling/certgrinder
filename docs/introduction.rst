@@ -4,7 +4,14 @@ Certgrinder is a set of Python scripts to handle Letsencrypt certificate signing
 
 Certgrinder clients calls the Certgrinder server (typically over ``SSH``) with a ``CSR`` on ``stdin`` and (if all goes well) get a signed certificate in return on ``stdout``.
 
-This approach simplifies getting certificates for stuff like loadbalanced hosts, where it can be difficult to predict which cluster node the LetsEncrypt challenge checker will hit when using ``HTTP-01``. Migrating services to new infrastructure becomes easier because it is possible to get real valid certificates for the new infrastructure before changing DNS to point to the new infrastructure.
+
+Advantages
+==========
+This approach simplifies getting certificates for stuff like loadbalanced or anycast services, where it can be impossible to predict which cluster node the LetsEncrypt challenge checker will hit when using ``HTTP-01``.
+
+Migrating services to new infrastructure becomes simpler because the new infrastructure can get real certificates before changing DNS to point to the new infrastructure.
+
+Certgrinder also makes it trivial to get certificates for infrastructure behind firewalls or even on networks with no internet connection. As long as the Certgrinder client can reach the Certgrinder server it is possible to use ``DNS-01`` to issue certificates for the clients hostname.
 
 Certgrinder does not rotate the RSA keypair on each certificate renewal, which makes ``TLSA`` and similar public key pinning easy. The Certgrinder client can output and check such ``TLSA`` and ``SPKI`` pins for the keypairs it manages, as well as checking correctness of ``TLSA`` records in the DNS.
 
@@ -12,4 +19,3 @@ Certgrinder does not rotate the RSA keypair on each certificate renewal, which m
 Terminology
 ===========
 The central host with the LetsEncrypt signing stack is called the "Certgrinder server". The individual servers (the ones that need the certificates) are called "Certgrinder clients". These match the two Python packages ``certgrinderd`` and ``certgrinder``, respectively.
-

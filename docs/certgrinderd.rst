@@ -164,28 +164,71 @@ Something like this works::
 To make the ``environment=`` foo work the option ``PermitUserEnvironment=CERTGRINDERD_DOMAINSETS`` needs to be added to ``sshd_config``.
 
 
+Challenge Types
+---------------
+Finally you need to decide which challenge types to use, and how to handle them. This section describes how Certgrinder handles ``DNS-01`` and ``HTTP-01`` challenges. 
+
+Certgrinder supports the two ``ACME`` challenge types ``DNS-01`` and ``HTTP-01``. The author prefers to use ``DNS-01`` for most things, but if the Certgrinder client happens to be a webserver, then the ``HTTP-01`` challenge is very easy to get up and running.
+
+Certgrinder will try both challenge types (``DNS-01`` first, then ``HTTP-01``), so your clients can use whatever is the best fit. Usually my webservers use ``HTTP-01`` and everything else uses ``DNS-01``. YMMV.
+
+The following sections describes how Certgrinder these two challenge types.
+
+DNS-01
+~~~~~~
+With the ``DNS-01`` challenge the Certgrinder server serves the challenge over DNS, which means you need to run an authoritative DNS server on the Certgrinder server. You can also use an external DNS server or provider, as long as you can make a hook script to add and delete records from the Certgrinder server as needed.
+
+To prepare the Certgrinder server for serving ``DNS-01`` challenges you first need a zone to serve the challenges. Invent and delegate a new zone (like ``acme.example.com``) to your Certgrinder server or DNS provider. Use an ``NS`` record to delegate, or follow your providers instructions. The zone name then needs to be configured in ``certgrinderd.conf``. This zone will be used to serve all ``DNS-01`` challenges, it will be updated automatically by ``certgrinderd`` as needed.
+
+The default ``manual-auth-hook`` script is made for the ``bind`` DNS server. It creates and deletes the DNS record using ``nsupdate`` and an ``rndc.key`` file in the path ``/usr/local/etc/namedb/rndc.key``. If you want to use other paths or another script for a local or external DNS provider you can configure it in ``certgrinderd.conf``. The same goes for the cleanup script ``manual-cleanup-hook``.
+
+Note:
+   Since ``certbot`` is responsible for calling the hooks they are run as root, just like ``certbot``.
+
+This concludes the server part of the ``DNS-01`` configuration.
+
+A client wanting a certificate must now create a ``CNAME`` record called ``_acme-challenge.${DOMAIN}`` pointing at ``${DOMAIN}.${ACMEZONE}`` for each domain in the ``CSR``.
+
+For example, to get a certificate for ``smtp.example.org`` you would create ``_acme-challenge.smtp.example.org CNAME smtp.example.org.acme.example.com`` if your acme challenge zone was ``acme.example.com``. certgrinderd will create the ``smtp.example.org.acme.example.com TXT`` record containing the validation string, and delete if afterwards.
+
+
+HTTP-01
+~~~~~~~
+With the ``HTTP-01`` challenge the Certgrinder server serves the challenge over HTTP, which means it needs a webserver somewhere to serve the challenges. It can be on the Certgrinder server or it can be an external webserver or provider, as long as you can make a hook script to add and delete files in the webroot from the Certgrinder server as needed. The hostname of this webserver will be the target of the Certgrinder clients HTTP redirects.
+
+Each Certgrinder client then implements an HTTP redirect from ``/.well-known/acme-challenge/`` to the Certgrinder server like so (nginx syntax)::
+
+    location /.well-known/acme-challenge/ {
+        return 301 http://acme.example.com$request_uri;
+    }
+
+When requesting a certificate the Certgrinder server receives the challenge and path from Certbot (which in turn gets it from LetsEncrypt of course). The challenge is then passed to the ``manual-auth-hook`` script which writes it in the webroot under ``/.well-known/acme-challenge/``.
+
+In another datacenter somewhere LetsEncrypts challenge checker then loops over the domains in the ``CSR`` and does a HTTP request to each for ``/.well-known/acme-challenge/${path}`` and expects the response to contain the challenge.
+
 Auth and Cleanup Hooks
 ----------------------
-Finally you need to decide which challenge types to use, and how to handle them. Read the section on LetsEncrypt Challenge Types below, and if you decide to use a local web/dns server then you need to install and configure it now.
-
-Regardless of your choice web/dns local/remote you now need to create two hook scripts ``certgrinderd`` can call before and after calling Certbot.
+The configured ``auth-hook`` and ``cleanup-hook`` scripts can be adapted as needed to update whatever local or remote web- or DNS-server you decide to use to serve challenges.
 
 Both scripts get the same environment variables to work with:
 
-   ``$CERTBOT_DOMAIN``
+   `$CERTBOT_DOMAIN`
       The domain being authenticated, like www.example.com
 
-   ``$CERTBOT_VALIDATION``
+   `$CERTBOT_VALIDATION`
       The validation string (the secret which LE looks for)
 
-   ``$CERTBOT_TOKEN``
+   `$CERTBOT_TOKEN`
       The filename containing the secret (only relevant for HTTP-01)
 
-   ``$ACMEZONE``
+   `$ACMEZONE`
       The DNS zone used for challenges (only relevant for DNS-01)
 
-   ``$WEBROOT``
+   `$WEBROOT`
       The path to the webroot used for challenges (only relevant for HTTP-01)
 
-Both scripts must be able to handle the challenge types you use. The same script will be called firsttwice 
-The web/dns server configuration depends on the local setup, just make sure that the configured ``auth-hook`` and ``cleanup-hook`` scripts work as expected. Check out the example scripts distributed with the project for inspiration.
+Both scripts must be able to handle the challenge type(s) you use. The same script will be called first for DNS-01 (if enabled), then for HTTP-01 (if enabled).
+
+Testing
+-------
+When the server has been configured with hooks you can test from a client using just SSH and a manually generated CSR, with something like: ``cat mail4.example.com.csr | ssh certgrinderd@certgrinder.example.org -T -- --staging`` where ``-T`` is to prevent SSH from allocating a TTY on the server, ``--`` is to mark the end of the SSH args, and ``--staging`` is to make ``certgrinderd`` use the LetsEncrypt staging servers. If all goes well it should output some logging and a certificate chain.

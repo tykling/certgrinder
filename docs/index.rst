@@ -6,7 +6,6 @@ Welcome to Certgrinder |version| Documentation!
    :caption: Contents:
 
    introduction
-   challenge-types
    certgrinderd
    certgrinder
    certgrinderd-autodoc

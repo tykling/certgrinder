@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+"""Certgrinderd v0.13.0-beta2-dev module.
+
+See https://certgrinder.readthedocs.io/en/latest/certgrinderd.html
+and https://github.com/tykling/certgrinder for more.
+"""
 import argparse
 import logging
 import logging.handlers
@@ -18,9 +23,7 @@ __version__ = "0.13.0-beta2-dev"
 
 
 class Certgrinderd:
-    """
-    The main Certgrinder server class.
-    """
+    """The Certgrinderd server class."""
 
     # default config
     conf: typing.Dict[str, typing.Union[str, bool, None]] = {
@@ -48,8 +51,13 @@ class Certgrinderd:
     def __init__(
         self, userconfig: typing.Dict[str, typing.Union[str, bool, None]]
     ) -> None:
-        """
-        Merge userconfig with defaults and configure logging
+        """Merge userconfig with defaults and configure logging.
+
+        Args:
+            userconfig: A dict of configuration to merge with default config
+
+        Returns:
+            None
         """
         self.conf.update(userconfig)
 
@@ -89,8 +97,17 @@ class Certgrinderd:
         logger.info(f"certgrinderd {__version__} running")
         logger.debug("Running with config: %s" % self.conf)
 
-    def load_csr(self, csrstring: str = "") -> None:
-        """ Parses the CSR using cryptography.x509.load_pem_x509_csr(), write to disk, returns the object """
+    def load_csr(self, csrstring: str = "") -> x509._CertificateSigningRequest:
+        """Write CSR to disk, parse with cryptography.x509.load_pem_x509_csr(), return object.
+
+        Takes the CSR data from ``sys.stdin`` if the ``csrstring`` argument is empty.
+
+        Args:
+            csrstring: The PEM formatted CSR as a string
+
+        Returns:
+            The CSR object
+        """
         if not csrstring:
             # get the CSR from stdin
             csrstring = sys.stdin.read()
@@ -103,20 +120,33 @@ class Certgrinderd:
         with os.fdopen(csrfd, "w") as csrfh:
             csrfh.write(csrstring)
 
-        # parse the csr
-        self.csr = cryptography.x509.load_pem_x509_csr(
+        # parse and return the csr
+        return cryptography.x509.load_pem_x509_csr(
             csrstring.encode("ascii"), default_backend()
         )
 
-    def check_csr(self, csr: x509._CertificateSigningRequest) -> None:
-        """ Check that this CSR is valid, all things considered """
+    def check_csr(self, csr: x509._CertificateSigningRequest) -> bool:
+        """Check that this CSR is valid, all things considered.
+
+        First check that the CSR has exactly one ``CommonName``, and that that CN is
+        also present in the list of ``SubjectAltNames``.
+
+        Then make sure that the environment var ``CERTGRINDERD_DOMAINSETS`` exists
+        and contains all the names from the CSR in one of the domainsets.
+
+        Args:
+            csr: The CSR object
+
+        Returns:
+            True if the CSR is OK, False otherwise
+        """
         # get the list of allowed names from env
         allowed_names = os.environ.get("CERTGRINDERD_DOMAINSETS", None)
         if not allowed_names:
             logger.error(
                 "Environment var CERTGRINDERD_DOMAINSETS not found, bailing out"
             )
-            sys.exit(1)
+            return False
 
         # get CommonName from CSR
         cn_list = csr.subject.get_attributes_for_oid(
@@ -140,8 +170,9 @@ class Certgrinderd:
             logger.error(
                 f"CSR is not valid (CN {cn} not found in SAN list {san_list}), bailing out"
             )
-            sys.exit(1)
+            return False
 
+        # domainsets is a semicolon-seperated list of comma-seperated domainsets.
         # loop over domainsets until we find a match
         for domainset in allowed_names.split(";"):
             if cn not in domainset.split(","):
@@ -158,7 +189,10 @@ class Certgrinderd:
             logger.error(
                 f"CSR contains one or more names which are not permitted for this client. Permitted names: {allowed_names}"
             )
-            sys.exit(1)
+            return False
+
+        # all good
+        return True
 
     def get_certbot_command(
         self,
@@ -168,7 +202,22 @@ class Certgrinderd:
         certpath: str,
         chainpath: str,
     ) -> typing.List[str]:
-        """ put the certbot command together """
+        """Put the certbot command together.
+
+        Start with ``self.conf["certbot-command"]`` and append all the needed options.
+
+        Optionally add ``--email`` and ``--staging`` and a bunch of certbot settings as needed.
+
+        Args:
+            challengetype: The type of challenge, ``dns`` or ``http``
+            csrpath: The path to the CSR
+            fullchainpath: The path to save the certificate+intermediate
+            certpath: The path to save the certificate (without intermediate)
+            chainpath: The path to save the intermediate (without certificate)
+
+        Returns:
+            The certbot command as a list
+        """
         command: typing.List[str] = str(self.conf["certbot-command"]).split(" ") + [
             "certonly",
             "--non-interactive",
@@ -223,7 +272,22 @@ class Certgrinderd:
         return command
 
     def process_csr(self, csrpath: str) -> None:
-        """ Loop over challenge types and run Certbot for each until we get a cert """
+        """Get a cert using ``DNS-01`` or ``HTTP-01`` by calling ``self.run_certbot()`` for each.
+
+        If ``self.conf["acme-zone"]`` is set then ``DNS-01`` is attempted. Return if it
+        results in a new certificate.
+
+        If ``self.conf["web-root"]`` is set then ``HTTP-01`` is attempted. Return if it
+        results in a new certificate.
+
+        If there is still no certificate log an error and return anyway.
+
+        Args:
+            csrpath: The path to the CSR
+
+        Returns:
+            None
+        """
         # get temp paths for certbot
         fullchainpath = os.path.join(str(self.conf["temp-dir"]), "fullchain.pem")
         certpath = os.path.join(str(self.conf["temp-dir"]), "certificate.pem")
@@ -270,25 +334,50 @@ class Certgrinderd:
     def run_certbot(
         self, command: typing.List[str], env: typing.Dict[str, str], fullchainpath: str
     ) -> bool:
-        """ Call certbot, check exitcode, return True if we got a cert """
+        """Call certbot, check exitcode, output cert, return bool success.
+
+        Do not log an error message regardless of Certbot exitcode. The calling method
+        will take care of that.
+
+        Args:
+            command: A list of certbot command elements
+            env: A dictionary of the environment to pass to subprocess.run()
+            fullchainpath: The path to read the certificate+chain from after Certbot runs
+
+        Returns:
+            True if Certbot command exitcode was 0, False otherwise
+        """
         # call certbot
         p = subprocess.run(command, capture_output=True, env=env)
         if p.returncode == 0:
             # success, output chain to stdout
             with open(str(fullchainpath)) as f:
                 print(f.read())
-            # no need to try more challenges, we have a cert
             return True
         else:
             return False
 
     def grind(self) -> None:
-        """ Primary method, load the CSR, process it, and cleanup """
+        """Load the CSR, use it to get a certificate, and cleanup.
+
+        Calls ``self.load_csr()`` followed by ``self.check_csr()``, and then exists if any
+        problems are found with the CSR.
+
+        Then ``self.process_csr()`` is called, which in turn calls Certbot, which writes
+        the certificate to stdout.
+
+        Finally the CSR is deleted.
+
+        Returns:
+            None
+        """
         # get the CSR
-        self.load_csr()
+        csr = self.load_csr()
 
         # check CSR creaminess
-        self.check_csr(self.csr)
+        if not self.check_csr(csr):
+            # something is fucky with the CSR
+            sys.exit(1)
 
         # alright, get the cert for this CSR
         self.process_csr(self.csrpath)
@@ -299,10 +388,19 @@ class Certgrinderd:
 
 
 def main() -> None:
-    """
-    Main function. Read config from file and/or commandline args.
-    Configure temporary path and configure logging.
-    Then instantiate the Certgrinderd class with the config and grind()
+    """Make the neccesary preparations before calling Certgrinderd.grind().
+
+    - Read config from file and/or commandline args
+    - Configure temporary paths
+    - Configure logging
+
+    Finally instantiate the Certgrinderd class with the config and grind()
+
+    Args:
+        None
+
+    Returns:
+        None
     """
     # parse commandline arguments
     parser = argparse.ArgumentParser(

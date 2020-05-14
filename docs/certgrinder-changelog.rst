@@ -31,7 +31,7 @@ Changed
 - Update ``certgrinder.conf.dist`` with new options and better comments
 - Mark most methods as ``@staticmethod`` or ``@classmethod``, refactor code as needed. This makes the code more reusable and easier to test.
 - Split certificate validity tests into seperate methods
-- Split parsing of ``certgrinderd`` output into seperate method ``parse_certgrinder_output()``
+- Split parsing of ``certgrinderd`` output into seperate method ``parse_certgrinderd_output()``
 - Split argparse stuff (which grew considerably with this change) into seperate ``get_parser()`` func
 - Support calling ``certgrinder.main()`` function and ``certgrinder.Certgrinder.grind()`` method with a list of mocked command-line args
 - Update existing tests to deal with all the new stuff

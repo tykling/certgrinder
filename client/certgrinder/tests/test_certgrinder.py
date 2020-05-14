@@ -1,4 +1,8 @@
 # type: ignore
+"""certgrinder.py tests.
+
+Runs with pytest and Tox.
+"""
 import base64
 import hashlib
 import logging
@@ -18,14 +22,13 @@ from cryptography.x509.oid import ExtensionOID, NameOID
 # INTEGRATION TESTS
 def test_get_certificate(
     pebble_server,
-    certgrinder_configfile,
     certgrinderd_configfile,
     tmp_path_factory,
     certgrinderd_env,
     caplog,
     tmpdir_factory,
 ):
-    """ Get a couple of certificates and check that they look right """
+    """Get a couple of certificates and check that they look right."""
     # caplog.set_level(logging.DEBUG)
     mockargs = [
         "--path",
@@ -81,8 +84,8 @@ def test_get_certificate(
             ), "SubjectAltName extension does not contain the right list of domains"
 
 
-def test_show_spki(certgrinder_configfile, tmp_path_factory, caplog, tmpdir_factory):
-    """ Test the 'show spki' subcommand """
+def test_show_spki(tmp_path_factory, caplog, tmpdir_factory):
+    """Test the 'show spki' subcommand."""
     # SPKI is output at level INFO
     caplog.set_level(logging.INFO)
     parser, args = parse_args(
@@ -116,8 +119,8 @@ def test_show_spki(certgrinder_configfile, tmp_path_factory, caplog, tmpdir_fact
 
 
 # UNIT TESTS (test individual methods)
-def test_generate_tlsa(certgrinder_configfile, known_public_key):
-    """ Test the TLSA record generation from a known public key """
+def test_generate_tlsa(known_public_key):
+    """Test the TLSA record generation from a known public key."""
     certgrinder = Certgrinder()
 
     # test with a known public key
@@ -144,8 +147,8 @@ def test_generate_tlsa(certgrinder_configfile, known_public_key):
     ), "Generation of DANE-EE Publickey SHA512 (3 1 2) TLSA Record failed"
 
 
-def test_generate_spki(certgrinder_configfile, known_public_key):
-    """ Test the SPKI pin-sha256 record generation from a known public key """
+def test_generate_spki(known_public_key):
+    """Test the SPKI pin-sha256 record generation from a known public key."""
     certgrinder = Certgrinder()
 
     # test with a known public key
@@ -160,7 +163,7 @@ def test_generate_spki(certgrinder_configfile, known_public_key):
 
 
 def test_argparse_version(capsys):
-    """ This is mostly here to demonstrate/test calling the main() function with args """
+    """This is mostly here to demonstrate/test calling the main() function with args."""
     with pytest.raises(SystemExit) as E:
         main(["version"])
     assert E.type == SystemExit
@@ -169,7 +172,7 @@ def test_argparse_version(capsys):
 
 
 def test_argparse():
-    """ Test argparse works as expected """
+    """Test argparse works as expected."""
     parser, args = parse_args(["-D", "example.com", "show", "tlsa", "443", "tcp"])
     assert isinstance(getattr(args, "domain-list"), list)
     assert getattr(args, "domain-list") == ["example.com"]

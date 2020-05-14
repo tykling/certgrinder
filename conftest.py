@@ -1,3 +1,4 @@
+"""pytest configuration file for Certgrinder project."""
 import pathlib
 import shutil
 import subprocess
@@ -11,9 +12,7 @@ from cryptography.hazmat.primitives.serialization import load_pem_public_key
 
 @pytest.fixture(scope="session", autouse=True)
 def pebble_server():
-    """
-    get the pebble sources, and build the binary, and run it
-    """
+    """Get the pebble sources, and build the binary, and run it."""
     print("Begginning setup")
     print("checking to see if we have Go available...")
     if not shutil.which("go"):
@@ -72,9 +71,7 @@ def pebble_server():
 
 @pytest.fixture(scope="session", autouse=True)
 def certgrinderd_configfile(tmp_path_factory):
-    """
-    Write a certgrinderd.yml file for this test run
-    """
+    """Write a certgrinderd.yml file for this test run."""
     confpath = tmp_path_factory.mktemp("conf") / "certgrinderd.yml"
     conf = {
         "acme-server-url": "https://127.0.0.1:14000/dir",
@@ -95,25 +92,8 @@ def certgrinderd_configfile(tmp_path_factory):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def certgrinder_configfile(tmpdir_factory, certgrinderd_configfile):
-    """
-    Write a certgrinder.yml file for this test run
-    """
-    confpath = tmpdir_factory.mktemp("conf") / "certgrinder.conf"
-    conf = {
-        "path": str(tmpdir_factory.mktemp("certificates")),
-        "domain-list": ["example.com,www.example.com", "example.net"],
-        "certgrinderd": f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile}",
-        "debug": True,
-    }
-    with open(confpath, "w") as f:
-        yaml.dump(conf, f)
-    # return path to the config
-    return confpath
-
-
-@pytest.fixture(scope="session", autouse=True)
 def known_public_key(tmpdir_factory, certgrinderd_configfile):
+    """Define, load and return a known public key."""
     pem_public_key = """
 -----BEGIN PUBLIC KEY-----
 MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtzhbcozNYjS1ee55GDKd
@@ -137,6 +117,7 @@ GD7OUrxoP9QtBwV7q7YlnoECAwEAAQ==
 
 @pytest.fixture
 def certgrinderd_env(monkeypatch):
+    """Whip up a fake CERTGRINDERD_DOMAINSETS environment for certgrinderd."""
     monkeypatch.setenv(
         "CERTGRINDERD_DOMAINSETS", "example.com,www.example.com;example.net"
     )

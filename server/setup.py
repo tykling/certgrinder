@@ -1,4 +1,9 @@
 # type: ignore
+"""Fairly minimal certgrinderd setup.py for setuptools.
+
+Can be installed from PyPi https://pypi.org/project/certgrinderd/
+Read more at https://certgrinder.readthedocs.io/en/latest/certgrinderd.html
+"""
 import setuptools
 
 with open("README.md", "r") as fh:
