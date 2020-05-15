@@ -286,8 +286,3 @@ The client has a few different commandline options which are shown below::
      --tlsa-type-list {310,311,312}
                            Enables a TLSA type for TLSA operations. Can be
                            specified multiple times.
-
-
-See Also
---------
-:manpage:`certgrinderd(8)`
