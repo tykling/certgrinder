@@ -110,7 +110,7 @@ This is an alphabetical list of the configurable options:
 
 Challenges
 ~~~~~~~~~~
-Finally you need to choose which challenge type to use for this ``certgrinder`` client. If ``DNS-01`` you need to create one or more ``CNAME`` record pointing somewhere. If ``HTTP-01`` you need to create an HTTP redirect. See the section on challenge types.
+Finally you need to choose which challenge type to use for this ``certgrinder`` client. If ``DNS-01`` you need to create one or more ``CNAME`` record pointing somewhere. If ``HTTP-01`` you need to create an HTTP redirect. See the section on challenge types towards the end of the ``certgrinderd`` docs/manpage.
 
 
 Testing
@@ -122,21 +122,21 @@ Crontab job
 ~~~~~~~~~~~
 I run Certgrinder daily, although it only attempts renewal when less than 30 days validity remains. When everything above works it is time to automate it by adding it to crontab. The following line works for me (I vary the times between servers)::
 
-    48 2 * * * certgrinder /usr/home/certgrinder/virtualenv/bin/certgrinder /usr/home/certgrinder/certgrinder.yml
+    48 2 * * * certgrinder /usr/home/certgrinder/virtualenv/bin/certgrinder -f /usr/home/certgrinder/certgrinder.yml
 
 Note that I call it inside the virtualenv directly to make sure the correct environment is used!
 
 
 Additional Client Features
 --------------------------
-Apart from the primary purpose of getting signed certificates the ``certgrinder`` script has a few other features that may be of use.
+Apart from the primary purpose of getting signed certificates the ``certgrinder`` client has a few other features that may be of use.
 
 
 TLSA Pin Generation
 ~~~~~~~~~~~~~~~~~~~
-The ``-s`` / ``--showtlsa`` switch suspends normal operation and instead loops over the configured domainsets and generates ``TLSA`` records for the public keys. The result is printed to the terminal in a format suitable for putting in the ``DNS``. It looks like this::
+The ``show tlsa`` subcommand loops over the configured domainsets and generates ``TLSA`` records for the public keys. The result is printed to the terminal in a format suitable for putting in the ``DNS``. It looks something like this::
 
-    [certgrinder@znc ~]$ ./virtualenv/bin/certgrinder -s _443._tcp -n 109.238.48.13 certgrinder.yml
+    [certgrinder@znc ~]$ ./virtualenv/bin/certgrinder -f certgrinder.conf show tlsa 443 tcp
     2018-02-16 08:42:18 +0000 INFO: Processing domains: znc.tyknet.dk
     2018-02-16 08:42:18 +0000 INFO: TLSA records for _443._tcp.znc.tyknet.dk:
     2018-02-16 08:42:18 +0000 INFO: _443._tcp.znc.tyknet.dk 3 1 0 30820222300d06092a864886f70d01010105000382020f003082020a0282020100bb852c1035ee7ce08d69a13f5cca95374dc872b2028e65ee34600478076c9185e79ff373d3acfc4aa29f152b9abcb515e449417ce7768f7f91915ff2d6e75d732e863021240ce4b24475220306e6ffd3f963dc4a8eafb4077f635d8a0d655b5921df2bcb2e6e610aa8db1d79b6da14d1fc7d842c1e5d4cbfa6697617aa9d2251be1a386fd7c14eccef21151c35d336ebba8f97d3160b35775c57079d2594b1d2a9d593bc408ccf2a01b171f4a3e65005b07df7efd77bac3d5f430b0aab5f161b7d7ebc40b600064ec3a4c59d64a1ec1f27c234a08a473aa0fcdf6008492161af6a1d9179a432622776e675f4d3dafb3d1d00b3189c4cdcd6de250721f012fc5f34426d06cb4b045b04ba2bd7ac2fcedce429dfde3dffcbb8b2df50cade99458c954de157b88751c26b79413d6eef5e26ab008e7aa7c69be3d6163f80f5d565b87f9030b54a23cf4c704e509cc84e618a446c75684893d65bd5fd38ef6b839d316b5616b06bbafbb7c2aa6f3db217b4df6e5f02b85d8685be14a9d480ee56c1b4454a88fc01a4532a55e926929fea70822088054f5ddf957e8c5ca2c3808c8a09b70c7eeda4883aaf6f1092033beeb0ff5621a8b8ddf3455f1d30d2398fe786038a39e0825bb6bac9865500de33eff67e3984a73b7592bde5897681b52da06c93447a0efa4d1fb52bc151811776ef501ca818c68fd1d4fe3d73c5e5526b4bf47f0203010001
@@ -144,14 +144,14 @@ The ``-s`` / ``--showtlsa`` switch suspends normal operation and instead loops o
     2018-02-16 08:42:18 +0000 INFO: _443._tcp.znc.tyknet.dk 3 1 2 24d49f3c974129b9c28b5e6213892a404d8e9777c5a2e977333b88442d4e16ac0bc732001ec783df795c194704149bd18bbca21087111b33fa79e84dab05e760
     [certgrinder@znc ~]$
 
-Shown above is the ``--showtlsa`` feature in action. The value supplied should be the port and protocol of the service, in the example above it is a ``HTTPS`` service, so the ``TLSA`` record is the service hostname prefixed with ``_443._tcp.``
+Shown above is the ``show tlsa`` subcommand in action. The value supplied should be the port and protocol of the service, in the example above it is a ``HTTPS`` service, so the ``TLSA`` record is the service hostname prefixed with ``_443._tcp.``
 
 
 TLSA Pin Checking
 ~~~~~~~~~~~~~~~~~
-The ``-c`` / ``--checktlsa`` switch is like the ``--showtlsa`` switch but it goes one step further and actually checks in the ``DNS`` if the records could be found, and prints some output accordingly. This also requires ``-n`` / ``--nameserver`` IP to be specified. The following example shows two runs of ``checktlsa`` mode. The first run finds no TLSA records and outputs what needs to be added::
+The ``check tlsa`` subcommand is like the ``show tlsa`` subcommand but it goes one step further and actually checks in the ``DNS`` if the records could be found, and prints some output accordingly. The following example shows two runs of ``check tlsa`` mode. The first run finds no TLSA records and outputs what needs to be added::
 
-    [certgrinder@znc ~]$ /usr/home/certgrinder/virtualenv/bin/python /usr/home/certgrinder/certgrinder/certgrinder.py -c _443._tcp -n 109.238.48.13 /usr/home/certgrinder/certgrinder.yml
+    [certgrinder@znc ~]$ ./virtualenv/bin/certgrinder -f certgrinder.conf check tlsa 443 tcp
     2018-02-16 08:59:39 +0000 INFO: Processing domains: znc.tyknet.dk
     2018-02-16 08:59:39 +0000 INFO: Looking up TLSA records for _443._tcp.znc.tyknet.dk
     2018-02-16 08:59:39 +0000 WARNING: No TLSA records for name _443._tcp.znc.tyknet.dk of type 3 1 0 was found in DNS. This record needs to be added:
@@ -165,7 +165,7 @@ The ``-c`` / ``--checktlsa`` switch is like the ``--showtlsa`` switch but it goe
 
 The second run is after adding the suggested records to ``DNS``::
 
-    [certgrinder@znc ~]$ ./virtualenv/bin/python certgrinder/certgrinder.py -c _443._tcp -n 109.238.48.13 certgrinder.yml
+    [certgrinder@znc ~]$ ./virtualenv/bin/certgrinder -f certgrinder.conf check tlsa 443 tcp
     2018-02-16 09:16:27 +0000 INFO: Processing domains: znc.tyknet.dk
     2018-02-16 09:16:27 +0000 INFO: Looking up TLSA records for _443._tcp.znc.tyknet.dk
     2018-02-16 09:16:27 +0000 INFO: TLSA record for name _443._tcp.znc.tyknet.dk type 3 1 0 found in DNS matches the local key, good.
@@ -176,16 +176,16 @@ The second run is after adding the suggested records to ``DNS``::
 
 All ``TLSA`` records for this public key can now be found in the ``DNS``.
 
-`NOTE`: As there might be additional records for the same name which do not belong to this server/key, no attempts are made to warn about wrong/old/superflous ``TLSA`` records. This might be added in a future version as a switch to tell Certgrinder that the local public key is the only one in existence for this service.
+`NOTE`: As there might be additional records for the same name which do not belong to this server/key (for example in a loadbalanced or anycast setup), no attempts are made to warn about wrong/old/superflous ``TLSA`` records. This might be added in a future version as a switch to tell Certgrinder that the local public key is the only one in existence for this service.
 
 
 SPKI Pin Generation
 ~~~~~~~~~~~~~~~~~~~
-The ``-p`` / ``--showspki`` switch tells Certgrinder to suspend normal operation and generate and print pin-sha256 spki pins for the public keys instead. The ``HPKP`` standard https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning defined the ``pin-sha256`` format for public key pins. While the ``HPKP`` standard didn't get much traction the pinning format is used in various places now, so ``certgrinder`` can generate them. 
+The ``show spki`` subcommand outputs pin-sha256 spki pins for the public keys. The ``HPKP`` standard https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning defined the ``pin-sha256`` format for public key pins. While the ``HPKP`` standard didn't get much traction the pinning format is used in various places now, so ``certgrinder`` can generate them. 
 
 The operation is pretty simple::
 
-    [certgrinder@znc ~]$ ./virtualenv/bin/certgrinder -p certgrinder.yml
+    [certgrinder@znc ~]$ ./virtualenv/bin/certgrinder -f certgrinder.conf show spki
     2018-02-16 09:28:37 +0000 INFO: Processing domains: znc.tyknet.dk
     2018-02-16 09:28:37 +0000 INFO: pin-sha256="W5XLbqOHVw8fPcRQh5TKE6F6ZlczurX3ax4zDy+hM2E="
     2018-02-16 09:28:37 +0000 INFO: Done processing domains: znc.tyknet.dk
