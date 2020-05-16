@@ -15,6 +15,7 @@ import typing
 
 import cryptography.x509
 import yaml
+from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.backends.openssl import x509  # type: ignore
 
@@ -49,7 +50,10 @@ class Certgrinderd:
     }
 
     def __init__(
-        self, userconfig: typing.Dict[str, typing.Union[str, bool, None]]
+        self,
+        userconfig: typing.Optional[
+            typing.Dict[str, typing.Union[str, bool, None]]
+        ] = None,
     ) -> None:
         """Merge userconfig with defaults and configure logging.
 
@@ -59,7 +63,8 @@ class Certgrinderd:
         Returns:
             None
         """
-        self.conf.update(userconfig)
+        if userconfig:
+            self.conf.update(userconfig)
 
         # define the log format used for stdout depending on the requested loglevel
         if self.conf["log-level"] == "DEBUG":
@@ -97,13 +102,14 @@ class Certgrinderd:
         logger.info(f"certgrinderd {__version__} running")
         logger.debug("Running with config: %s" % self.conf)
 
-    def load_csr(self, csrstring: str = "") -> x509._CertificateSigningRequest:
-        """Write CSR to disk, parse with cryptography.x509.load_pem_x509_csr(), return object.
+    @staticmethod
+    def parse_csr(csrstring: str = "") -> x509._CertificateSigningRequest:
+        """Parse CSR with cryptography.x509.load_pem_x509_csr(), return CSR object.
 
         Takes the CSR data from ``sys.stdin`` if the ``csrstring`` argument is empty.
 
         Args:
-            csrstring: The PEM formatted CSR as a string
+            csrstring: The PEM formatted CSR as a string (optional)
 
         Returns:
             The CSR object
@@ -112,20 +118,27 @@ class Certgrinderd:
             # get the CSR from stdin
             csrstring = sys.stdin.read()
 
-        # get temp path for the csr so we can save it to disk
-        csrfd, self.csrpath = tempfile.mkstemp(
-            suffix=".csr", prefix="certgrinderd-", dir=str(self.conf["temp-dir"])
-        )
-        # save the csr to disk
-        with os.fdopen(csrfd, "w") as csrfh:
-            csrfh.write(csrstring)
-
         # parse and return the csr
         return cryptography.x509.load_pem_x509_csr(
             csrstring.encode("ascii"), default_backend()
         )
 
-    def check_csr(self, csr: x509._CertificateSigningRequest) -> bool:
+    @staticmethod
+    def save_csr(csr: x509._CertificateSigningRequest, path: str) -> None:
+        """Save the CSR object to the path in PEM format.
+
+        Args:
+            csr: The CSR object
+            path: The path to save it in
+
+        Returns:
+            None
+        """
+        with open(path, "wb") as f:
+            f.write(csr.public_bytes(primitives.serialization.Encoding.PEM))
+
+    @staticmethod
+    def check_csr(csr: x509._CertificateSigningRequest) -> bool:
         """Check that this CSR is valid, all things considered.
 
         First check that the CSR has exactly one ``CommonName``, and that that CN is
@@ -271,7 +284,7 @@ class Certgrinderd:
             command.append("--staging")
         return command
 
-    def process_csr(self, csrpath: str) -> None:
+    def get_certificate(self, csrpath: str) -> None:
         """Get a cert using ``DNS-01`` or ``HTTP-01`` by calling ``self.run_certbot()`` for each.
 
         If ``self.conf["acme-zone"]`` is set then ``DNS-01`` is attempted. Return if it
@@ -360,10 +373,10 @@ class Certgrinderd:
     def grind(self) -> None:
         """Load the CSR, use it to get a certificate, and cleanup.
 
-        Calls ``self.load_csr()`` followed by ``self.check_csr()``, and then exists if any
+        Calls ``self.parse_csr()`` followed by ``self.check_csr()``, and then exists if any
         problems are found with the CSR.
 
-        Then ``self.process_csr()`` is called, which in turn calls Certbot, which writes
+        Then ``self.get_certificate()`` is called, which in turn calls Certbot, which writes
         the certificate to stdout.
 
         Finally the CSR is deleted.
@@ -371,8 +384,16 @@ class Certgrinderd:
         Returns:
             None
         """
-        # get the CSR
-        csr = self.load_csr()
+        # get the CSR from stdin
+        csr = self.parse_csr()
+
+        # get temp path for the csr so we can save it to disk
+        csrfd, csrpath = tempfile.mkstemp(
+            suffix=".csr", prefix="certgrinderd-", dir=str(self.conf["temp-dir"])
+        )
+
+        # save the csr to disk
+        self.save_csr(csr, csrpath)
 
         # check CSR creaminess
         if not self.check_csr(csr):
@@ -380,11 +401,10 @@ class Certgrinderd:
             sys.exit(1)
 
         # alright, get the cert for this CSR
-        self.process_csr(self.csrpath)
+        self.get_certificate(csrpath)
 
-        # clean up temp files
-        if os.path.exists(self.csrpath):
-            os.remove(self.csrpath)
+        # clean up temp file
+        os.remove(csrpath)
 
 
 def main() -> None:

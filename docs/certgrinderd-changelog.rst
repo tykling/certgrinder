@@ -18,6 +18,7 @@ Added
 - Dev requirements now has ``sphinx-rtd-theme`` which is the theme used on ReadTheDocs, so ``make html`` in ``docs/`` now produces the same-ish output.
 - Short command-line options for a bunch of things.
 - Manpage certgrinderd.8
+- Unittests for a few Certgrinderd() methods
 
 Changed
 ~~~~~~~
