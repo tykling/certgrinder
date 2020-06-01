@@ -60,39 +60,57 @@ def pebble_server():
 
     yield
 
-    # get Pebble output
-    # proc.communicate()
-
     print("Beginning teardown")
     print("Stopping pebble server...")
     proc.terminate()
     print("Teardown finished!")
 
 
-@pytest.fixture(scope="session")
-def certgrinderd_configfile(tmp_path_factory):
-    """Write a certgrinderd.yml file for this test run."""
+@pytest.fixture
+def certgrinderd_broken_yaml_configfile(tmp_path_factory):
+    """Write a certgrinderd.yml file with invalid yml."""
+    confpath = tmp_path_factory.mktemp("conf") / "certgrinderd.yml"
+    # write file to disk
+    with open(confpath, "w") as f:
+        f.write("foo:\nbar")
+    # return path to the config
+    return confpath
+
+
+@pytest.fixture(params=["dns", "http", ""])
+def certgrinderd_configfile(request, tmp_path_factory):
+    """Write a certgrinderd.yml config file."""
     confpath = tmp_path_factory.mktemp("conf") / "certgrinderd.yml"
     conf = {
+        "acme-email": "certgrindertest@invalid",
         "acme-server-url": "https://127.0.0.1:14000/dir",
-        "skip-acme-server-cert-verify": True,
         "auth-hook": "echo 'authhook faked OK!'",
         "cleanup-hook": "echo 'cleanuphook faked OK!'",
         "certbot-command": str(pathlib.Path(sys.executable).parent / "certbot"),
         "certbot-config-dir": str(tmp_path_factory.mktemp("certbot") / "configdir"),
         "certbot-work-dir": str(tmp_path_factory.mktemp("certbot") / "workdir"),
         "certbot-logs-dir": str(tmp_path_factory.mktemp("certbot") / "logsdir"),
-        "acme-email": "certgrindertest@invalid",
-        "web-root": str(tmp_path_factory.mktemp("certbot") / "webroot"),
+        "skip-acme-server-cert-verify": True,
+        "temp-dir": str(tmp_path_factory.mktemp("certgrinderd")),
     }
+    # add auth type
+    if request.param == "dns":
+        conf.update({"acme-zone": "acme.example.com"})
+    elif request.param == "http":
+        conf.update({"web-root": str(tmp_path_factory.mktemp("certbot") / "webroot")})
+    elif request.param == "":
+        pass
+    else:
+        raise ValueError("Unsupported auth type")
+    # write file to disk
     with open(confpath, "w") as f:
         yaml.dump(conf, f)
     # return path to the config
-    return confpath
+    return request.param, confpath
 
 
-@pytest.fixture(scope="session")
-def known_public_key(tmpdir_factory, certgrinderd_configfile):
+@pytest.fixture
+def known_public_key():
     """Define, load and return a known public key."""
     pem_public_key = """
 -----BEGIN PUBLIC KEY-----
@@ -115,9 +133,9 @@ GD7OUrxoP9QtBwV7q7YlnoECAwEAAQ==
     )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def known_csr():
-    """A CSR for example.com,www.example.com."""
+    """A PEM formatted CSR for example.com,www.example.com."""
     pem_csr = """
 -----BEGIN CERTIFICATE REQUEST-----
 MIIElTCCAn0CAQAwFjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggIiMA0GCSqGSIb3
@@ -150,9 +168,9 @@ L37QA7qQ9foiMk/wJdtkYNss1xD7dW+biQ==
     return pem_csr
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def csr_with_two_cn():
-    """An invalid CSR for example.com,www.example.com with two CommonName attributes."""
+    """An invalid PEM formatted CSR for example.com,www.example.com with two CommonName attributes."""
     two_cn_csr = """
 -----BEGIN CERTIFICATE REQUEST-----
 MIIEqzCCApMCAQAwLDEUMBIGA1UEAwwLZXhhbXBsZS5jb20xFDASBgNVBAMMC2V4
@@ -185,8 +203,119 @@ ynp0GOksYz7y2xIUBhtNyye8P4LbsYlixLAmL0vcWXmqt34j9rsTUyBGvIa+NkU=
 
 
 @pytest.fixture
+def csr_with_cn_not_in_san_list():
+    """An invalid PEM formatted CSR where the CN example.com is not in the SAN list."""
+    csr = """
+-----BEGIN CERTIFICATE REQUEST-----
+MIIEiDCCAnACAQAwFjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggIiMA0GCSqGSIb3
+DQEBAQUAA4ICDwAwggIKAoICAQDT6T4eChNkmhsPWpANXfZYffT43n8qV7RFuSd8
+ng4O1Xc0isLdpmFCt6kZ4BVxZtz56OGAGEIrmWUUM1oqrO9u4bZAhFPYQ/UK7cJl
+MO/3yIDBNGHRVzaHPZllkx82d+NrK8qOTWVuz47PWWTH64p5AxAjf1Su8K3Mk9L8
+n6o5s4RBqa9veL56/eQ5l2ytOqtanz0ZTRP4lg0xHMaItXK2ooIoAnka5NDb7seI
+uQZt43QBIpE6NAPK7BRrHmwGp2mJCon1XOd/wy8PLqDMFthSLs3SSMEUL/tZCxzp
+dMNQDF0E5ogl82hPJVbx/Hz4GxBRroFMciZIO/2neOV8akFEPfVWaaistzRFkkxf
+zVOw4wRPAeEI6iOIoqwuCf6Ozh12eeP0oLjJBs8HGfOkw2sLuUeZ6/dKDZ0zIfy4
+82C2xNh47HSicLCM/zX7hodUJkYtwCMzQaauozlY+2hvc+Je7F5feKEv1SCRsIgp
+pZb8W5Yk4526n037zamqpi4SUhibtGTGmua3qH6S5gr8lbQg59vBv4dLs1KgXx64
+iyCbQvSXaTUyVVvcEyptNedsaJJ6ogExfNKztO4wZL8Juw+ZiHsd1cd7kFNBfU62
+MN9RXEL70RftRXKdIj9f0GFXrH8tqeWr0WiOKyJ9chqffUJM15n2Hrd3o2pD0iBt
+dHyMpwIDAQABoC0wKwYJKoZIhvcNAQkOMR4wHDAaBgNVHREEEzARgg93d3cuZXhh
+bXBsZS5jb20wDQYJKoZIhvcNAQELBQADggIBAHSe4EKe6RChIm4aOe8GlkOIMkAT
+H6NJLKpKhVKk7NsaG4VP8vXS6kPOeDHgmVXGqAdNORhIfkrdNUMYheHf/XlozVzv
+R9KOCSL7wd+Pg8JWH3a7SmeKHzZE1EKjJYnWcpSU+xi+/EyupDtbCglKX79B37Wh
+Fico0perPVQafI9Kcr/SPLNS/R/FyvCUkmReY+wYv7b3EYP6z/Ru4ByDuU9INj0a
+OQTOLTeIOs2Oa6dAWeJse1nwbQT72gtN+tBB2jT6XHj4s+8D2AmARVv7G64noYAF
+J4XOp4n/Q/xVaelAz8fVGClilyAIJigJ6ouJ6v5w1drxY3sw3kgcZX6pCVkm4Dn8
+N1ttJC+JWIOinAKI44f6dwBwB/hLyn8flCqGy85zJBrW3KK5jBChhcrCkhbkasQJ
+PqIK1UAbPiVvhk8RrRoRj2RGRBrSr2GmznXYTVQuOWwU5K14aRaEoawxmcY/0JD4
+13pmoznCtXvX5/acZtN4Yv+FQbYoabFUa5liNyrszJQ86nh+dRjO24R4tBeL363n
+mHhfttwvNq8iXVPlQTE6Jmaph2mh+SUiokrKaw54f487Agg0kM2emEFImZcEx1Qs
+yb9zp23eleOTPnni3asK2t0E08yIgPILjuzJ875OiSgSTjASesmjGf7lSZP53hjP
+pKA7KJjOAUWagWnA
+-----END CERTIFICATE REQUEST-----"""
+    return csr
+
+
+@pytest.fixture
+def csr_example_org():
+    """A PEM formatted CSR for example.org,www.example.org."""
+    csr = """
+-----BEGIN CERTIFICATE REQUEST-----
+MIIElTCCAn0CAQAwFjEUMBIGA1UEAwwLZXhhbXBsZS5vcmcwggIiMA0GCSqGSIb3
+DQEBAQUAA4ICDwAwggIKAoICAQCUil7U19gr1V6XxE5LkthupD4pGD+eukdq1JkZ
+b167h2NJuQUqjw2FQsDwPy6doI50RvcjJrfNR13Hw37wex+YoG3KJ0Z0apkY53LG
+Ok5QsFS/kmObUtTyH7ybnjpPhzw+CD5CdPFfyBOvUofcbhKKcIqHPneI+qJ2+6rH
+559UO70ux4EDOc0AneeGHj5fciGvqTQYKv2KUCs/dnaQTYgYw/sUDuQujHGAiNVI
+LjBaVRJt6BIcv43RDNmm2vjRAjZTizXN0aFDgH8o5wAw3vopMEldNV2yN9kDZNRU
+A9kGNN1fUTGpP8YvK8ktBGqCT13zBURTcWzK9vgqfeSzT6eYY9tzElIBsdkfk4+c
+O+fg4Q/pyv45AKIQicrhJ8LyQxGS1uw5IGte7HhVMY5cYerEPzBGdLNO6foV29Lp
+NoaAuAhQKyxVCguO0UyCcDXuSVSzHy+6dw9Re60mFs62bu6yaAndWYNDR3KIyfe7
+zz36gWlsye+2UgDrfmj+lATHfdpujP2x5U6GkhbxuT86xJBvMzBEcJwVvqjVjvLq
+d/6CrhmalJx+yzDMtivVPglmdi6ng45/2Q/jdBfvhd0wR/aPsL+24dgcZeFJ0xSB
+dJ3fdWsL2vuxxF/awdmuuMaybzwLzy0RDHpDReRhHFIDLoR9KGdF/wk64XiHQYFA
+vXl91QIDAQABoDowOAYJKoZIhvcNAQkOMSswKTAnBgNVHREEIDAeggtleGFtcGxl
+Lm9yZ4IPd3d3LmV4YW1wbGUub3JnMA0GCSqGSIb3DQEBCwUAA4ICAQBCmWvyLECn
+EZdrZHsBmIDhAZzdNSBTTu0WDmG6Ic6ErKIP0N+YCf6y0HveHossTGNlYRz/phKk
+H4c+X0MEXoiUTd0NrLry0yeorHLMj2JWAn1N/oiBtgQma8sNaxJjGXzsA5jFBqmR
+xwiMq9CMLm+J8ZrKL9bjU9SP+JJpGHCX8CWZJFHfC0hOr0rMZlsrLWFakb0ou01/
+aScveQ/EjtQul1KFl3zepFKsDDhPc2rSQPdXRDckvMqHizBTdOJ87azUzTT0R/Id
+tlD5XsPnGocgrQX+ysBMPX0I8z0FO3EHwYc118rF2B37FbPIAzAys/wL++iCsmzg
+ktCDNt+UjmZ1kFcsewtM+DI4euKgI69HI3V4ET42GF7ISarObAtDKF3GWebr9093
+emqK4qtaSHo0Wb0Ahr0UAWTea2EDbEh7YsjIdVq6K9tg7ZXlY0DPbqAH5FLM43Qm
+/PxI1wsJSYOz2c0u9pvXL51MzQf10t9qCUhO/KWO3yzciiEbkJdUKVF1N9st2nef
+oF60TAp7H4S0q77YSnO14CoXgx3o5Y2idM6Aciexu89AcIZYwpWRrtgJgIrLRqxK
+Q5SGFmRh72w2H7c1OPiePk/HVLIZLqbG53pJ1m+IAh3w27ee3WEEZIX6uwZhwM8j
+KTDvlTiQSl+cy49SkgWsFlUukwkJJPzU7g==
+-----END CERTIFICATE REQUEST-----"""
+    return csr
+
+
+@pytest.fixture
+def csr_example_com_and_org():
+    """A CSR for example.com,www.example.com,foo.example.org."""
+    csr = """
+-----BEGIN CERTIFICATE REQUEST-----
+MIIEpjCCAo4CAQAwFjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggIiMA0GCSqGSIb3
+DQEBAQUAA4ICDwAwggIKAoICAQCUil7U19gr1V6XxE5LkthupD4pGD+eukdq1JkZ
+b167h2NJuQUqjw2FQsDwPy6doI50RvcjJrfNR13Hw37wex+YoG3KJ0Z0apkY53LG
+Ok5QsFS/kmObUtTyH7ybnjpPhzw+CD5CdPFfyBOvUofcbhKKcIqHPneI+qJ2+6rH
+559UO70ux4EDOc0AneeGHj5fciGvqTQYKv2KUCs/dnaQTYgYw/sUDuQujHGAiNVI
+LjBaVRJt6BIcv43RDNmm2vjRAjZTizXN0aFDgH8o5wAw3vopMEldNV2yN9kDZNRU
+A9kGNN1fUTGpP8YvK8ktBGqCT13zBURTcWzK9vgqfeSzT6eYY9tzElIBsdkfk4+c
+O+fg4Q/pyv45AKIQicrhJ8LyQxGS1uw5IGte7HhVMY5cYerEPzBGdLNO6foV29Lp
+NoaAuAhQKyxVCguO0UyCcDXuSVSzHy+6dw9Re60mFs62bu6yaAndWYNDR3KIyfe7
+zz36gWlsye+2UgDrfmj+lATHfdpujP2x5U6GkhbxuT86xJBvMzBEcJwVvqjVjvLq
+d/6CrhmalJx+yzDMtivVPglmdi6ng45/2Q/jdBfvhd0wR/aPsL+24dgcZeFJ0xSB
+dJ3fdWsL2vuxxF/awdmuuMaybzwLzy0RDHpDReRhHFIDLoR9KGdF/wk64XiHQYFA
+vXl91QIDAQABoEswSQYJKoZIhvcNAQkOMTwwOjA4BgNVHREEMTAvggtleGFtcGxl
+LmNvbYIPd3d3LmV4YW1wbGUuY29tgg9mb28uZXhhbXBsZS5vcmcwDQYJKoZIhvcN
+AQELBQADggIBAF6DCYBsGvKmpLez0+wKTOCNJG84ByL0Jmjyr2NoUkGRSWGbQW6q
+JJUuXTm7vZZrGy70aND5gW5ofjq1/mn6cLyfjcZSa7U+XkWCxTmFhP1S/OIoTrWF
+CM2lm4fA85XNm1DuxZfaKvdXi+pjjfknLrtUtCExx/JLTRnrkSDWsnF14A1zYuSI
+ZqRr/VRW8o8Nx88Yxi/gws36SjbQu4lvAhy7p120mZhk4IWVXsu9B+dxE6PdD+AK
+jt//m3yjjPXfzZ0m2EuYOJA22N64iDg2E8gH1X3Vln/3hgOO7TVoOF2UhdXKKvYm
++chI6LDvYE8KJO6/oTvGu0qJVzCrP6+acIFQ3SNdwF6Kwg7r7yKXsKnfrh6/JVtF
+7jbm3trFycXQL47qYDFYKjOlmTPx/awGfDZqhkrv0Za2aRpCgjKLSK4CJ00cdVpx
+ORf1UHb8t6MDv5qOdL9eIa+TDECWUGK2LGCc75MQAvQVU3E8XLuts33oMNExxeG9
+3P4ng3DhwzpegzI+QwH5OpBrlLPr4PkzW7UF8vf3GaPORbYi//rLC40QN4jvTHTp
+L4COL0UajaWs1L9UXyxD/wSS/HcSVw1NS9+cmQYTpgPnz2dbOj6twklrq9NzEUt7
+vMjDUV30GSeQe5KxMR3TmXUFXVXyJEr5FbcWIO//e3pYSBfEra1QDh6w
+-----END CERTIFICATE REQUEST-----"""
+    return csr
+
+
+@pytest.fixture
 def certgrinderd_env(monkeypatch):
     """Whip up a fake CERTGRINDERD_DOMAINSETS environment for certgrinderd."""
     monkeypatch.setenv(
         "CERTGRINDERD_DOMAINSETS", "example.com,www.example.com;example.net"
     )
+
+
+@pytest.fixture
+def no_certgrinderd_env(monkeypatch):
+    """Delete CERTGRINDERD_DOMAINSETS environment variable."""
+    try:
+        monkeypatch.delenv("CERTGRINDERD_DOMAINSETS")
+    except KeyError:
+        pass

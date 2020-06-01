@@ -12,3 +12,4 @@ _build/
 *.pem
 .coverage
 coverage.xml
+htmlcov/

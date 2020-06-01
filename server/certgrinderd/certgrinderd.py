@@ -89,13 +89,17 @@ class Certgrinderd:
             )
             syslog_format = logging.Formatter("certgrinderd: %(message)s")
             syslog_handler.setFormatter(syslog_format)
-            try:
-                logger.addHandler(syslog_handler)
-            except Exception:
-                logger.exception(
-                    f"Unable to connect to syslog socket {self.conf['syslog-socket']} - syslog not enabled. Exception info below:"
-                )
-                sys.exit(1)
+            logger.addHandler(syslog_handler)
+            # usually SysLogHandler is lazy and doesn't connect the socket until
+            # a message has to be sent. Call _connect_unixsocket() now to force
+            # an exception now if we can't connect to the socket
+            syslog_handler._connect_unixsocket(  # type: ignore
+                self.conf["syslog-socket"]
+            )
+            # OK, we are connected to syslog
+            logger.debug(
+                f"Connected to syslog-socket {self.conf['syslog-socket']}, logging to facility {self.conf['syslog-facility']}"
+            )
         else:
             logger.debug("Not configuring syslog")
 
@@ -168,7 +172,7 @@ class Certgrinderd:
         if len(cn_list) != 1:
             # we have more or less than one CN, fuckery is afoot
             logger.error("CSR is not valid (has more or less than 1 CN), bailing out")
-            sys.exit(1)
+            return False
         cn = cn_list[0].value
 
         # get list of SubjectAltNames from CSR
@@ -186,17 +190,25 @@ class Certgrinderd:
             return False
 
         # domainsets is a semicolon-seperated list of comma-seperated domainsets.
-        # loop over domainsets until we find a match
+        # loop over domainsets until we find a match and break out, or hit the else
+        # if we never find a domainset covering all names in the CSR
         for domainset in allowed_names.split(";"):
             if cn not in domainset.split(","):
                 # cert CN is not in this domainset
                 continue
+            # loop over SubjectAltNames and check if each is present in domainset,
+            # break out of the loop if a name is not in the domainset
             for san in san_list:
                 if san not in domainset.split(","):
-                    # this name is not in this domainset
-                    continue
-            # all names in the CSR are permitted for this client
-            break
+                    # this name is not in this domainset, no need to keep checking
+                    break
+            else:
+                # all names in the CSR are permitted for this client,
+                # no need to check more domainsets, break out now
+                logger.debug(
+                    f"All names in the CSR ({san_list}) are permitted for this client"
+                )
+                break
         else:
             # this CSR contains names which are not permitted for this client
             logger.error(
@@ -361,6 +373,7 @@ class Certgrinderd:
             True if Certbot command exitcode was 0, False otherwise
         """
         # call certbot
+        logger.debug(f"Running certbot command with env {env}: {command}")
         p = subprocess.run(command, capture_output=True, env=env)
         if p.returncode == 0:
             # success, output chain to stdout
@@ -368,6 +381,7 @@ class Certgrinderd:
                 print(f.read())
             return True
         else:
+            logger.error("certbot command returned non-zero exit code")
             return False
 
     def grind(self) -> None:
@@ -576,14 +590,13 @@ def main() -> None:
     config.update(vars(args))
 
     # create tempfile directory if needed
-    if hasattr(config, "temp-dir") and config["temp-dir"]:
-        tempdir = tempfile.TemporaryDirectory(
-            prefix="certgrinderd-temp-", dir=config["temp-dir"]
-        )
-    else:
-        tempdir = tempfile.TemporaryDirectory(prefix="certgrinderd-temp-")
+    kwargs = {"prefix": "certgrinderd-temp-"}
+    if "temp-dir" in config and config["temp-dir"]:
+        kwargs["dir"] = config["temp-dir"]
+    tempdir = tempfile.TemporaryDirectory(**kwargs)
     config["temp-dir"] = tempdir.name
 
+    # all good
     try:
         # instantiate Certgrinderd class
         certgrinderd = Certgrinderd(userconfig=config)

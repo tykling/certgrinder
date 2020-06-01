@@ -115,7 +115,7 @@ This is an alphabetical list of the configurable options:
      Default: ``False``
 
    `syslog-facility`
-     Set this and syslog-socket to enable logging to syslog.
+     Set this and syslog-socket to enable logging to syslog. Must be a value supported by ``logging.handlers.SysLogHandler`` like ``LOG_USER`` or ``LOG_LOCAL0``.
 
      Default: ``None``
 

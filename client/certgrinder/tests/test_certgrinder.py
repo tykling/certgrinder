@@ -9,6 +9,7 @@ import logging
 import os
 import pathlib
 import ssl
+import subprocess
 import urllib.request
 
 import pytest
@@ -19,13 +20,84 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import ExtensionOID, NameOID
 
 
-# INTEGRATION TESTS
+def test_certgrinderd_broken_configfile(
+    tmpdir_factory, capsys, certgrinderd_broken_yaml_configfile
+):
+    """Test certgrinderd with a broken config."""
+    mockargs = [
+        "--path",
+        str(tmpdir_factory.mktemp("certificates")),
+        "--domain-list",
+        "example.com,www.example.com",
+        "--certgrinderd",
+        f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_broken_yaml_configfile}",
+        "--debug",
+        "get",
+        "certificate",
+    ]
+    with pytest.raises(SystemExit) as E:
+        main(mockargs)
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    captured = capsys.readouterr()
+    assert "Unable to parse YAML config file" in captured.err
+
+
+def test_certgrinderd_fail(tmpdir_factory, certgrinderd_env, capsys):
+    """Test a failing certbot."""
+    mockargs = [
+        "--path",
+        str(tmpdir_factory.mktemp("certificates")),
+        "--domain-list",
+        "example.com,www.example.com",
+        "--certgrinderd",
+        f"server/certgrinderd/certgrinderd.py --certbot-command /bin/false --acme-zone acme.example.com",
+        "--debug",
+        "get",
+        "certificate",
+    ]
+    with pytest.raises(SystemExit) as E:
+        main(mockargs)
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    captured = capsys.readouterr()
+    assert "certbot command returned non-zero exit code" in captured.err
+
+
+def test_certgrinderd_broken_csr(
+    csr_with_two_cn, certgrinderd_env, certgrinderd_configfile
+):
+    """Test calling certgrinderd with an invalid CSR."""
+    if certgrinderd_configfile[0] != "dns":
+        # we only need to test this once
+        return
+
+    p = subprocess.Popen(
+        [
+            "server/certgrinderd/certgrinderd.py",
+            "--config-file",
+            certgrinderd_configfile[1],
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    # send the CSR to stdin and save stdout (the cert chain) + stderr (the certgrinderd logging)
+    certgrinderd_stdout, certgrinderd_stderr = p.communicate(
+        input=csr_with_two_cn.encode("ASCII")
+    )
+    assert p.returncode == 1
+    assert (
+        "CSR is not valid (has more or less than 1 CN), bailing out"
+        in certgrinderd_stderr.decode("ASCII")
+    ), "Did not find expected error message with broken CSR"
+
+
 def test_get_certificate(
     pebble_server,
     certgrinderd_configfile,
     tmp_path_factory,
     certgrinderd_env,
     caplog,
+    capsys,
     tmpdir_factory,
 ):
     """Get a couple of certificates and check that they look right."""
@@ -38,7 +110,7 @@ def test_get_certificate(
         "--domain-list",
         "example.net",
         "--certgrinderd",
-        f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile}",
+        f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]}",
         # "--debug",
         "get",
         "certificate",
@@ -61,27 +133,36 @@ def test_get_certificate(
     ) as u:
         intermediate = x509.load_pem_x509_certificate(u.read(), default_backend())
 
-    # check that the certificates were issued correctly
-    for domainset in ["example.com,www.example.com", "example.net"]:
-        domains = domainset.split(",")
-        certpath = os.path.join(mockargs[1], domains[0] + ".crt")
-        with open(certpath, "rb") as f:
-            certificate = x509.load_pem_x509_certificate(f.read(), default_backend())
-            # check that it was issued by our intermediate
-            assert intermediate.subject == certificate.issuer
-            # check that the cert has the right CN in subject
-            name = x509.NameAttribute(
-                NameOID.COMMON_NAME, domains[0].encode("idna").decode("utf-8")
-            )
-            cns = certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
-            assert len(cns) == 1, "Certificate must have exactly one CN attribute"
-            assert cns[0] == name, "Certificate CN does not match expected name"
-            # make sure we have the full domainlist in SubjectAltName
-            assert domains == certificate.extensions.get_extension_for_oid(
-                ExtensionOID.SUBJECT_ALTERNATIVE_NAME
-            ).value.get_values_for_type(
-                x509.DNSName
-            ), "SubjectAltName extension does not contain the right list of domains"
+    # only check certs if we expect to get any
+    if certgrinderd_configfile[0] == "":
+        captured = capsys.readouterr()
+        assert (
+            "No more challenge types to try, unable to get certificate" in captured.err
+        ), "Did not find expected errormessage with no challenge types enabled"
+    else:
+        # check that the certificates were issued correctly
+        for domainset in ["example.com,www.example.com", "example.net"]:
+            domains = domainset.split(",")
+            certpath = os.path.join(mockargs[1], domains[0] + ".crt")
+            with open(certpath, "rb") as f:
+                certificate = x509.load_pem_x509_certificate(
+                    f.read(), default_backend()
+                )
+                # check that it was issued by our intermediate
+                assert intermediate.subject == certificate.issuer
+                # check that the cert has the right CN in subject
+                name = x509.NameAttribute(
+                    NameOID.COMMON_NAME, domains[0].encode("idna").decode("utf-8")
+                )
+                cns = certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+                assert len(cns) == 1, "Certificate must have exactly one CN attribute"
+                assert cns[0] == name, "Certificate CN does not match expected name"
+                # make sure we have the full domainlist in SubjectAltName
+                assert domains == certificate.extensions.get_extension_for_oid(
+                    ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+                ).value.get_values_for_type(
+                    x509.DNSName
+                ), "SubjectAltName extension does not contain the right list of domains"
 
 
 def test_show_spki(tmp_path_factory, caplog, tmpdir_factory):
@@ -118,7 +199,6 @@ def test_show_spki(tmp_path_factory, caplog, tmpdir_factory):
     assert spki in caplog.text, "SPKI not found in output"
 
 
-# UNIT TESTS (test individual methods)
 def test_generate_tlsa(known_public_key):
     """Test the TLSA record generation from a known public key."""
     certgrinder = Certgrinder()
