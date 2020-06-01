@@ -260,3 +260,24 @@ def test_argparse():
     assert getattr(args, "subcommand") == "tlsa"
     assert getattr(args, "tlsa-port") == "443"
     assert getattr(args, "tlsa-protocol") == "tcp"
+
+
+def test_no_domainlist(caplog):
+    """Test Certgrinder with no domain-list config."""
+    certgrinder2 = Certgrinder()
+    print(certgrinder2.conf)
+    with pytest.raises(SystemExit) as E:
+        certgrinder2.configure({})
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    assert "No domain-list(s) configured." in caplog.text
+
+
+def test_nonexistant_path(caplog):
+    """Test Certgrinder with wrong path setting."""
+    certgrinder3 = Certgrinder()
+    with pytest.raises(SystemExit) as E:
+        certgrinder3.configure(
+            {"domain-list": ["example.com,www.example.com"], "path": "/nonexistant"}
+        )
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    assert "Configured path /nonexistant does not exist" in caplog.text

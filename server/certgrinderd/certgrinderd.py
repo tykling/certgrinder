@@ -26,29 +26,6 @@ __version__ = "0.13.0-beta2-dev"
 class Certgrinderd:
     """The Certgrinderd server class."""
 
-    # default config
-    conf: typing.Dict[str, typing.Union[str, bool, None]] = {
-        "acme-email": None,
-        "acme-server-url": "https://acme-v02.api.letsencrypt.org/directory",
-        "acme-zone": None,
-        "auth-hook": "manual-auth-hook.sh",
-        "certbot-command": "/usr/local/bin/sudo /usr/local/bin/certbot",
-        "certbot-config-dir": None,
-        "certbot-logs-dir": None,
-        "certbot-work-dir": None,
-        "cleanup-hook": "manual-cleanup-hook.sh",
-        "config-file": None,
-        "debug": False,
-        "log-level": "INFO",
-        "pid-dir": "/tmp",
-        "skip-acme-server-cert-verify": False,
-        "staging": False,
-        "syslog-facility": None,
-        "syslog-socket": None,
-        "temp-dir": None,
-        "web-root": None,
-    }
-
     def __init__(
         self,
         userconfig: typing.Optional[
@@ -63,6 +40,29 @@ class Certgrinderd:
         Returns:
             None
         """
+        # default config
+        self.conf: typing.Dict[str, typing.Union[str, bool, None]] = {
+            "acme-email": None,
+            "acme-server-url": "https://acme-v02.api.letsencrypt.org/directory",
+            "acme-zone": None,
+            "auth-hook": "manual-auth-hook.sh",
+            "certbot-command": "/usr/local/bin/sudo /usr/local/bin/certbot",
+            "certbot-config-dir": None,
+            "certbot-logs-dir": None,
+            "certbot-work-dir": None,
+            "cleanup-hook": "manual-cleanup-hook.sh",
+            "config-file": None,
+            "debug": False,
+            "log-level": "INFO",
+            "pid-dir": "/tmp",
+            "skip-acme-server-cert-verify": False,
+            "staging": False,
+            "syslog-facility": None,
+            "syslog-socket": None,
+            "temp-dir": None,
+            "web-root": None,
+        }
+
         if userconfig:
             self.conf.update(userconfig)
 

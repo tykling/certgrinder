@@ -35,41 +35,45 @@ class Certgrinder:
     # save version as a class attribute
     __version__ = __version__
 
-    # default config
-    conf: typing.Dict[str, typing.Union[str, int, bool, typing.List[str]]] = {
-        "certgrinderd": "",
-        "cert-renew-threshold-days": 30,
-        "domain-list": [],
-        "invalid-ca-cn-list": ["Fake LE Intermediate X1", "Fake LE Intermediate X2"],
-        "log-level": "INFO",
-        "name-server": "",
-        "path": "",
-        "pid-dir": "/tmp",
-        "post-renew-hooks": [],
-        "staging": False,
-        "syslog-facility": "",
-        "syslog-socket": "",
-        "tlsa-port": "",
-        "tlsa-protocol": "",
-        "tlsa-type-list": ["310", "311", "312"],
-    }
+    def __init__(self) -> None:
+        """Define the default config."""
+        self.conf: typing.Dict[str, typing.Union[str, int, bool, typing.List[str]]] = {
+            "certgrinderd": "",
+            "cert-renew-threshold-days": 30,
+            "domain-list": [],
+            "invalid-ca-cn-list": [
+                "Fake LE Intermediate X1",
+                "Fake LE Intermediate X2",
+            ],
+            "log-level": "INFO",
+            "name-server": "",
+            "path": "",
+            "pid-dir": "/tmp",
+            "post-renew-hooks": [],
+            "staging": False,
+            "syslog-facility": "",
+            "syslog-socket": "",
+            "tlsa-port": "",
+            "tlsa-protocol": "",
+            "tlsa-type-list": ["310", "311", "312"],
+        }
 
-    # current domainset
-    domainset: typing.List[str] = []
+        # current domainset
+        self.domainset: typing.List[str] = []
 
-    # paths for current certificate and keys
-    keypair_path: str = ""
-    csr_path: str = ""
-    certificate_path: str = ""
-    certificate_chain_path: str = ""
-    intermediate_path: str = ""
-    concat_path: str = ""
+        # paths for current certificate and keys
+        self.keypair_path: str = ""
+        self.csr_path: str = ""
+        self.certificate_path: str = ""
+        self.certificate_chain_path: str = ""
+        self.intermediate_path: str = ""
+        self.concat_path: str = ""
 
-    # this is set to True if an error occurs
-    error: bool = False
+        # this is set to True if an error occurs
+        self.error: bool = False
 
-    # this is set to True if we need to run a post renew hook
-    hook_needed: bool = False
+        # this is set to True if we need to run a post renew hook
+        self.hook_needed: bool = False
 
     def configure(
         self,
