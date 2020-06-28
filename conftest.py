@@ -405,7 +405,9 @@ def selfsigned_certificate(known_private_key):
             + datetime.timedelta(days=10)
         )
         .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName("example.com")]),
+            x509.SubjectAlternativeName(
+                [x509.DNSName("example.com"), x509.DNSName("www.example.com")]
+            ),
             critical=False,
             # Sign our certificate with our private key
         )

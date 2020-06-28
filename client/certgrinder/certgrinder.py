@@ -724,7 +724,7 @@ class Certgrinder:
             san_names=self.domainset,
         )
         if not valid:
-            logger.error("Certificate is not valid, not saving to disk.")
+            logger.error("Certificate is not valid.")
             self.error = True
             return None
 
@@ -765,17 +765,13 @@ class Certgrinder:
             # get certificate
             stdout = self.run_certgrinderd(csr)
         if not stdout:
-            logger.error("Did not get a certificate :(")
+            logger.error("Did not get any output from certgrinderd")
             return False
         result = self.parse_certgrinderd_output(stdout, csr)
         if result:
             certificate, intermediate = result
         else:
             logger.error("Did not get a certificate :(")
-            return False
-
-        if not self.check_certificate(certificate):
-            logger.error("The new certificate is not valid, not saving to disk")
             return False
 
         logger.info(

@@ -114,6 +114,10 @@ def test_get_certificate(
         f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]} --acme-server-url https://127.0.0.1:14000/dir",
         "--debug",
     ]
+    if certgrinderd_configfile[0] == "dns":
+        # include a couple of post renew hook for one of the cert operations
+        mockargs += ["--post-renew-hooks", "true", "--post-renew-hooks", "false"]
+
     with pytest.raises(SystemExit) as E:
         main(mockargs + ["get", "certificate"])
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
@@ -231,6 +235,9 @@ def test_generate_tlsa(known_public_key):
         certgrinder.generate_tlsa_record(derkey=public_key_der_bytes, tlsatype="312")
         == tlsa312
     ), "Generation of DANE-EE Publickey SHA512 (3 1 2) TLSA Record failed"
+
+    with pytest.raises(ValueError):
+        certgrinder.generate_tlsa_record(derkey=public_key_der_bytes, tlsatype="1337")
 
 
 def test_generate_spki(known_public_key):
@@ -593,5 +600,79 @@ def test_get_certificate_method(caplog, tmpdir_factory, known_csr, signed_certif
         certgrinder.get_certificate(csr=csr, stdout=stdout) is False
     ), "The get_certificate() method did not return False as expected"
     assert "Certificate public key is different from the expected" in caplog.text
-    assert "Certificate is not valid, not saving to disk." in caplog.text
+    assert "Certificate is not valid." in caplog.text
     assert "Did not get a certificate :(" in caplog.text
+    caplog.clear()
+
+
+def test_check_certificate_no_file(caplog, tmpdir_factory):
+    """Make sure the check_certificate() method behaves if the file doesn't exist."""
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com,www.example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+        }
+    )
+    assert (
+        certgrinder.check_certificate() is False
+    ), "check_certificate() method did not return False as expected when called with a nonexiststant certificate path"
+    assert "not found" in caplog.text
+    assert (
+        certgrinder.error is True
+    ), "certgrinder.error is not True as expected after an error happened"
+
+
+def test_check_certificate_not_cert(caplog, tmpdir_factory):
+    """Make sure the check_certificate() method behaves with a file that isn't a cert."""
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com,www.example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+        }
+    )
+    certgrinder.certificate_path = "/etc/motd"
+    with pytest.raises(ValueError):
+        certgrinder.check_certificate()
+
+
+def test_check_certificate_selfsigned(caplog, tmpdir_factory, selfsigned_certificate):
+    """Make sure the check_certificate() method behaves if the cert is selfsigned."""
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com,www.example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+        }
+    )
+    certgrinder.load_domainset(certgrinder.conf["domain-list"][0].split(","))
+    assert (
+        certgrinder.check_certificate(certificate=selfsigned_certificate) is False
+    ), "check_certificate() method did not return False as expected when called with a selfsigned certificate"
+    assert (
+        certgrinder.error is True
+    ), "certgrinder.error is not True as expected after an error happened"
+
+
+def test_show_certificate(caplog, tmpdir_factory):
+    """Make sure the show_certificate() method logs the right error when file not found."""
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com,www.example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+        }
+    )
+    certgrinder.certificate_path = "/nonexistant"
+    assert (
+        certgrinder.show_certificate() is None
+    ), "show_certificate() did not return None as expected"
