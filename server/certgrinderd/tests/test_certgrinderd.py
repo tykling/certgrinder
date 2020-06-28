@@ -94,19 +94,6 @@ def test_debug_loglevel(caplog):
     ), "Config logmessage not found even though log-level is DEBUG"
 
 
-def test_staging_certbot_command():
-    """Make sure --staging is added to certbot command if staging mode is enabled."""
-    certgrinderd = Certgrinderd({"staging": True})
-    command = certgrinderd.get_certbot_command(
-        challengetype="dns",
-        csrpath="/tmp/csrpath",
-        fullchainpath="/tmp/fullchainpath",
-        certpath="/tmp/certpath",
-        chainpath="/tmp/chainpath",
-    )
-    assert command[-1] == "--staging"
-
-
 def test_syslog():
     """Test connection to syslog socket."""
     Certgrinderd({"syslog-socket": "/dev/log", "syslog-facility": "LOG_LOCAL0"})

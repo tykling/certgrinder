@@ -1,4 +1,5 @@
 """pytest configuration file for Certgrinder project."""
+import datetime
 import pathlib
 import shutil
 import subprocess
@@ -6,6 +7,7 @@ import sys
 
 import pytest
 import yaml
+from cryptography import x509
 from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend
 
@@ -83,7 +85,6 @@ def certgrinderd_configfile(request, tmp_path_factory):
     confpath = tmp_path_factory.mktemp("conf") / "certgrinderd.yml"
     conf = {
         "acme-email": "certgrindertest@invalid",
-        "acme-server-url": "https://127.0.0.1:14000/dir",
         "auth-hook": "echo 'authhook faked OK!'",
         "cleanup-hook": "echo 'cleanuphook faked OK!'",
         "certbot-command": str(pathlib.Path(sys.executable).parent / "certbot"),
@@ -130,6 +131,67 @@ GD7OUrxoP9QtBwV7q7YlnoECAwEAAQ==
 """
     return primitives.serialization.load_pem_public_key(
         pem_public_key.encode("ascii"), backend=default_backend()
+    )
+
+
+@pytest.fixture()
+def known_private_key():
+    """Define, parse and return a known private key."""
+    pem_private_key = """
+-----BEGIN RSA PRIVATE KEY-----
+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
+-----END RSA PRIVATE KEY-----
+"""
+    return primitives.serialization.load_pem_private_key(
+        pem_private_key.encode("ascii"), backend=default_backend(), password=None
     )
 
 
@@ -319,3 +381,71 @@ def no_certgrinderd_env(monkeypatch):
         monkeypatch.delenv("CERTGRINDERD_DOMAINSETS")
     except KeyError:
         pass
+
+
+@pytest.fixture
+def selfsigned_certificate(known_private_key):
+    """Return a selfsigned certificate, only valid for 10 days."""
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "example.com"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(known_private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.utcnow())
+        .not_valid_after(
+            # Our certificate will be valid for 10 days
+            datetime.datetime.utcnow()
+            + datetime.timedelta(days=10)
+        )
+        .add_extension(
+            x509.SubjectAlternativeName([x509.DNSName("example.com")]),
+            critical=False,
+            # Sign our certificate with our private key
+        )
+        .sign(known_private_key, primitives.hashes.SHA256(), default_backend())
+    )
+    return cert
+
+
+@pytest.fixture
+def signed_certificate(known_private_key):
+    """Return a certificate selfsigned but with different issuer and subject."""
+    subject = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "example.com"),
+        ]
+    )
+    issuer = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "example.net"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(known_private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.utcnow())
+        .not_valid_after(
+            # Our certificate will be valid for 90 days
+            datetime.datetime.utcnow()
+            + datetime.timedelta(days=90)
+        )
+        .add_extension(
+            x509.SubjectAlternativeName([x509.DNSName("example.com")]),
+            critical=False,
+            # Sign our certificate with our private key
+        )
+        .sign(known_private_key, primitives.hashes.SHA256(), default_backend())
+    )
+    return cert

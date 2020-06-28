@@ -110,7 +110,7 @@ def test_get_certificate(
         "--domain-list",
         "example.net",
         "--certgrinderd",
-        f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]}",
+        f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]} --acme-server-url https://127.0.0.1:14000/dir",
         "--debug",
     ]
     with pytest.raises(SystemExit) as E:
@@ -374,3 +374,146 @@ def test_create_and_chmod_keypair(tmpdir_factory, caplog):
         oct(os.stat(path).st_mode)[4:] == "0640"
     ), "Keypair saved with wrong permissions"
     assert "has incorrect permissions, fixing to 0640" in caplog.text
+
+
+def test_check_certificate_issuer_empty_invalid_ca_cn_list(signed_certificate, caplog):
+    """Test the check_certificate_issuer() method with an empty invalid_ca_cn_list."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    assert (
+        certgrinder.check_certificate_issuer(
+            certificate=signed_certificate, invalid_ca_cn_list=[]
+        )
+        is True
+    ), "check_certificate_issuer() did not return True with an empty invalid_ca_cn_list"
+    assert "We have an empty invalid_ca_cn_list, returning True" in caplog.text
+
+
+def test_check_certificate_issuer_selfsigned(selfsigned_certificate, caplog):
+    """Test the check_certificate_issuer() method with a selfsigned cert."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    assert (
+        certgrinder.check_certificate_issuer(
+            certificate=selfsigned_certificate, invalid_ca_cn_list=["badca"]
+        )
+        is False
+    ), "check_certificate_issuer() did not return False with a selfsigned cert"
+    assert "This certificate is selfsigned, returning False" in caplog.text
+
+
+def test_check_certificate_issuer_invalid_ca(signed_certificate, caplog):
+    """Test the check_certificate_issuer() method with a cert issued by an invalid CA."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    assert (
+        certgrinder.check_certificate_issuer(
+            certificate=signed_certificate, invalid_ca_cn_list=["example.net"]
+        )
+        is False
+    ), "check_certificate_issuer() did not return False when checking a cert issued by a CA in the invalid_ca_cn_list"
+    assert "This certificate was issued by a CA CN" in caplog.text
+
+
+def test_check_certificate_expiry(selfsigned_certificate, caplog):
+    """Test the check_certificate_expiry() method with a cert valid for 10 days."""
+    assert (
+        Certgrinder().check_certificate_expiry(
+            certificate=selfsigned_certificate, threshold_days=30
+        )
+        is False
+    ), "check_certficate_expiry() did not return False with a cert with 10 days validity"
+
+
+def test_check_certificate_validity(
+    selfsigned_certificate, signed_certificate, known_public_key, caplog
+):
+    """Test the various failure modes of the check_certificate_validity() method."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+
+    assert (
+        certgrinder.check_certificate_validity(
+            certificate=signed_certificate,
+            invalid_ca_cn_list=["example.net"],
+            threshold_days=30,
+            san_names=["example.com"],
+        )
+        is False
+    ), "check_certificate_validity() did not return False when checking a cert issued by a CA in the invalid_ca_cn_list"
+    assert "CN is on our list of invalid CAs" in caplog.text
+    caplog.clear()
+
+    assert (
+        certgrinder.check_certificate_validity(
+            certificate=signed_certificate,
+            invalid_ca_cn_list=["badca"],
+            threshold_days=100,
+            san_names=["example.com"],
+        )
+        is False
+    ), "check_certificate_validity() did not return False when checking a cert with 90 days validity when the threshold is 100"
+    assert "Certificate expires in less than" in caplog.text
+    caplog.clear()
+
+    assert (
+        certgrinder.check_certificate_validity(
+            certificate=signed_certificate,
+            invalid_ca_cn_list=["badca"],
+            threshold_days=30,
+            san_names=["example.com"],
+            public_key=known_public_key,
+        )
+        is False
+    ), "check_certificate_validity() did not return False when checking a cert with a wrong public key"
+    assert "Certificate public key is different from the expected" in caplog.text
+    caplog.clear()
+
+    assert (
+        certgrinder.check_certificate_validity(
+            certificate=signed_certificate,
+            invalid_ca_cn_list=["badca"],
+            threshold_days=30,
+            san_names=["example.com"],
+            subject="wrong",
+        )
+        is False
+    ), "check_certificate_validity() did not return False when checking a cert with a wrong subject"
+    assert "Certificate subject is different from the expected" in caplog.text
+    caplog.clear()
+
+    assert (
+        certgrinder.check_certificate_validity(
+            certificate=signed_certificate,
+            invalid_ca_cn_list=["badca"],
+            threshold_days=30,
+            san_names=["example.org"],
+        )
+        is False
+    ), "check_certificate_validity() did not return False when checking a cert with a wrong san_names list"
+    assert "Certificate SAN name list is different from the expected" in caplog.text
+
+
+def test_get_certgrinderd_command_staging(
+    tmpdir_factory, certgrinderd_configfile, caplog
+):
+    """Make sure we use the staging url when using --staging."""
+    caplog.set_level(logging.DEBUG)
+    parser, args = parse_args(
+        [
+            "--path",
+            str(tmpdir_factory.mktemp("certificates")),
+            "--domain-list",
+            "example.com,www.example.com",
+            "--certgrinderd",
+            f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]}",
+            "--staging",
+            "get",
+            "certificate",
+        ]
+    )
+    certgrinder = Certgrinder()
+    certgrinder.configure(userconfig=vars(args))
+    command = certgrinder.get_certgrinderd_command()
+    assert "https://acme-staging-v02.api.letsencrypt.org/directory" in command
+    assert "'invalid-ca-cn-list': []" in caplog.text

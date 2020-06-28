@@ -56,7 +56,6 @@ class Certgrinderd:
             "log-level": "INFO",
             "pid-dir": "/tmp",
             "skip-acme-server-cert-verify": False,
-            "staging": False,
             "syslog-facility": None,
             "syslog-socket": None,
             "temp-dir": None,
@@ -231,7 +230,7 @@ class Certgrinderd:
 
         Start with ``self.conf["certbot-command"]`` and append all the needed options.
 
-        Optionally add ``--email`` and ``--staging`` and a bunch of certbot settings as needed.
+        Optionally add ``--email`` and a bunch of certbot settings as needed.
 
         Args:
             challengetype: The type of challenge, ``dns`` or ``http``
@@ -291,9 +290,6 @@ class Certgrinderd:
         if self.conf["certbot-logs-dir"]:
             command.append("--logs-dir")
             command.append(str(self.conf["certbot-logs-dir"]))
-
-        if self.conf["staging"]:
-            command.append("--staging")
         return command
 
     def get_certificate(self, csrpath: str) -> None:
@@ -436,7 +432,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--acme-server-url",
         dest="acme-server-url",
-        help="The url for the ACME server to use",
+        help="The url for the ACME server to use.",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
@@ -525,9 +521,10 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-s",
         "--staging",
-        dest="staging",
-        action="store_true",
-        help="Staging mode. Make Certbot use LetsEncrypt staging servers",
+        dest="acme-server-url",
+        action="store_const",
+        const="https://acme-staging-v02.api.letsencrypt.org/directory",
+        help="Staging mode. Equal to setting --acme-server-url https://acme-staging-v02.api.letsencrypt.org/directory",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
@@ -559,7 +556,16 @@ def get_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> None:
+def parse_args(
+    mockargs: typing.Optional[typing.List[str]] = None
+) -> argparse.Namespace:
+    """Parse and return command-line args."""
+    parser = get_parser()
+    args = parser.parse_args(mockargs if mockargs else sys.argv[1:])
+    return args
+
+
+def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
     """Make the neccesary preparations before calling Certgrinderd.grind().
 
     - Read config from file and/or commandline args
@@ -574,8 +580,8 @@ def main() -> None:
     Returns:
         None
     """
-    parser = get_parser()
-    args = parser.parse_args()
+    # get commandline arguments
+    args = parse_args(mockargs)
 
     # read and parse the config file
     if hasattr(args, "config-file"):

@@ -165,6 +165,16 @@ class Certgrinder:
         else:
             logger.debug("Not configuring syslog")
 
+        # is this staging mode?
+        if self.conf["staging"]:
+            logger.debug(
+                "Staging mode enabled. Setting acme-server-url to 'https://acme-staging-v02.api.letsencrypt.org/directory' and invalid-ca-cn-list to an empty list."
+            )
+            self.conf[
+                "acme-server-url"
+            ] = "https://acme-staging-v02.api.letsencrypt.org/directory"
+            self.conf["invalid-ca-cn-list"] = []
+
         logger.debug(
             f"Certgrinder {__version__} configured OK - running with config: {self.conf}"
         )
@@ -377,20 +387,22 @@ class Certgrinder:
         """
         # Return False if the certificate was issued by itself
         if certificate.issuer == certificate.subject:
+            logger.debug("This certificate is selfsigned, returning False")
             return False
 
         # do we have any invalid CA CNs? otherwise bail out now
         if not invalid_ca_cn_list:
+            logger.debug("We have an empty invalid_ca_cn_list, returning True")
             return True
 
-        # check if certificate was issued by an invalid CA
+        # check if certificate was issued by an invalid CA CN
         for x in certificate.issuer:
             if (
                 x.oid == cryptography.x509.oid.NameOID.COMMON_NAME
                 and x.value in invalid_ca_cn_list
             ):
                 logger.debug(
-                    f"This certificate was issued by a CA CN in invalid_ca_cn_list, check_certificate_issuer() returning False"
+                    f"This certificate was issued by a CA CN ({x.value}) in invalid_ca_cn_list ({invalid_ca_cn_list}), check_certificate_issuer() returning False"
                 )
                 return False
 
@@ -419,22 +431,21 @@ class Certgrinder:
     @staticmethod
     def check_certificate_public_key(
         certificate: cryptography.x509.Certificate,
-        keypair: typing.Union[
-            openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey
+        public_key: typing.Union[
+            openssl.rsa._RSAPublicKey, openssl.ed25519.Ed25519PublicKey
         ],
     ) -> bool:
         """Make sure certificate has the specified public key.
 
         Args:
             certificate: The certificate to check
-            keypair: The keypair which contains the public key
+            public_key: The public key
 
         Returns:
             True if the public key matches, False if not
         """
-        # compare the PEM representation of the two public keys and return the result
         return bool(
-            keypair.public_key().public_bytes(
+            public_key.public_bytes(
                 encoding=primitives.serialization.Encoding.PEM,
                 format=primitives.serialization.PublicFormat.SubjectPublicKeyInfo,
             )
@@ -489,9 +500,9 @@ class Certgrinder:
         invalid_ca_cn_list: typing.List[str],
         threshold_days: int,
         san_names: typing.List[str],
-        keypair: typing.Optional[
-            typing.Union[openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey]
-        ],
+        public_key: typing.Optional[
+            typing.Union[openssl.rsa._RSAPublicKey, openssl.ed25519.Ed25519PublicKey]
+        ] = None,
         subject: str = "",
     ) -> bool:
         """Perform a few sanity checks of the certificate.
@@ -514,13 +525,13 @@ class Certgrinder:
         """
         if not cls.check_certificate_issuer(certificate, invalid_ca_cn_list):
             logger.error(
-                f"Certificate issuer is on our list of invalid CAs: {invalid_ca_cn_list}"
+                f"Certificate is self-signed or the issuer {certificate.issuer} CN is on our list of invalid CAs: {invalid_ca_cn_list}."
             )
             return False
         if not cls.check_certificate_expiry(certificate, threshold_days):
             logger.error(f"Certificate expires in less than {threshold_days} days")
             return False
-        if keypair and not cls.check_certificate_public_key(certificate, keypair):
+        if public_key and not cls.check_certificate_public_key(certificate, public_key):
             logger.error("Certificate public key is different from the expected")
             return False
         if subject and not cls.check_certificate_subject(certificate, subject):
@@ -586,7 +597,7 @@ class Certgrinder:
     def get_certgrinderd_command(self) -> typing.List[str]:
         """Return the certgrinderd command to run.
 
-        Adds ``--log-level`` with the current ``self.conf["log-level"]``, and ``--staging`` as needed.
+        Adds ``--log-level`` with the current ``self.conf["log-level"]``.
 
         Returns:
             A list of the elements which make up the ``certgrinderd`` command
@@ -599,9 +610,10 @@ class Certgrinder:
         commandlist.append("--log-level")
         commandlist.append(str(self.conf["log-level"]))
 
-        # do we want staging mode?
-        if self.conf["staging"]:
-            commandlist.append("--staging")
+        # pass the acme-server-url if we have one
+        if "acme-server-url" in self.conf:
+            commandlist.append("--acme-server-url")
+            commandlist.append(str(self.conf["acme-server-url"]))
 
         # all good
         return commandlist
@@ -707,7 +719,7 @@ class Certgrinder:
             if self.conf["staging"]
             else [str(x) for x in self.conf["invalid-ca-cn-list"]],
             threshold_days=self.conf["cert-renew-threshold-days"],
-            keypair=self.keypair,
+            public_key=self.keypair.public_key(),
             subject=csr.subject,
             san_names=self.domainset,
         )
@@ -777,8 +789,8 @@ class Certgrinder:
     def check_certificate(
         self,
         certificate: typing.Optional[cryptography.x509.Certificate] = None,
-        keypair: typing.Optional[
-            typing.Union[openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey]
+        public_key: typing.Optional[
+            typing.Union[openssl.rsa._RSAPublicKey, openssl.ed25519.Ed25519PublicKey]
         ] = None,
     ) -> bool:
         """Check certificate validity and returns True or False.
@@ -789,7 +801,7 @@ class Certgrinder:
 
         Args:
             certificate: The certificate to be checked
-            keypair: The keypair the certificate is based on
+            public_key: The keypair the certificate is based on
 
         Returns:
             True if everything is OK, False otherwise
@@ -814,7 +826,7 @@ class Certgrinder:
             if self.conf["staging"]
             else [str(x) for x in self.conf["invalid-ca-cn-list"]],
             threshold_days=self.conf["cert-renew-threshold-days"],
-            keypair=keypair,
+            public_key=public_key,
             san_names=self.domainset,
         )
         # set self.error if cert is not valid (we may need the information later)
@@ -1519,7 +1531,7 @@ def get_parser() -> argparse.ArgumentParser:
         "--staging",
         dest="staging",
         action="store_true",
-        help="Pass --staging to the certgrinderd command to tell the Certgrinder server to use LetsEncrypt staging servers (use for testing purposes).",
+        help="Staging mode. Sets --acme-server-url https://acme-staging-v02.api.letsencrypt.org/directory and --invalid-ca-cn-list empty. Use this while playing around to avoid hitting rate limits!",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
