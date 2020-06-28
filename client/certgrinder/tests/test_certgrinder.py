@@ -15,6 +15,7 @@ import urllib.request
 import pytest
 from certgrinder.certgrinder import Certgrinder, main, parse_args
 from cryptography import x509
+from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend, openssl
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import ExtensionOID, NameOID
@@ -517,3 +518,57 @@ def test_get_certgrinderd_command_staging(
     command = certgrinder.get_certgrinderd_command()
     assert "https://acme-staging-v02.api.letsencrypt.org/directory" in command
     assert "'invalid-ca-cn-list': []" in caplog.text
+
+
+def test_parse_certgrinderd_output_not_pem(
+    caplog, tmpdir_factory, known_csr, signed_certificate
+):
+    """Test the various failure modes of the parse_certgrinderd_output()."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com,www.example.com"],
+            "certgrinderd": "true",
+        }
+    )
+    csr = x509.load_pem_x509_csr(known_csr.encode("ascii"), default_backend())
+    assert (
+        certgrinder.parse_certgrinderd_output(
+            certgrinderd_stdout=b"NOT_A_PEM_CERT", csr=csr
+        )
+        is None
+    ), "The parse_certgrinderd_output() method did not return None with a non-PEM certificate input"
+    assert "This is stdout from the certgrinderd call" in caplog.text
+    assert "NOT_A_PEM_CERT" in caplog.text
+    caplog.clear()
+
+    stdout = b"""-----BEGIN CERTIFICATE-----
+NOT_A_PEM
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+ALSO_NOT_A_PEM
+-----END CERTIFICATE-----"""
+    assert (
+        certgrinder.parse_certgrinderd_output(certgrinderd_stdout=stdout, csr=csr)
+        is None
+    ), "The parse_certgrinderd_output() method did not return None with a PEM-ish but invalid certificate input"
+    assert "This is stdout from the certgrinderd call" in caplog.text
+    assert "ALSO_NOT_A_PEM" in caplog.text
+    caplog.clear()
+
+    stdout = signed_certificate.public_bytes(primitives.serialization.Encoding.PEM)
+    stdout += b"""-----BEGIN CERTIFICATE-----
+ALSO_NOT_A_PEM
+-----END CERTIFICATE-----"""
+    assert (
+        certgrinder.parse_certgrinderd_output(certgrinderd_stdout=stdout, csr=csr)
+        is None
+    ), "The parse_certgrinderd_output() method did not return None with a non-PEM certificate input"
+    assert (
+        "The Certgrinder server did not return a valid PEM formatted intermediate."
+        in caplog.text
+    )
+    assert "This is stdout from the certgrinderd call" in caplog.text
+    assert "ALSO_NOT_A_PEM" in caplog.text
