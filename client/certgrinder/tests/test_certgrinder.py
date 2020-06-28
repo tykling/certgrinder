@@ -368,6 +368,8 @@ def test_create_and_chmod_keypair(tmpdir_factory, caplog):
         oct(os.stat(path).st_mode)[4:] == "0640"
     ), "Keypair saved with wrong permissions"
     os.chmod(path, 0o777)
+    # loading the keypair should fix the mode to 0640
+    certgrinder.load_keypair(path)
     assert (
         oct(os.stat(path).st_mode)[4:] == "0640"
     ), "Keypair saved with wrong permissions"
