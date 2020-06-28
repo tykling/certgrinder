@@ -19,3 +19,4 @@ Certgrinder does not rotate the RSA keypair on each certificate renewal, which m
 Terminology
 ===========
 The central host with the LetsEncrypt signing stack is called the "Certgrinder server". The individual servers (the ones that need the certificates) are called "Certgrinder clients". These match the two Python packages ``certgrinderd`` and ``certgrinder``, respectively.
+

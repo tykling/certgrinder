@@ -421,22 +421,8 @@ class Certgrinderd:
         os.remove(csrpath)
 
 
-def main() -> None:
-    """Make the neccesary preparations before calling Certgrinderd.grind().
-
-    - Read config from file and/or commandline args
-    - Configure temporary paths
-    - Configure logging
-
-    Finally instantiate the Certgrinderd class with the config and grind()
-
-    Args:
-        None
-
-    Returns:
-        None
-    """
-    # parse commandline arguments
+def get_parser() -> argparse.ArgumentParser:
+    """Create and return the argparse object."""
     parser = argparse.ArgumentParser(
         description="certgrinderd version %s. See the README.md file for more info."
         % __version__
@@ -570,6 +556,25 @@ def main() -> None:
         help="The path to pass to the auth hook script as env WEBROOT to use for HTTP-01 challenges.",
         default=argparse.SUPPRESS,
     )
+    return parser
+
+
+def main() -> None:
+    """Make the neccesary preparations before calling Certgrinderd.grind().
+
+    - Read config from file and/or commandline args
+    - Configure temporary paths
+    - Configure logging
+
+    Finally instantiate the Certgrinderd class with the config and grind()
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+    parser = get_parser()
     args = parser.parse_args()
 
     # read and parse the config file

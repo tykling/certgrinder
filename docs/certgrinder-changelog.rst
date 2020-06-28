@@ -16,12 +16,14 @@ Added
 ~~~~~
 
 - Dev requirements now has ``sphinx-rtd-theme`` which is the theme used on ReadTheDocs, so ``make html`` in ``docs/`` now produces the same-ish output.
+- Dev requirements now include ``sphinx-argparse`` used for generating automatic usage documentation.
 - Very preliminary support for EC keys in addition to RSA keys.
 - More tests
 - Better validation of returned certificate and intermediate
 - Save intermediate in seperate file, save certificate only in seperate file.
 - Documentation for all config settings
 - Manpage certgrinder.8
+- periodic command to run from cron
 
 Changed
 ~~~~~~~
@@ -36,6 +38,9 @@ Changed
 - Support calling ``certgrinder.main()`` function and ``certgrinder.Certgrinder.grind()`` method with a list of mocked command-line args
 - Update existing tests to deal with all the new stuff
 - Make pytest logformat look like regular logging
+- Split creating the argparse object into a seperate function to assist sphinx-argparse
+- Reorder argparse commands and subcommands in alphabetical order
+- Re-add -v / --version to show version and exit
 
 
 v0.13.0-beta1 (7-may-2020)

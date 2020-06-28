@@ -1,15 +1,15 @@
-Certgrinder (Client)
-====================
+Certgrinder
+===========
 The ``certgrinder`` client is responsible for generating a keypair and a CSR, which it uses to contact the Certgrinder server ``certgrinderd`` over SSH to get a signed certificate. The following section explains how to install and configure it to get certificates from the Certgrinder server.
 
 
-Installing Certgrinder Clients
-------------------------------
+Installation
+------------
 This section explains the steps to install a Certgrinder client. Repeat these steps on each server in need of certificates!
 
 
 Install certgrinder
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 You can install certgrinder from pip with ``pip install certgrinder``. This will install the latest ``certgrinder`` release. It will pull in the dependencies it needs automatically.
 
 You can also checkout the Github repo and install the deps from requirements.txt by hand if you prefer. If you want to install with pip directly from Git the following may help:
@@ -68,6 +68,11 @@ This is an alphabetical list of the configurable options:
 
      Default: ``None``
 
+   `periodic-sleep-minutes`
+     Certgrinder will pick a random number of minutes between 0 and this number and sleep for that long before doing periodic actions. Set to 0 to disable sleeping.
+
+     Default: ``60``
+
    `pid-dir`
      The directory to place the certgrinderd PID file in.
 
@@ -108,9 +113,9 @@ This is an alphabetical list of the configurable options:
 
      Default: ``["310", "311", "312"]``
 
-Challenges
-~~~~~~~~~~
-Finally you need to choose which challenge type to use for this ``certgrinder`` client. If ``DNS-01`` you need to create one or more ``CNAME`` record pointing somewhere. If ``HTTP-01`` you need to create an HTTP redirect. See the section on challenge types towards the end of the ``certgrinderd`` docs/manpage.
+ACME Challenges
+~~~~~~~~~~~~~~~
+Finally you need to choose which challenge type to use for this ``certgrinder`` client. If ``DNS-01`` you need to create one or more ``CNAME`` record pointing somewhere. If ``HTTP-01`` you need to create an HTTP redirect. See the section on challenges for more info.
 
 
 Testing
@@ -127,28 +132,34 @@ I run Certgrinder daily, although it only attempts renewal when less than 30 day
 Note that I call it inside the virtualenv directly to make sure the correct environment is used!
 
 
-Additional Client Features
---------------------------
-Apart from the primary purpose of getting signed certificates the ``certgrinder`` client has a few other features that may be of use.
+Client Commands
+---------------
+All the functionality in Certgrinder can be accessed by using ``commands`` and ``subcommands``. The following ``commands`` are available:
+
+- `check certificate command`_
+- `check tlsa command`_
+- `get certificate command`_
+- `help command`_
+- `periodic command`_
+- `show certificate command`_
+- `show configuration command`_
+- `show spki command`_
+- `show tlsa command`_
+- `version command`_
 
 
-TLSA Pin Generation
-~~~~~~~~~~~~~~~~~~~
-The ``show tlsa`` subcommand loops over the configured domainsets and generates ``TLSA`` records for the public keys. The result is printed to the terminal in a format suitable for putting in the ``DNS``. It looks something like this::
-
-    [certgrinder@znc ~]$ ./virtualenv/bin/certgrinder -f certgrinder.conf show tlsa 443 tcp
-    2018-02-16 08:42:18 +0000 INFO: Processing domains: znc.tyknet.dk
-    2018-02-16 08:42:18 +0000 INFO: TLSA records for _443._tcp.znc.tyknet.dk:
-    2018-02-16 08:42:18 +0000 INFO: _443._tcp.znc.tyknet.dk 3 1 0 30820222300d06092a864886f70d01010105000382020f003082020a0282020100bb852c1035ee7ce08d69a13f5cca95374dc872b2028e65ee34600478076c9185e79ff373d3acfc4aa29f152b9abcb515e449417ce7768f7f91915ff2d6e75d732e863021240ce4b24475220306e6ffd3f963dc4a8eafb4077f635d8a0d655b5921df2bcb2e6e610aa8db1d79b6da14d1fc7d842c1e5d4cbfa6697617aa9d2251be1a386fd7c14eccef21151c35d336ebba8f97d3160b35775c57079d2594b1d2a9d593bc408ccf2a01b171f4a3e65005b07df7efd77bac3d5f430b0aab5f161b7d7ebc40b600064ec3a4c59d64a1ec1f27c234a08a473aa0fcdf6008492161af6a1d9179a432622776e675f4d3dafb3d1d00b3189c4cdcd6de250721f012fc5f34426d06cb4b045b04ba2bd7ac2fcedce429dfde3dffcbb8b2df50cade99458c954de157b88751c26b79413d6eef5e26ab008e7aa7c69be3d6163f80f5d565b87f9030b54a23cf4c704e509cc84e618a446c75684893d65bd5fd38ef6b839d316b5616b06bbafbb7c2aa6f3db217b4df6e5f02b85d8685be14a9d480ee56c1b4454a88fc01a4532a55e926929fea70822088054f5ddf957e8c5ca2c3808c8a09b70c7eeda4883aaf6f1092033beeb0ff5621a8b8ddf3455f1d30d2398fe786038a39e0825bb6bac9865500de33eff67e3984a73b7592bde5897681b52da06c93447a0efa4d1fb52bc151811776ef501ca818c68fd1d4fe3d73c5e5526b4bf47f0203010001
-    2018-02-16 08:42:18 +0000 INFO: _443._tcp.znc.tyknet.dk 3 1 1 5b95cb6ea387570f1f3dc4508794ca13a17a665733bab5f76b1e330f2fa13361
-    2018-02-16 08:42:18 +0000 INFO: _443._tcp.znc.tyknet.dk 3 1 2 24d49f3c974129b9c28b5e6213892a404d8e9777c5a2e977333b88442d4e16ac0bc732001ec783df795c194704149bd18bbca21087111b33fa79e84dab05e760
-    [certgrinder@znc ~]$
-
-Shown above is the ``show tlsa`` subcommand in action. The value supplied should be the port and protocol of the service, in the example above it is a ``HTTPS`` service, so the ``TLSA`` record is the service hostname prefixed with ``_443._tcp.``
+check commands
+~~~~~~~~~~~~~~
+All the subcommands for the ``check`` commands return exit code 1 if a problem is found and 0 if everything is fine.
 
 
-TLSA Pin Checking
-~~~~~~~~~~~~~~~~~
+check certificate command
+^^^^^^^^^^^^^^^^^^^^^^^^^
+The ``check certificate`` subcommand loops over the configured domainsets and checks the validity of the certificate for each. If a problem is found ``certgrinder`` will exit with exit code 1, if all is well the exit code will be 0.
+
+
+check tlsa command
+^^^^^^^^^^^^^^^^^^
 The ``check tlsa`` subcommand is like the ``show tlsa`` subcommand but it goes one step further and actually checks in the ``DNS`` if the records could be found, and prints some output accordingly. The following example shows two runs of ``check tlsa`` mode. The first run finds no TLSA records and outputs what needs to be added::
 
     [certgrinder@znc ~]$ ./virtualenv/bin/certgrinder -f certgrinder.conf check tlsa 443 tcp
@@ -178,9 +189,36 @@ All ``TLSA`` records for this public key can now be found in the ``DNS``.
 
 `NOTE`: As there might be additional records for the same name which do not belong to this server/key (for example in a loadbalanced or anycast setup), no attempts are made to warn about wrong/old/superflous ``TLSA`` records. This might be added in a future version as a switch to tell Certgrinder that the local public key is the only one in existence for this service.
 
+get commands
+~~~~~~~~~~~~
+The ``get`` subcommands do all the real work.
 
-SPKI Pin Generation
-~~~~~~~~~~~~~~~~~~~
+get certificate command
+^^^^^^^^^^^^^^^^^^^^^^^
+The ``get certificate`` subcommand loops over the configured domainsets and gets a new certificate for each, regardless of the current status of existing certificates. Use with care, only for troubleshooting. `Do not use from cron. Use the periodic command instead.`
+
+help command
+~~~~~~~~~~~~
+The ``help`` command is just a shortcut for ``-h`` which shows commandline usage and help.
+
+periodic command
+~~~~~~~~~~~~~~~~
+The ``periodic`` command sleeps for a random number of minutes between 0 and the config setting ``periodic-sleep-minutes`` before doing anything. Set this setting to 0 to disable sleeping. After sleeping the certificates are checked and renewed as needed. This is meant to be run daily from cron or similar. 
+
+show commands
+~~~~~~~~~~~~~
+The ``show`` subcommands show information but never change anything.
+
+show certificate command
+^^^^^^^^^^^^^^^^^^^^^^^^
+The ``show certificate`` subcommand loops over configured domainsets and outputs information about each certificate (if any).
+
+show configuration command
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+The ``show configuration`` subcommand just dumps the active configuration as a pretty printed JSON object and exits. Useful for testing or debugging configuration issues.
+
+show spki command
+^^^^^^^^^^^^^^^^^
 The ``show spki`` subcommand outputs pin-sha256 spki pins for the public keys. The ``HPKP`` standard https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning defined the ``pin-sha256`` format for public key pins. While the ``HPKP`` standard didn't get much traction the pinning format is used in various places now, so ``certgrinder`` can generate them. 
 
 The operation is pretty simple::
@@ -191,98 +229,34 @@ The operation is pretty simple::
     2018-02-16 09:28:37 +0000 INFO: Done processing domains: znc.tyknet.dk
     [certgrinder@znc ~]$
 
+show tlsa command
+^^^^^^^^^^^^^^^^^
+The ``show tlsa`` subcommand loops over the configured domainsets and generates ``TLSA`` records for the public keys. The result is printed to the terminal in a format suitable for putting in the ``DNS``. It looks something like this::
 
-Command-line Options
---------------------
-The client has a few different commandline options which are shown below::
+    [certgrinder@znc ~]$ ./virtualenv/bin/certgrinder -f certgrinder.conf show tlsa 443 tcp
+    2018-02-16 08:42:18 +0000 INFO: Processing domains: znc.tyknet.dk
+    2018-02-16 08:42:18 +0000 INFO: TLSA records for _443._tcp.znc.tyknet.dk:
+    2018-02-16 08:42:18 +0000 INFO: _443._tcp.znc.tyknet.dk 3 1 0 30820222300d06092a864886f70d01010105000382020f003082020a0282020100bb852c1035ee7ce08d69a13f5cca95374dc872b2028e65ee34600478076c9185e79ff373d3acfc4aa29f152b9abcb515e449417ce7768f7f91915ff2d6e75d732e863021240ce4b24475220306e6ffd3f963dc4a8eafb4077f635d8a0d655b5921df2bcb2e6e610aa8db1d79b6da14d1fc7d842c1e5d4cbfa6697617aa9d2251be1a386fd7c14eccef21151c35d336ebba8f97d3160b35775c57079d2594b1d2a9d593bc408ccf2a01b171f4a3e65005b07df7efd77bac3d5f430b0aab5f161b7d7ebc40b600064ec3a4c59d64a1ec1f27c234a08a473aa0fcdf6008492161af6a1d9179a432622776e675f4d3dafb3d1d00b3189c4cdcd6de250721f012fc5f34426d06cb4b045b04ba2bd7ac2fcedce429dfde3dffcbb8b2df50cade99458c954de157b88751c26b79413d6eef5e26ab008e7aa7c69be3d6163f80f5d565b87f9030b54a23cf4c704e509cc84e618a446c75684893d65bd5fd38ef6b839d316b5616b06bbafbb7c2aa6f3db217b4df6e5f02b85d8685be14a9d480ee56c1b4454a88fc01a4532a55e926929fea70822088054f5ddf957e8c5ca2c3808c8a09b70c7eeda4883aaf6f1092033beeb0ff5621a8b8ddf3455f1d30d2398fe786038a39e0825bb6bac9865500de33eff67e3984a73b7592bde5897681b52da06c93447a0efa4d1fb52bc151811776ef501ca818c68fd1d4fe3d73c5e5526b4bf47f0203010001
+    2018-02-16 08:42:18 +0000 INFO: _443._tcp.znc.tyknet.dk 3 1 1 5b95cb6ea387570f1f3dc4508794ca13a17a665733bab5f76b1e330f2fa13361
+    2018-02-16 08:42:18 +0000 INFO: _443._tcp.znc.tyknet.dk 3 1 2 24d49f3c974129b9c28b5e6213892a404d8e9777c5a2e977333b88442d4e16ac0bc732001ec783df795c194704149bd18bbca21087111b33fa79e84dab05e760
+    [certgrinder@znc ~]$
 
-   $ certgrinder help
-   usage: certgrinder.py [-h] [--certgrinderd CERTGRINDERD]
-                         [--cert-renew-threshold-days CERT-RENEW-THRESHOLD-DAYS]
-                         [-d] [-D DOMAIN-LIST]
-                         [--invalid-ca-cn-list INVALID-CA-CN-LIST]
-                         [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-f CONFIGFILE]
-                         [-n NAME-SERVER] [--path PATH] [-p PID-DIR]
-                         [--post-renew-hooks POST-RENEW-HOOKS] [-q] [-s]
-                         [--syslog-facility SYSLOG-FACILITY]
-                         [--syslog-socket SYSLOG-SOCKET] [--tlsa-port TLSA-PORT]
-                         [--tlsa-protocol TLSA-PROTOCOL]
-                         [--tlsa-type-list {310,311,312}]
-                         {check,show,get,version,help,periodic} ...
+Shown above is the ``show tlsa`` subcommand in action. The value supplied should be the port and protocol of the service, in the example above it is a ``HTTPS`` service, so the ``TLSA`` record is the service hostname prefixed with ``_443._tcp.``
 
-   Certgrinder version 0.13.0-beta2-dev. See the manpage or ReadTheDocs for more
-   info.
+version command
+~~~~~~~~~~~~~~~
+The ``version`` command is just a shortcut for ``-v`` which shows the Certgrinder version and exits.
 
-   positional arguments:
-     {check,show,get,version,help,periodic}
-                           Command (required)
-       check               Use the "check" command to check certificates, OCSP
-                           responses and TLSA records. Returns exit code 0 if all
-                           is well, and 1 if something needs attention.
-       show                Use the "show" command to show certificates, TLSA
-                           records, SPKI pins or configuration.
-       get                 Use the "get" command to get certificates and OCSP
-                           responses
-       version             The "version" command just outputs the version of
-                           Certgrinder
-       help                The "help" command just outputs the usage help
-       periodic            The "periodic" command checks certificates and renews
-                           them as needed. It is meant to be run daily.
+Command Line Usage
+------------------
+.. argparse::
+   :filename: ../client/certgrinder/certgrinder.py
+   :func: get_parser
+   :prog: certgrinder
 
-   optional arguments:
-     -h, --help            show this help message and exit
-     --certgrinderd CERTGRINDERD
-                           The command to reach the certgrinderd server, will get
-                           the CSR on stdin. Usually something like 'ssh
-                           certgrinderd@server -T'
-     --cert-renew-threshold-days CERT-RENEW-THRESHOLD-DAYS
-                           A certificate is renewed when it has less than this
-                           many days of lifetime left. Default: `30`
-     -d, --debug           Debug mode. Equal to setting --log-level=DEBUG.
-     -D DOMAIN-LIST, --domain-list DOMAIN-LIST
-                           Comma seperated list of domains for a certificate. Can
-                           be specified multiple times.
-     --invalid-ca-cn-list INVALID-CA-CN-LIST
-                           The CommonName of an issuer (CA intermediate) to
-                           consider invalid. Can be specified multiple times.
-     -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
-                           Logging level. One of DEBUG, INFO, WARNING, ERROR,
-                           CRITICAL. Defaults to INFO.
-     -f CONFIGFILE, --config-file CONFIGFILE
-                           The path to the certgrinder.yml config file to use,
-                           default ~/certgrinder.yml
-     -n NAME-SERVER, --name-server NAME-SERVER
-                           Tell certgrinder to use this DNS server IP to lookup
-                           TLSA records. Only relevant with -c / --checktlsa.
-                           Only v4/v6 IPs, no hostnames.
-     --path PATH           Tell certgrinder to use the specified directory for
-                           keys, CSRs and certificates. The directory must exist
-                           and be writeable by the user running certgrinder.
-     -p PID-DIR, --pid-dir PID-DIR
-                           The directory to store the PID file in
-     --post-renew-hooks POST-RENEW-HOOKS
-                           The list of commands to run after one or more
-                           certificates are renewed. Most such commands will need
-                           root access to run, remember to prefix the command
-                           with 'sudo' as needed. Can be specified multiple
-                           times. Default: `None`
-     -q, --quiet           Quiet mode. No output at all if there is nothing to
-                           do, and no errors are encountered. Equal to setting
-                           --log-level=WARNING.
-     -s, --staging         Pass --staging to the certgrinderd command to tell the
-                           Certgrinder server to use LetsEncrypt staging servers
-                           (use for testing purposes).
-     --syslog-facility SYSLOG-FACILITY
-                           The syslog facility to use. Set this and syslog-socket
-                           to enable logging to syslog.
-     --syslog-socket SYSLOG-SOCKET
-                           The syslog socket to connect to. Set this and syslog-
-                           facility to enable logging to syslog.
-     --tlsa-port TLSA-PORT
-                           The service port number (like 443) for TLSA
-                           operations.
-     --tlsa-protocol TLSA-PROTOCOL
-                           The service protocol (like tcp) for TLSA operations.
-     --tlsa-type-list {310,311,312}
-                           Enables a TLSA type for TLSA operations. Can be
-                           specified multiple times.
+
+Class Methods
+-------------
+.. py:currentmodule:: certgrinder
+.. autoclass:: Certgrinder
+   :members:

@@ -6,10 +6,9 @@ Welcome to Certgrinder |version| Documentation!
    :caption: Contents:
 
    introduction
+   challenges
    certgrinderd
    certgrinder
-   certgrinderd-autodoc
-   certgrinder-autodoc
    certgrinderd-changelog
    certgrinder-changelog
 

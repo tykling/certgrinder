@@ -10,7 +10,12 @@ sys.path.insert(0, os.path.abspath("../server/certgrinderd"))
 project = "Certgrinder"
 copyright = "2020, Thomas Steen Rasmussen"
 author = "Thomas Steen Rasmussen"
-extensions = ["sphinx.ext.autodoc", "sphinx_rtd_theme", "sphinx.ext.napoleon"]
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx_rtd_theme",
+    "sphinx.ext.napoleon",
+    "sphinxarg.ext",
+]
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_static_path = ["_static"]

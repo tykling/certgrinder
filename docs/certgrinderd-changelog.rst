@@ -16,6 +16,7 @@ Added
 ~~~~~
 
 - Dev requirements now has ``sphinx-rtd-theme`` which is the theme used on ReadTheDocs, so ``make html`` in ``docs/`` now produces the same-ish output.
+- Dev requirements now include ``sphinx-argparse`` used for generating automatic usage documentation.
 - Short command-line options for a bunch of things.
 - Manpage certgrinderd.8
 - Unittests for a few Certgrinderd() methods
@@ -24,6 +25,7 @@ Changed
 ~~~~~~~
 - Move CHANGELOG.md to rst format and into ``docs/``
 - Split certbot-command related stuff into new methods get_certbot_command() and run_certbot()
+- Split creating the argparse object into a seperate function to assist sphinx-argparse
 
 Fixed
 ~~~~~

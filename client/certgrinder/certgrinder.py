@@ -11,9 +11,11 @@ import hashlib
 import logging
 import logging.handlers
 import os
+import random
 import subprocess
 import sys
 import tempfile
+import time
 import typing
 from datetime import datetime
 from pprint import pprint
@@ -48,6 +50,7 @@ class Certgrinder:
             "log-level": "INFO",
             "name-server": "",
             "path": "",
+            "periodic-sleep-minutes": 60,
             "pid-dir": "/tmp",
             "post-renew-hooks": [],
             "staging": False,
@@ -113,6 +116,20 @@ class Certgrinder:
             )
             sys.exit(1)
 
+        # check if we have a certgrinderd command
+        if not self.conf["certgrinderd"]:
+            logger.error(
+                "No certgrinderd command configured. Specify --certgrinderd or define certgrinderd: in the config file."
+            )
+            sys.exit(1)
+
+        # check if we have a path
+        if not self.conf["path"]:
+            logger.error(
+                f"No configured path. Specify --path or define path: in the config file."
+            )
+            sys.exit(1)
+
         # check if configured path exists
         if not os.path.exists(str(self.conf["path"])):
             logger.error(f"Configured path {self.conf['path']} does not exist")
@@ -120,7 +137,7 @@ class Certgrinder:
 
         # check if configured path is writable
         try:
-            with tempfile.TemporaryFile() as _:
+            with tempfile.TemporaryFile(dir=str(self.conf["path"])) as _:
                 pass
         except PermissionError:
             logger.error(
@@ -138,13 +155,13 @@ class Certgrinder:
             )
             syslog_format = logging.Formatter("certgrinderd: %(message)s")
             syslog_handler.setFormatter(syslog_format)
-            try:
-                logger.addHandler(syslog_handler)
-            except Exception:
-                logger.exception(
-                    f"Unable to connect to syslog socket {self.conf['syslog-socket']} - syslog not enabled. Exception info below:"
-                )
-                sys.exit(1)
+            logger.addHandler(syslog_handler)
+            # usually SysLogHandler is lazy and doesn't connect the socket until
+            # a message has to be sent. Call _connect_unixsocket() now to force
+            # an exception now if we can't connect to the socket
+            syslog_handler._connect_unixsocket(  # type: ignore
+                self.conf["syslog-socket"]
+            )
         else:
             logger.debug("Not configuring syslog")
 
@@ -170,7 +187,9 @@ class Certgrinder:
         """
         # check permissions for self.keypair_path and fix to 640 if needed
         if oct(os.stat(path).st_mode)[4:] != "0640":
-            logger.debug(f"Keypair {path} has incorrect permissions, fixing to 640...")
+            logger.warning(
+                f"Keypair {path} has incorrect permissions, fixing to 0640..."
+            )
             os.chmod(path, 0o640)
 
         # read keypair
@@ -220,12 +239,22 @@ class Certgrinder:
 
         Returns:
             None
+
+        Raises:
+            ValueError: For unsupported keytypes
         """
+        if isinstance(keypair, openssl.rsa._RSAPrivateKey):
+            keyformat = primitives.serialization.PrivateFormat.TraditionalOpenSSL
+        elif isinstance(keypair, openssl.ed25519.Ed25519PrivateKey):
+            keyformat = primitives.serialization.PrivateFormat.PKCS8
+        else:
+            raise ValueError("Unsupported keytype")
+
         with open(path, "wb") as f:
             f.write(
                 keypair.private_bytes(
                     encoding=primitives.serialization.Encoding.PEM,
-                    format=primitives.serialization.PrivateFormat.TraditionalOpenSSL,
+                    format=keyformat,
                     encryption_algorithm=primitives.serialization.NoEncryption(),
                 )
             )
@@ -793,6 +822,22 @@ class Certgrinder:
             self.error = True
         return valid
 
+    def show_certificate(self) -> None:
+        """The ``show certificate`` subcommand method, called for each domainset by ``self.grind()``.
+
+        Returns:
+            None
+        """
+        if not os.path.exists(self.certificate_path):
+            logger.error(f"Certificate {self.certificate_path} not found")
+            return
+        certificate = self.load_certificate(self.certificate_path)
+        logger.info(f"Certificate serial: {certificate.serial_number}")
+        logger.info(f"Certificate subject: {certificate.subject}")
+        logger.info(
+            f"PEM formatted certificate:\n {certificate.public_bytes(primitives.serialization.Encoding.PEM).decode('ASCII')}"
+        )
+
     # POST RENEW HOOK METHOD
 
     def run_post_renew_hooks(self) -> bool:
@@ -1149,7 +1194,15 @@ class Certgrinder:
         """The periodic method performs periodic maintenance tasks.
 
         This method is called by the 'periodic' command, from cron or similar.
+        It starts out by sleeping for a random period and then checks certificates and renews as needed.
         """
+        if self.conf["periodic-sleep-minutes"]:
+            assert isinstance(
+                self.conf["periodic-sleep-minutes"], int
+            )  # make mypy happy
+            sleep = random.randint(0, self.conf["periodic-sleep-minutes"])
+            logger.debug(f"Sleeping for {sleep} minutes before doing periodic...")
+            time.sleep(sleep * 60)
         # check if we have a valid certificate
         if not self.check_certificate():
             # certificate is not valid, get new
@@ -1252,10 +1305,8 @@ class Certgrinder:
         sys.exit(0)
 
 
-def parse_args(
-    mockargs: typing.Optional[typing.List[str]] = None
-) -> typing.Tuple[argparse.ArgumentParser, argparse.Namespace]:
-    """Create an argparse monster and parse mockargs or sys.argv[1:]."""
+def get_parser() -> argparse.ArgumentParser:
+    """Create and return the argparse object."""
     parser = argparse.ArgumentParser(
         description=f"Certgrinder version {__version__}. See the manpage or ReadTheDocs for more info."
     )
@@ -1264,14 +1315,23 @@ def parse_args(
         help="Command (required)", dest="command", required=True
     )
 
-    # "check" subcommand
+    # "check" command
     check_parser = subparsers.add_parser(
         "check",
         help='Use the "check" command to check certificates, OCSP responses and TLSA records. Returns exit code 0 if all is well, and 1 if something needs attention.',
     )
     check_subparsers = check_parser.add_subparsers(
-        help="check sub-command help", dest="subcommand", required=True
+        help="Specify what to check using one of the available check sub-commands.",
+        dest="subcommand",
+        required=True,
     )
+
+    # "check certificate" subcommand
+    check_certificate_parser = check_subparsers.add_parser(
+        "certificate",
+        help="Tell certgrinder to check certificate validity for all configured domainsets. Returns exit code 1 if any problem is found, exit code 0 if all is well.",
+    )
+    check_certificate_parser.set_defaults(method="check_certificate")
 
     # "check tlsa" subcommand
     check_tlsa_parser = check_subparsers.add_parser(
@@ -1286,22 +1346,61 @@ def parse_args(
         "tlsa-protocol", help="The protocol of the service, for example tcp"
     )
 
-    # "check certificate" subcommand
-    check_cert_parser = check_subparsers.add_parser(
-        "certificate",
-        aliases=["cert"],
-        help="Tell certgrinder check certificate validity and exit. If any certificates are missing or have less than 30 days validity the exit code will be 1.",
+    # "get" command
+    get_parser = subparsers.add_parser(
+        "get", help='Use the "get" command to get certificates and OCSP responses'
     )
-    check_cert_parser.set_defaults(method="check_certificate")
+    get_subparsers = get_parser.add_subparsers(
+        help="Specify what to get using one of the available get sub-commands",
+        dest="subcommand",
+        required=True,
+    )
 
-    # "show" subcommand
+    # "get certificate" subcommand
+    get_cert_parser = get_subparsers.add_parser(
+        "certificate",
+        help="Tell certgrinder to get new certificate(s), regardless of their current state. Rarely needed, use 'periodic' command instead.",
+    )
+    get_cert_parser.set_defaults(method="get_certificate")
+
+    # "help" command
+    subparsers.add_parser("help", help='The "help" command just outputs the usage help')
+
+    # "periodic" command
+    periodic_parser = subparsers.add_parser(
+        "periodic",
+        help='The "periodic" command checks certificates and renews them as needed. Meant to be run from cron or similar daily.',
+    )
+    periodic_parser.set_defaults(method="periodic")
+
+    # "show" command
     show_parser = subparsers.add_parser(
         "show",
         help='Use the "show" command to show certificates, TLSA records, SPKI pins or configuration.',
     )
     show_subparsers = show_parser.add_subparsers(
-        help="show sub-command help", dest="subcommand", required=True
+        help="Specify what to show using one of the available show sub-commands",
+        dest="subcommand",
+        required=True,
     )
+
+    # "show certificate" subcommand
+    show_certificate_parser = show_subparsers.add_parser(
+        "certificate", help="Tell certgrinder to output information about certificates."
+    )
+    show_certificate_parser.set_defaults(method="show_certificate")
+
+    # "show configuration" subcommand
+    show_subparsers.add_parser(
+        "configuration", help="Tell certgrinder to output the current configuration"
+    )
+
+    # "show spki" subcommand
+    show_spki_parser = show_subparsers.add_parser(
+        "spki",
+        help="Tell certgrinder to generate and print the pin-sha256 spki pins for the public keys it manages.",
+    )
+    show_spki_parser.set_defaults(method="show_spki")
 
     # "show tlsa" subcommand
     show_tlsa_parser = show_subparsers.add_parser(
@@ -1316,50 +1415,10 @@ def parse_args(
         "tlsa-protocol", help="The protocol of the service, for example tcp"
     )
 
-    # "show spki" subcommand
-    show_spki_parser = show_subparsers.add_parser(
-        "spki",
-        help="Tell certgrinder to generate and print the pin-sha256 spki pins for the public keys it manages.",
-    )
-    show_spki_parser.set_defaults(method="show_spki")
-
-    # "show configuration" subcommand
-    show_subparsers.add_parser(
-        "configuration",
-        aliases=["config", "conf"],
-        help="Tell certgrinder to output the current configuration",
-    )
-
-    # "get" subcommand
-    get_parser = subparsers.add_parser(
-        "get", help='Use the "get" command to get certificates and OCSP responses'
-    )
-    get_subparsers = get_parser.add_subparsers(
-        help="get sub-command help", dest="subcommand", required=True
-    )
-
-    # "get certificate" subcommand
-    get_cert_parser = get_subparsers.add_parser(
-        "certificate",
-        aliases=["cert"],
-        help="Tell certgrinder to get new certificate(s), regardless of their current state. Rarely needed, use 'periodic' command instead.",
-    )
-    get_cert_parser.set_defaults(method="get_certificate")
-
-    # "version" subcommand
+    # "version" command
     subparsers.add_parser(
         "version", help='The "version" command just outputs the version of Certgrinder'
     )
-
-    # "help" subcommand
-    subparsers.add_parser("help", help='The "help" command just outputs the usage help')
-
-    # "periodic" subcommand
-    subparsers.add_parser(
-        "periodic",
-        help='The "periodic" command checks certificates and renews them as needed. It is meant to be run daily.',
-    )
-    get_cert_parser.set_defaults(method="periodic")
 
     # optional arguments
     parser.add_argument(
@@ -1427,6 +1486,12 @@ def parse_args(
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "--periodic-sleep-minutes",
+        dest="periodic-sleep-minutes",
+        help="Tell certgrinder to sleep for a random number of minutes between 0 and this number before doing anything when the periodic command is used. Set to 0 to disable sleeping.",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
         "-p",
         "--pid-dir",
         dest="pid-dir",
@@ -1489,7 +1554,22 @@ def parse_args(
         help="Enables a TLSA type for TLSA operations. Can be specified multiple times.",
         default=argparse.SUPPRESS,
     )
-    # all done
+    parser.add_argument(
+        "-v",
+        "--version",
+        dest="version",
+        action="store_true",
+        help="Show version and exit.",
+        default=argparse.SUPPRESS,
+    )
+    return parser
+
+
+def parse_args(
+    mockargs: typing.Optional[typing.List[str]] = None
+) -> typing.Tuple[argparse.ArgumentParser, argparse.Namespace]:
+    """Create an argparse monster and parse mockargs or sys.argv[1:]."""
+    parser = get_parser()
     args = parser.parse_args(mockargs if mockargs else sys.argv[1:])
     return parser, args
 
@@ -1530,18 +1610,16 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
     config.update(vars(args))
 
     # remove command and subcommand (part of argparse internals)
-    del config["command"]
-    del config["subcommand"]
+    if "command" in config:
+        del config["command"]
+    if "subcommand" in config:
+        del config["subcommand"]
 
     # configure certgrinder
     certgrinder = Certgrinder()
     certgrinder.configure(userconfig=config)
 
-    if args.command == "show" and args.subcommand in [
-        "conf",
-        "config",
-        "configuration",
-    ]:
+    if args.command == "show" and args.subcommand == "configuration":
         logger.info("Current certgrinder configuration:")
         pprint(certgrinder.conf)
         sys.exit(0)

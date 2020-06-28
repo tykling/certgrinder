@@ -15,7 +15,7 @@ import urllib.request
 import pytest
 from certgrinder.certgrinder import Certgrinder, main, parse_args
 from cryptography import x509
-from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.backends import default_backend, openssl
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import ExtensionOID, NameOID
 
@@ -101,7 +101,7 @@ def test_get_certificate(
     tmpdir_factory,
 ):
     """Get a couple of certificates and check that they look right."""
-    # caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG)
     mockargs = [
         "--path",
         str(tmpdir_factory.mktemp("certificates")),
@@ -111,12 +111,10 @@ def test_get_certificate(
         "example.net",
         "--certgrinderd",
         f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]}",
-        # "--debug",
-        "get",
-        "certificate",
+        "--debug",
     ]
     with pytest.raises(SystemExit) as E:
-        main(mockargs)
+        main(mockargs + ["get", "certificate"])
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
 
     # initialise a TLS context with the pebble minica.pem to download certs
@@ -148,21 +146,26 @@ def test_get_certificate(
                 certificate = x509.load_pem_x509_certificate(
                     f.read(), default_backend()
                 )
-                # check that it was issued by our intermediate
-                assert intermediate.subject == certificate.issuer
-                # check that the cert has the right CN in subject
-                name = x509.NameAttribute(
-                    NameOID.COMMON_NAME, domains[0].encode("idna").decode("utf-8")
-                )
-                cns = certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
-                assert len(cns) == 1, "Certificate must have exactly one CN attribute"
-                assert cns[0] == name, "Certificate CN does not match expected name"
-                # make sure we have the full domainlist in SubjectAltName
-                assert domains == certificate.extensions.get_extension_for_oid(
-                    ExtensionOID.SUBJECT_ALTERNATIVE_NAME
-                ).value.get_values_for_type(
-                    x509.DNSName
-                ), "SubjectAltName extension does not contain the right list of domains"
+            # check that it was issued by our intermediate
+            assert intermediate.subject == certificate.issuer
+            # check that the cert has the right CN in subject
+            name = x509.NameAttribute(
+                NameOID.COMMON_NAME, domains[0].encode("idna").decode("utf-8")
+            )
+            cns = certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+            assert len(cns) == 1, "Certificate must have exactly one CN attribute"
+            assert cns[0] == name, "Certificate CN does not match expected name"
+            # make sure we have the full domainlist in SubjectAltName
+            assert domains == certificate.extensions.get_extension_for_oid(
+                ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+            ).value.get_values_for_type(
+                x509.DNSName
+            ), "SubjectAltName extension does not contain the right list of domains"
+
+            with pytest.raises(SystemExit) as E:
+                main(mockargs + ["show", "certificate"])
+            assert str(certificate.serial_number) in caplog.text
+            assert str(certificate.subject) in caplog.text
 
 
 def test_show_spki(tmp_path_factory, caplog, tmpdir_factory):
@@ -171,6 +174,8 @@ def test_show_spki(tmp_path_factory, caplog, tmpdir_factory):
     caplog.set_level(logging.INFO)
     parser, args = parse_args(
         [
+            "--certgrinder",
+            "true",
             "--path",
             str(tmpdir_factory.mktemp("certificates")),
             "--domain-list",
@@ -264,20 +269,106 @@ def test_argparse():
 
 def test_no_domainlist(caplog):
     """Test Certgrinder with no domain-list config."""
-    certgrinder2 = Certgrinder()
-    print(certgrinder2.conf)
+    certgrinder = Certgrinder()
     with pytest.raises(SystemExit) as E:
-        certgrinder2.configure({})
+        certgrinder.configure({})
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
     assert "No domain-list(s) configured." in caplog.text
 
 
+def test_no_certgrinderd(caplog):
+    """Test Certgrinder with no certgrinderd in config."""
+    certgrinder = Certgrinder()
+    with pytest.raises(SystemExit) as E:
+        certgrinder.configure({"domain-list": ["example.com"]})
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    assert "No certgrinderd command configured." in caplog.text
+
+
+def test_no_path(caplog):
+    """Test Certgrinder with no path in config."""
+    certgrinder = Certgrinder()
+    with pytest.raises(SystemExit) as E:
+        certgrinder.configure({"domain-list": ["example.com"], "certgrinderd": "true"})
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    assert "No configured path" in caplog.text
+
+
 def test_nonexistant_path(caplog):
     """Test Certgrinder with wrong path setting."""
-    certgrinder3 = Certgrinder()
+    certgrinder = Certgrinder()
     with pytest.raises(SystemExit) as E:
-        certgrinder3.configure(
-            {"domain-list": ["example.com,www.example.com"], "path": "/nonexistant"}
+        certgrinder.configure(
+            {
+                "domain-list": ["example.com,www.example.com"],
+                "path": "/nonexistant",
+                "certgrinderd": "true",
+            }
         )
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
     assert "Configured path /nonexistant does not exist" in caplog.text
+
+
+def test_permission_denied_path(caplog):
+    """Test Certgrinder with a path with no permissions."""
+    certgrinder = Certgrinder()
+    with pytest.raises(SystemExit) as E:
+        certgrinder.configure(
+            {
+                "domain-list": ["example.com,www.example.com"],
+                "path": "/dev",
+                "certgrinderd": "true",
+            }
+        )
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    assert "Permission error while accessing configured path" in caplog.text
+
+
+def test_syslog_connect(tmpdir_factory, caplog):
+    """Test syslog connect functionality."""
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        {
+            "domain-list": ["example.com,www.example.com"],
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "syslog-socket": "/dev/log",
+            "syslog-facility": "LOG_LOCAL0",
+            "certgrinderd": "true",
+        }
+    )
+
+
+def test_syslog_connect_wrong_socket(tmpdir_factory, caplog):
+    """Test syslog connect functionality."""
+    certgrinder = Certgrinder()
+    with pytest.raises(FileNotFoundError):
+        certgrinder.configure(
+            {
+                "domain-list": ["example.com,www.example.com"],
+                "path": str(tmpdir_factory.mktemp("certificates")),
+                "syslog-socket": "/dev/notlog",
+                "syslog-facility": "LOG_LOCAL0",
+                "certgrinderd": "true",
+            }
+        )
+
+
+def test_create_and_chmod_keypair(tmpdir_factory, caplog):
+    """Test generating ed2519 keypair, and chmod correcting."""
+    certgrinder = Certgrinder()
+    with pytest.raises(ValueError):
+        keypair = certgrinder.generate_private_key("foo")
+    keypair = certgrinder.generate_private_key("ed25519")
+    assert isinstance(keypair, openssl.ed25519.Ed25519PrivateKey)
+    path = os.path.join(tmpdir_factory.mktemp("certificates"), "test.key")
+    with pytest.raises(ValueError):
+        certgrinder.save_keypair(keypair="notakey", path=path)
+    certgrinder.save_keypair(keypair=keypair, path=path)
+    assert (
+        oct(os.stat(path).st_mode)[4:] == "0640"
+    ), "Keypair saved with wrong permissions"
+    os.chmod(path, 0o777)
+    assert (
+        oct(os.stat(path).st_mode)[4:] == "0640"
+    ), "Keypair saved with wrong permissions"
+    assert "has incorrect permissions, fixing to 0640" in caplog.text
