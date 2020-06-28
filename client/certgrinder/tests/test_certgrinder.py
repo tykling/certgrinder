@@ -636,7 +636,7 @@ def test_check_certificate_not_cert(caplog, tmpdir_factory):
             "log-level": "DEBUG",
         }
     )
-    certgrinder.certificate_path = "/etc/motd"
+    certgrinder.certificate_path = pathlib.Path(__file__).absolute()
     with pytest.raises(ValueError):
         certgrinder.check_certificate()
 
