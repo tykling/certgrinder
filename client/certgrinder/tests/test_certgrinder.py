@@ -572,3 +572,26 @@ ALSO_NOT_A_PEM
     )
     assert "This is stdout from the certgrinderd call" in caplog.text
     assert "ALSO_NOT_A_PEM" in caplog.text
+
+
+def test_get_certificate_method(caplog, tmpdir_factory, known_csr, signed_certificate):
+    """Test various failure modes of the get_certificate() method."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com,www.example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+        }
+    )
+    certgrinder.load_domainset(certgrinder.conf["domain-list"][0].split(","))
+    csr = x509.load_pem_x509_csr(known_csr.encode("ascii"), default_backend())
+    stdout = signed_certificate.public_bytes(primitives.serialization.Encoding.PEM) * 2
+    assert (
+        certgrinder.get_certificate(csr=csr, stdout=stdout) is False
+    ), "The get_certificate() method did not return False as expected"
+    assert "Certificate public key is different from the expected" in caplog.text
+    assert "Certificate is not valid, not saving to disk." in caplog.text
+    assert "Did not get a certificate :(" in caplog.text

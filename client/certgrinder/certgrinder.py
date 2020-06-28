@@ -734,26 +734,36 @@ class Certgrinder:
         # done, return the certificate chain bytes
         return certificate, intermediate
 
-    def get_certificate(self) -> bool:
+    def get_certificate(
+        self,
+        csr: typing.Optional[x509._CertificateSigningRequest] = None,
+        stdout: typing.Optional[bytes] = None,
+    ) -> bool:
         """Get a new certificate for self.domainset.
 
         This methods gets a new certificate regardless of the status of any
         existing certificate. It is called by ``self.periodic()`` as needed.
         It can also be called by the ``get certificate`` subcommand.
 
+        Args:
+            csr: The CSR to use instead of generating one
+            stdout: The stdout bytes to use instead of calling self.run_certgrinder(csr)
+
         Returns:
-            None
+            False something goes wrong, True if all is well
         """
         logger.info(f"Getting new certificate for domainset {self.domainset} ...")
-        # get and save CSR
-        csr = self.generate_csr(self.keypair, self.domainset)
+        if not csr:
+            # generate new CSR
+            csr = self.generate_csr(self.keypair, self.domainset)
         self.save_csr(csr, self.csr_path)
         logger.debug(
             f"Wrote {len(csr.public_bytes(primitives.serialization.Encoding.PEM))} bytes CSR to path {self.csr_path}"
         )
 
-        # get certificate
-        stdout = self.run_certgrinderd(csr)
+        if not stdout:
+            # get certificate
+            stdout = self.run_certgrinderd(csr)
         if not stdout:
             logger.error("Did not get a certificate :(")
             return False
