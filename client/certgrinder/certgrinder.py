@@ -1086,7 +1086,7 @@ class Certgrinder:
         protocol: str,
         tlsatype: str,
         nameserver: str = "",
-    ) -> None:
+    ) -> bool:
         """Check the TLSA records for the port/protocol/domain and DER key in the DNS.
 
         Output the info needed to fix things when missing records are found.
@@ -1100,7 +1100,7 @@ class Certgrinder:
             nameserver: The DNS server IP to use instead of system resolver (optional)
 
         Return:
-            None
+            True if all is well, False if one or more problems are found
         """
         tlsarecord = f"_{port}._{protocol}.{domain}"
         tlsadata = cls.generate_tlsa_record(derkey, tlsatype)
@@ -1128,7 +1128,7 @@ class Certgrinder:
                 tlsatype=tlsatype,
                 warning=True,
             )
-            return
+            return False
 
         # we have a response
         logger.debug(
@@ -1139,19 +1139,20 @@ class Certgrinder:
                 logger.info(
                     f"TLSA record for name {tlsarecord} type {tlsastr} matching the local key found in DNS, good."
                 )
-                break
-        else:
-            logger.warning(
-                f"None of the TLSA records found in DNS for the name {tlsarecord} and type {tlsatype} match the local key. This record needs to be added to the DNS:"
-            )
-            cls.output_tlsa_record(
-                derkey=derkey,
-                domain=domain,
-                port=port,
-                protocol=protocol,
-                tlsatype=tlsatype,
-                warning=True,
-            )
+                return True
+
+        logger.warning(
+            f"None of the TLSA records found in DNS for the name {tlsarecord} and type {tlsatype} match the local key. This record needs to be added to the DNS:"
+        )
+        cls.output_tlsa_record(
+            derkey=derkey,
+            domain=domain,
+            port=port,
+            protocol=protocol,
+            tlsatype=tlsatype,
+            warning=True,
+        )
+        return False
 
     def show_tlsa(self) -> None:
         """The 'show tlsa' subcommand method, called for each domainset by ``self.grind()``.
@@ -1164,10 +1165,10 @@ class Certgrinder:
                 f"Generated TLSA records for {domain} port {self.conf['tlsa-port']} protocol {self.conf['tlsa-protocol']}:"
             )
             # keep mypy happy
-            assert isinstance(self.conf["tlsa-types"], list)
+            assert isinstance(self.conf["tlsa-type-list"], list)
             assert isinstance(self.conf["tlsa-port"], int)
             assert isinstance(self.conf["tlsa-protocol"], str)
-            for tlsatype in self.conf["tlsa-types"]:
+            for tlsatype in self.conf["tlsa-type-list"]:
                 self.output_tlsa_record(
                     derkey=self.get_der_pubkey(self.keypair),
                     domain=domain,
@@ -1189,12 +1190,12 @@ class Certgrinder:
             logger.debug(
                 f"Checking DNS for TLSA records for {domain} port {self.conf['tlsa-port']} protocol {self.conf['tlsa-protocol']}:"
             )
-            assert isinstance(self.conf["tlsa-types"], list)
+            assert isinstance(self.conf["tlsa-type-list"], list)
             assert isinstance(self.conf["tlsa-port"], int)
             assert isinstance(self.conf["tlsa-protocol"], str)
             assert isinstance(self.conf["name-server"], str)
-            for tlsatype in self.conf["tlsa-types"]:
-                self.verify_tlsa_record(
+            for tlsatype in self.conf["tlsa-type-list"]:
+                result = self.verify_tlsa_record(
                     derkey=self.get_der_pubkey(self.keypair),
                     domain=domain,
                     port=self.conf["tlsa-port"],
@@ -1202,6 +1203,11 @@ class Certgrinder:
                     tlsatype=tlsatype,
                     nameserver=self.conf["name-server"],
                 )
+                if not result and not self.error:
+                    logger.debug(
+                        "Problem discovered in check mode, setting self.error=True"
+                    )
+                    self.error = True
             logger.debug(
                 f"Done checking DNS for TLSA records for {domain} port {self.conf['tlsa-port']} protocol {self.conf['tlsa-protocol']}"
             )
@@ -1486,7 +1492,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-f",
         "--config-file",
-        dest="configfile",
+        dest="config-file",
         help="The path to the certgrinder.yml config file to use, default ~/certgrinder.yml",
         default=argparse.SUPPRESS,
     )
@@ -1495,6 +1501,14 @@ def get_parser() -> argparse.ArgumentParser:
         "--name-server",
         dest="name-server",
         help="Tell certgrinder to use this DNS server IP to lookup TLSA records. Only relevant with -c / --checktlsa. Only v4/v6 IPs, no hostnames.",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--now",
+        dest="periodic-sleep-minutes",
+        action="store_const",
+        const="0",
+        help="Run periodic command without delay. Equal to setting --periodic-sleep-minutes 0.",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
@@ -1646,5 +1660,10 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
     certgrinder.grind(args)
 
 
-if __name__ == "__main__":
-    main()
+def init() -> None:
+    """This is here just as a testable way of calling main()."""
+    if __name__ == "__main__":
+        main()
+
+
+init()

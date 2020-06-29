@@ -79,6 +79,17 @@ def certgrinderd_broken_yaml_configfile(tmp_path_factory):
     return confpath
 
 
+@pytest.fixture
+def certgrinder_broken_yaml_configfile(tmp_path_factory):
+    """Write a certgrinder.yml file with invalid yml."""
+    confpath = tmp_path_factory.mktemp("conf") / "certgrinder.yml"
+    # write file to disk
+    with open(confpath, "w") as f:
+        f.write("foo:\nbar")
+    # return path to the config
+    return confpath
+
+
 @pytest.fixture(params=["dns", "http", ""])
 def certgrinderd_configfile(request, tmp_path_factory):
     """Write a certgrinderd.yml config file."""

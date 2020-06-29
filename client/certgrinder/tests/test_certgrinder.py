@@ -4,15 +4,18 @@
 Runs with pytest and Tox.
 """
 import base64
+import binascii
 import hashlib
 import logging
 import os
 import pathlib
 import ssl
 import subprocess
+import time
 import urllib.request
 from collections import namedtuple
 
+import certgrinder.certgrinder
 import dns.resolver
 import pytest
 from certgrinder.certgrinder import Certgrinder, main, parse_args
@@ -257,8 +260,8 @@ def test_generate_spki(known_public_key):
     ), "SPKI pin-sha256 generation failed"
 
 
-def test_argparse_version(capsys):
-    """This is mostly here to demonstrate/test calling the main() function with args."""
+def test_version(capsys):
+    """Test the version command."""
     with pytest.raises(SystemExit) as E:
         main(["version"])
     assert E.type == SystemExit
@@ -956,3 +959,206 @@ def test_verify_tlsa_record(caplog, tmpdir_factory, known_public_key, monkeypatc
         "None of the TLSA records found in DNS for the name _587._tcp.smtp.example.com and type 311 match the local key. This record needs to be added to the DNS:"
         in caplog.text
     ), "Expected output not found for wrong tlsa type response"
+
+
+def test_show_tlsa(caplog, tmpdir_factory):
+    """Test the show_tlsa() method."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+            "tlsa-port": 587,
+            "tlsa-protocol": "tcp",
+        }
+    )
+    certgrinder.load_domainset(certgrinder.conf["domain-list"][0].split(","))
+    derkey = certgrinder.keypair.public_key().public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    tlsa310 = binascii.hexlify(derkey).decode("ASCII").upper()
+    tlsa311 = hashlib.sha256(derkey).hexdigest().upper()
+    tlsa312 = hashlib.sha512(derkey).hexdigest().upper()
+    certgrinder.show_tlsa()
+    assert tlsa310 in caplog.text, "Expected 3 1 0 TLSA record not found in output"
+    assert tlsa311 in caplog.text, "Expected 3 1 1 TLSA record not found in output"
+    assert tlsa312 in caplog.text, "Expected 3 1 2 TLSA record not found in output"
+
+
+def test_check_tlsa(caplog, tmpdir_factory, monkeypatch):
+    """Test the check_tlsa() method."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+            "tlsa-port": 587,
+            "tlsa-protocol": "tcp",
+        }
+    )
+    certgrinder.load_domainset(certgrinder.conf["domain-list"][0].split(","))
+    derkey = certgrinder.keypair.public_key().public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    tlsa310 = binascii.hexlify(derkey).decode("ASCII").upper()
+    tlsa311 = hashlib.sha256(derkey).hexdigest().upper()
+    tlsa312 = hashlib.sha512(derkey).hexdigest().upper()
+
+    def mock_tlsa_query_dynamic_response(*args, **kwargs):
+        """Return a response with the three TLSA records."""
+        Response = namedtuple("Response", ["usage", "selector", "mtype", "cert"])
+        return [
+            Response(3, 1, 0, bytes.fromhex(tlsa310)),
+            Response(3, 1, 1, bytes.fromhex(tlsa311)),
+            Response(3, 1, 2, bytes.fromhex(tlsa312)),
+        ]
+
+    monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_dynamic_response)
+    certgrinder.check_tlsa()
+    assert (
+        "TLSA record for name _587._tcp.example.com type 3 1 0 matching the local key found in DNS, good."
+        in caplog.text
+    ), "Expected 3 1 0 output not found in output"
+    assert (
+        "TLSA record for name _587._tcp.example.com type 3 1 1 matching the local key found in DNS, good."
+        in caplog.text
+    ), "Expected 3 1 1 output not found in output"
+    assert (
+        "TLSA record for name _587._tcp.example.com type 3 1 2 matching the local key found in DNS, good."
+        in caplog.text
+    ), "Expected 3 1 2 output not found in output"
+    assert certgrinder.error is False, "self.error should not be False here"
+    caplog.clear()
+
+    monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_2_responses)
+    certgrinder.check_tlsa()
+    assert (
+        "Problem discovered in check mode, setting self.error=True" in caplog.text
+    ), "Expected self.error output not found"
+    assert certgrinder.error is True, "self.error should be True here"
+
+
+def test_exit_1_in_check_mode(caplog, tmpdir_factory, monkeypatch):
+    """Make sure we get a systemexit with exit code 1 when self.error is True in check mode."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.error = True
+    FakeArgs = namedtuple("FakeArgs", ["command"])
+    args = FakeArgs("check")
+    with pytest.raises(SystemExit) as E:
+        certgrinder.grind(args=args)
+    assert E.value.code == 1, "Exit code not 1 as expected"
+    assert (
+        "Running in check mode and one or more errors were encountered, exit code 1"
+        in caplog.text
+    ), "Expected error text not found"
+
+
+def test_help(capsys):
+    """Test the help command."""
+    with pytest.raises(SystemExit) as E:
+        main(["help"])
+    assert E.type == SystemExit
+    captured = capsys.readouterr()
+    assert "See the manpage or ReadTheDocs for more" in captured.out
+
+
+def test_show_configuration(capsys, tmpdir_factory):
+    """Test the show configuration command."""
+    with pytest.raises(SystemExit) as E:
+        main(
+            [
+                "--path",
+                str(tmpdir_factory.mktemp("certificates")),
+                "--domain-list",
+                "example.com",
+                "--certgrinderd",
+                "foobarbaz",
+                "show",
+                "configuration",
+            ]
+        )
+    assert E.type == SystemExit
+    captured = capsys.readouterr()
+    assert "'certgrinderd': 'foobarbaz'," in captured.out
+
+
+def test_certgrinder_broken_configfile(
+    tmpdir_factory, caplog, certgrinder_broken_yaml_configfile
+):
+    """Test certgrinder with a broken yaml config."""
+    with pytest.raises(SystemExit) as E:
+        main(
+            [
+                "--path",
+                str(tmpdir_factory.mktemp("certificates")),
+                "--domain-list",
+                "example.com",
+                "--certgrinderd",
+                "foobarbaz",
+                "--config-file",
+                str(certgrinder_broken_yaml_configfile),
+                "show",
+                "configuration",
+            ]
+        )
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    assert "Unable to parse YAML config file" in caplog.text
+
+
+def mock_time_sleep(seconds):
+    """A fake time.sleep()."""
+    print(f"fake sleeping {seconds} seconds")
+
+
+def mock_get_certificate_ok():
+    """A fake certgrinder.get_certificate() which just returns True."""
+    print("pretending we got a certificate")
+    return True
+
+
+def mock_get_certificate_fail():
+    """A fake certgrinder.get_certificate() which just returns False."""
+    print("pretending we didn't get a certificate")
+    return False
+
+
+def test_periodic(caplog, tmpdir_factory, monkeypatch):
+    """Test the periodic() method."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+            "periodic-sleep-minutes": 30,
+        }
+    )
+    certgrinder.load_domainset(certgrinder.conf["domain-list"][0].split(","))
+    monkeypatch.setattr(time, "sleep", mock_time_sleep)
+
+    monkeypatch.setattr(certgrinder, "get_certificate", mock_get_certificate_ok)
+    result = certgrinder.periodic()
+    assert result is True, "periodic() did not return True as expected"
+
+    monkeypatch.setattr(certgrinder, "get_certificate", mock_get_certificate_fail)
+    result = certgrinder.periodic()
+    assert result is False, "periodic() did not return False as expected"
+
+
+def test_init(monkeypatch):
+    """Test the init() function calls main() only when __name__ is __main__."""
+    certgrinder.certgrinder.init()
+    monkeypatch.setattr(certgrinder.certgrinder, "__name__", "__main__")
+    with pytest.raises(SystemExit):
+        certgrinder.certgrinder.init()
