@@ -41,6 +41,7 @@ Changed
 - Split creating the argparse object into a seperate function to assist sphinx-argparse
 - Reorder argparse commands and subcommands in alphabetical order
 - Re-add -v / --version to show version and exit
+- Test suite now covers 100% of certgrinder.py
 
 
 v0.13.0-beta1 (7-may-2020)
