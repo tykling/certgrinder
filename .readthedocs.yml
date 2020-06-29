@@ -7,5 +7,5 @@ formats: all
 python:
    version: 3.7
    install:
-      - requirements: client/requirements.txt
-      - requirements: server/requirements.txt
+      - requirements: client/requirements-dev.txt
+      - requirements: server/requirements-dev.txt
