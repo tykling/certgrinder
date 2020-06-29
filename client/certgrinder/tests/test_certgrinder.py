@@ -11,7 +11,9 @@ import pathlib
 import ssl
 import subprocess
 import urllib.request
+from collections import namedtuple
 
+import dns.resolver
 import pytest
 from certgrinder.certgrinder import Certgrinder, main, parse_args
 from cryptography import x509
@@ -676,3 +678,281 @@ def test_show_certificate(caplog, tmpdir_factory):
     assert (
         certgrinder.show_certificate() is None
     ), "show_certificate() did not return None as expected"
+
+
+def mock_tlsa_query_2_responses(*args, **kwargs):
+    """A mock dns.resolver.query function which just returns 2 bogus TLSA records."""
+    Response = namedtuple("Response", ["usage", "selector", "mtype", "cert"])
+    return [Response(3, 1, 1, b"FOO"), Response(3, 1, 2, b"BAR")]
+
+
+def test_lookup_tlsa_record(caplog, monkeypatch, tmpdir_factory):
+    """Test the lookup_tlsa_record() method."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com,www.example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+        }
+    )
+    monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_2_responses)
+    monkeypatch.setattr(dns.resolver.Resolver, "query", mock_tlsa_query_2_responses)
+    responses = certgrinder.lookup_tlsa_record(
+        domain="smtp.example.com", port=587, protocol="tcp"
+    )
+    assert (
+        "Looking up TLSA record in DNS using system resolver: _587._tcp.smtp.example.com - all TLSA types"
+        in caplog.text
+    ), "Expected output not found"
+    assert (
+        "Found TLSA record type 3 1 0" not in caplog.text
+    ), "TLSA 3 1 0 found in output"
+    assert (
+        "Found TLSA record type 3 1 1" in caplog.text
+    ), "TLSA 3 1 1 not found in output"
+    assert (
+        "Found TLSA record type 3 1 2" in caplog.text
+    ), "TLSA 3 1 2 not found in output"
+    assert "Returning 2 TLSA records" in caplog.text
+    assert len(responses) == 2
+    caplog.clear()
+
+    responses = certgrinder.lookup_tlsa_record(
+        domain="smtp.example.com",
+        port=587,
+        protocol="tcp",
+        tlsatype="310",
+        nameserver="192.0.2.53",
+    )
+    assert (
+        "Looking up TLSA record in DNS using configured DNS server 192.0.2.53: _587._tcp.smtp.example.com - TLSA type 3 1 0"
+        in caplog.text
+    ), "Expected output not found"
+    assert (
+        "2 TLSA records found, but none of the type 310 were found" in caplog.text
+    ), "Expected output not found"
+
+
+def mock_tlsa_query_nxdomain(*args, **kwargs):
+    """Mock a NXDOMAIN response."""
+    raise dns.resolver.NXDOMAIN
+
+
+def mock_tlsa_query_noanswer(*args, **kwargs):
+    """Mock a NoAnswer response."""
+    raise dns.resolver.NoAnswer
+
+
+def mock_tlsa_query_syntaxerror(*args, **kwargs):
+    """Mock a SyntaxError response."""
+    raise dns.exception.SyntaxError
+
+
+def mock_tlsa_query_timeout(*args, **kwargs):
+    """Mock a Timeout response."""
+    raise dns.exception.Timeout
+
+
+def mock_tlsa_query_exception(*args, **kwargs):
+    """Mock an unknown exception."""
+    raise ValueError("Some other exception")
+
+
+def test_lookup_tlsa_record_exceptions(caplog, monkeypatch, tmpdir_factory):
+    """Test exception responses in the lookup_tlsa_record() method."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com,www.example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+        }
+    )
+    monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_nxdomain)
+    certgrinder.lookup_tlsa_record(domain="smtp.example.com", port=587, protocol="tcp")
+    assert (
+        "NXDOMAIN returned by system resolver, no TLSA records found in DNS for: _587._tcp.smtp.example.com"
+        in caplog.text
+    ), "Expected output not found for NXDOMAIN"
+    caplog.clear()
+
+    monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_noanswer)
+    certgrinder.lookup_tlsa_record(domain="smtp.example.com", port=587, protocol="tcp")
+    assert (
+        "Empty answer returned by system resolver. No TLSA records found in DNS for: _587._tcp.smtp.example.com"
+        in caplog.text
+    ), "Expected output not found for NoAnswer"
+    caplog.clear()
+
+    monkeypatch.setattr(dns.resolver.Resolver, "query", mock_tlsa_query_syntaxerror)
+    with pytest.raises(SystemExit):
+        certgrinder.lookup_tlsa_record(
+            domain="smtp.example.com",
+            port=587,
+            protocol="tcp",
+            nameserver="ns.example.com",
+        )
+    assert (
+        "Error parsing DNS server IP 'ns.example.com'. Only IP addresses are supported."
+        in caplog.text
+    ), "Expected output not found for SyntaxError"
+    caplog.clear()
+
+    monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_timeout)
+    with pytest.raises(SystemExit):
+        certgrinder.lookup_tlsa_record(
+            domain="smtp.example.com", port=587, protocol="tcp"
+        )
+    assert (
+        "Timeout while waiting for system resolver. Error." in caplog.text
+    ), "Expected output not found for timeout"
+    caplog.clear()
+
+    monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_exception)
+    certgrinder.lookup_tlsa_record(domain="smtp.example.com", port=587, protocol="tcp")
+    assert (
+        "Exception received during DNS lookup" in caplog.text
+    ), "Expected output not found for other exception"
+
+
+def test_output_tlsa_record(caplog, tmpdir_factory, known_public_key):
+    """Test the output_tlsa_record() method."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com,www.example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+        }
+    )
+    public_key_der_bytes = known_public_key.public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    certgrinder.output_tlsa_record(
+        derkey=public_key_der_bytes,
+        domain="smtp.example.com",
+        port=587,
+        protocol="tcp",
+        tlsatype="310",
+        warning=True,
+    )
+    assert (
+        "_587._tcp.smtp.example.com TLSA 3 1 0 30820222300D06092A864886F70D01010105000382020F003082020A0282020100B7385B728CCD6234B579EE7918329DA988DEB18B83EA7C45422B8281F53682AC57C93AC428EB3BFF216926662CC69D34FC2D8EE44673C9C87EF8DCDFFDE93FC5F483834465F075376691DA46FB157B68E3D58E16B5A5C0FAF026A6EAADC1FD47E55C0B2E98669CD13A9A42AFC7180F88769E409A46029CCE0FE3184A66FF3A1ABBB848CF7064EF299246CA42175EFBD30FA2A2437B19EFC9DA7BCAFA74D583DA8397B84B3492E7C084AA31B49CF3CDE1A661F0B112F2676F1BA6C9EB9EB42EB104EE7F0C0859D9F0C3C5821602B7D628C2E62195D2174CEAABAA2794DAEBA0EB7C165A2B6EA146CEACA08EC0534DDBF74149C694B6D03EC8CAC8251215853B4171588C5B3D8B5BB4B9C9960F75B540A61759F44474648ACF9810ABA65519379030639769EECC782EF1D0B81E956839B23B77A753868625B6648E5E0ACFD31F40EDB7B26CB5D9EAB91FECDEB9EFEF5752F4F5E9A92C87B9D20732D13FE9077ABD5767065756C01B5264722BB2740AF5A1EE2A60B08C5814C8CED874DBCE2F034A364BC59473BCB65B6463DE3E6657C6B287B02050A005D74C4617735C27B324FAE004491BB646302940BB7239FDC997F3F5EC27CA683F1742F5C279780B32CE33D24FA11B63ED390BAC417CC1206FFF49FBCE203F9C31D9AAFA106FC7169723F00BC6A59E0142790135C131D38BF549183ECE52BC683FD42D07057BABB6259E810203010001"
+        in caplog.text
+    ), "expected output not found for TLSA 3 1 0 record"
+
+    certgrinder.output_tlsa_record(
+        derkey=public_key_der_bytes,
+        domain="smtp.example.com",
+        port=587,
+        protocol="tcp",
+        tlsatype="311",
+        warning=True,
+    )
+    assert (
+        "_587._tcp.smtp.example.com TLSA 3 1 1 D6F9BA311A04F711C19C459266D53561145AC1ABF403E368976AFE51B41FAE53"
+        in caplog.text
+    )
+
+    certgrinder.output_tlsa_record(
+        derkey=public_key_der_bytes,
+        domain="smtp.example.com",
+        port=587,
+        protocol="tcp",
+        tlsatype="312",
+        warning=False,
+    )
+    assert (
+        "_587._tcp.smtp.example.com TLSA 3 1 2 048D0D297B5E525795CEEBB87C8CD18436766CB87DE3B5E50EE9863DB3A12FB8E639878A4B03A0C23CC2253257266F9A695EA24207CEF284EB6FD45322AE809A"
+        in caplog.text
+    )
+
+
+def mock_tlsa_query_real_response(*args, **kwargs):
+    """Mock a TLSA response for the known_public_key."""
+    Response = namedtuple("Response", ["usage", "selector", "mtype", "cert"])
+    return [
+        Response(
+            3,
+            1,
+            0,
+            bytes.fromhex(
+                "30820222300D06092A864886F70D01010105000382020F003082020A0282020100B7385B728CCD6234B579EE7918329DA988DEB18B83EA7C45422B8281F53682AC57C93AC428EB3BFF216926662CC69D34FC2D8EE44673C9C87EF8DCDFFDE93FC5F483834465F075376691DA46FB157B68E3D58E16B5A5C0FAF026A6EAADC1FD47E55C0B2E98669CD13A9A42AFC7180F88769E409A46029CCE0FE3184A66FF3A1ABBB848CF7064EF299246CA42175EFBD30FA2A2437B19EFC9DA7BCAFA74D583DA8397B84B3492E7C084AA31B49CF3CDE1A661F0B112F2676F1BA6C9EB9EB42EB104EE7F0C0859D9F0C3C5821602B7D628C2E62195D2174CEAABAA2794DAEBA0EB7C165A2B6EA146CEACA08EC0534DDBF74149C694B6D03EC8CAC8251215853B4171588C5B3D8B5BB4B9C9960F75B540A61759F44474648ACF9810ABA65519379030639769EECC782EF1D0B81E956839B23B77A753868625B6648E5E0ACFD31F40EDB7B26CB5D9EAB91FECDEB9EFEF5752F4F5E9A92C87B9D20732D13FE9077ABD5767065756C01B5264722BB2740AF5A1EE2A60B08C5814C8CED874DBCE2F034A364BC59473BCB65B6463DE3E6657C6B287B02050A005D74C4617735C27B324FAE004491BB646302940BB7239FDC997F3F5EC27CA683F1742F5C279780B32CE33D24FA11B63ED390BAC417CC1206FFF49FBCE203F9C31D9AAFA106FC7169723F00BC6A59E0142790135C131D38BF549183ECE52BC683FD42D07057BABB6259E810203010001"
+            ),
+        )
+    ]
+
+
+def mock_tlsa_query_no_response(*args, **kwargs):
+    """Mock a TLSA no response."""
+    return []
+
+
+def test_verify_tlsa_record(caplog, tmpdir_factory, known_public_key, monkeypatch):
+    """Test the verify_tlsa_record() method."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com,www.example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+        }
+    )
+    public_key_der_bytes = known_public_key.public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_real_response)
+    certgrinder.verify_tlsa_record(
+        derkey=public_key_der_bytes,
+        domain="smtp.example.com",
+        port=587,
+        protocol="tcp",
+        tlsatype="310",
+    )
+    assert (
+        "Received DNS response for TLSA type 3 1 0: 1 answers - looking for an answer matching the public key..."
+        in caplog.text
+    ), "Expected output not found from verify_tlsa_record() method"
+    assert (
+        "TLSA record for name _587._tcp.smtp.example.com type 3 1 0 matching the local key found in DNS, good."
+        in caplog.text
+    ), "Expected output not found from verify_tlsa_record() method"
+    caplog.clear()
+
+    monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_no_response)
+    certgrinder.verify_tlsa_record(
+        derkey=public_key_der_bytes,
+        domain="smtp.example.com",
+        port=587,
+        protocol="tcp",
+        tlsatype="310",
+    )
+    assert (
+        "No TLSA records for name _587._tcp.smtp.example.com of type 3 1 0 was found in DNS. This record needs to be added:"
+        in caplog.text
+    ), "Expected output not found for empty response"
+    caplog.clear()
+
+    monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_2_responses)
+    certgrinder.verify_tlsa_record(
+        derkey=public_key_der_bytes,
+        domain="smtp.example.com",
+        port=587,
+        protocol="tcp",
+        tlsatype="311",
+    )
+    assert (
+        "None of the TLSA records found in DNS for the name _587._tcp.smtp.example.com and type 311 match the local key. This record needs to be added to the DNS:"
+        in caplog.text
+    ), "Expected output not found for wrong tlsa type response"

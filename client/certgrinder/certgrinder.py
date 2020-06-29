@@ -1011,19 +1011,19 @@ class Certgrinder:
             return None
         except dns.resolver.NoAnswer:
             logger.error(
-                "Empty answer returned by {nameserverstr}. No TLSA records found in DNS for: {record}"
+                f"Empty answer returned by {nameserverstr}. No TLSA records found in DNS for: {record}"
             )
             return None
         except dns.exception.SyntaxError:
             logger.error(
-                "Error parsing DNS server IP '{nameserver}'. Only IP addresses are supported."
+                f"Error parsing DNS server IP '{nameserver}'. Only IP addresses are supported."
             )
             sys.exit(1)
         except dns.exception.Timeout:
-            logger.error("Timeout while waiting for {nameserverstr}. Error.")
+            logger.error(f"Timeout while waiting for {nameserverstr}. Error.")
             sys.exit(1)
         except Exception as E:
-            logger.error("Exception received during DNS lookup: %s" % E)
+            logger.error(f"Exception received during DNS lookup: {E}")
             return None
 
         # loop over the responses
