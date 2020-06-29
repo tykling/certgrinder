@@ -2,14 +2,11 @@ Creating a release
 ====================
 
 First, update the version numbers in needed files (meaning remove -dev):
-* Update version in setup.py for client & server
-* Update version in certgrinder.py
-* Update version in certgrinderd.py
-* Update version numbers in docs
+    sed -i'' "s/0.13.0-beta2-dev/0.13.0-beta2/g" client/setup.py server/setup.py client/certgrinder/certgrinder.py server/certgrinderd/certgrinderd.py docs/conf.py
 
-Then update release date in CHANGELOG.md for client & server
+Then update release date in certgrinder-changelog.rst and certgrinderd-changelog.rst for client & server.
 
-Commit the above and push.
+Commit the above changes and push.
 
 Then tag the new release:
     git tag v0.4.0 -a
@@ -25,4 +22,5 @@ Upload new release to pypi:
     twine upload dist/*
 
 Back to development: Bump version and add -dev to version numbers everywhere.
+    sed -i'' "s/0.13.0-beta2/0.13.0-beta3-dev/g" client/setup.py server/setup.py client/certgrinder/certgrinder.py server/certgrinderd/certgrinderd.py docs/conf.py
 
