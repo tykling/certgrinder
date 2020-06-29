@@ -16,11 +16,6 @@ from cryptography.hazmat.backends import default_backend
 def pebble_server():
     """Get the pebble sources, and build the binary, and run it."""
     print("Begginning setup")
-    print("checking to see if we have Go available...")
-    if not shutil.which("go"):
-        print("go binary not found in $PATH, cannot build pebble, bailing out")
-        return False
-
     print("Getting pebble sources ...")
     proc = subprocess.run(
         args=[shutil.which("go"), "get", "-u", "github.com/letsencrypt/pebble/..."],
@@ -50,13 +45,6 @@ def pebble_server():
         env={"PEBBLE_VA_ALWAYS_VALID": "1"},
         cwd=pathlib.Path.home() / "go/src/github.com/letsencrypt/pebble",
     )
-    # get Pebble startup output
-    # proc.communicate()
-
-    if proc.returncode is not None:
-        pytest.fail(
-            "Something is fucky, pebble exited with returncode {proc.returncode}"
-        )
 
     print("Setup finished - pebble is running!")
 
@@ -112,8 +100,6 @@ def certgrinderd_configfile(request, tmp_path_factory):
         conf.update({"web-root": str(tmp_path_factory.mktemp("certbot") / "webroot")})
     elif request.param == "":
         pass
-    else:
-        raise ValueError("Unsupported auth type")
     # write file to disk
     with open(confpath, "w") as f:
         yaml.dump(conf, f)
