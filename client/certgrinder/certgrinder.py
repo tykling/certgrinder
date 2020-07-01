@@ -1507,7 +1507,7 @@ def get_parser() -> argparse.ArgumentParser:
         "--now",
         dest="periodic-sleep-minutes",
         action="store_const",
-        const="0",
+        const=0,
         help="Run periodic command without delay. Equal to setting --periodic-sleep-minutes 0.",
         default=argparse.SUPPRESS,
     )
