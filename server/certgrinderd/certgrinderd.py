@@ -102,7 +102,9 @@ class Certgrinderd:
         else:
             logger.debug("Not configuring syslog")
 
-        logger.info(f"certgrinderd {__version__} running")
+        logger.info(
+            f"certgrinderd {__version__} running, log-level is {self.conf['log-level']}"
+        )
         logger.debug("Running with config: %s" % self.conf)
 
     @staticmethod

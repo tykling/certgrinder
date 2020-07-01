@@ -9,6 +9,14 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+v0.13.0-rc1 (unreleased)
+-------------------------
+
+Changed
+~~~~~~~
+- Writing the certificate only (without the intermediate) to ``example.com-certonly.crt`` is new in 0.13, so make the ``check_certificate()`` method checks the chain certificate to make sure upgrading 0.12 to 0.13 doesn't trigger needlessly renewing all existing certs.
+
+
 v0.13.0-beta2 (29-jun-2020)
 ---------------------------
 

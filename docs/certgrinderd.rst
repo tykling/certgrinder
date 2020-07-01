@@ -154,12 +154,12 @@ Each Certgrinder client must generate an SSH key which is to be added to ``~/.ss
 
 * A ``from=`` specifying the IP the Certgrinder client connects from (optional but recommended).
 * An ``environment=`` restricting which names it may ask for, see above (required).
-* ``command=`` to restrict the command it can run (optional but recommended).
+* ``command=`` to restrict the command it can run (optional but recommended). Remember ``$SSH_ORIGINAL_COMMAND`` so ``certgrinder`` can set ``certgrinderd`` command-line arguments.
 * The ``restrict`` keyword to limit tunneling and forwarding and such (optional but recommended). The ``restrict`` option was added to OpenSSH in version 7.4, it might not be available everywhere.
 
 Something like this works::
 
-    from="2001:DB8::15",environment="CERTGRINDERD_DOMAINSETS=example.com,www.example.com;example.net",command="/path/to/certgrinderd",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOegnR+qnK2FEoaSrVwHgCIxjFkVEbW4VO31/Hd2mAwk ansible-generated on webproxy2.example.com
+    from="2001:DB8::15",environment="CERTGRINDERD_DOMAINSETS=example.com,www.example.com;example.net",command="/path/to/certgrinderd $SSH_ORIGINAL_COMMAND",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOegnR+qnK2FEoaSrVwHgCIxjFkVEbW4VO31/Hd2mAwk ansible-generated on webproxy2.example.com
 
 To make the ``environment=`` foo work the option ``PermitUserEnvironment=CERTGRINDERD_DOMAINSETS`` needs to be added to ``sshd_config``.
 

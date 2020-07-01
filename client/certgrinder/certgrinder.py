@@ -815,10 +815,10 @@ class Certgrinder:
         # load certificate from disk?
         if not certificate:
             # does the file exist?
-            if os.path.exists(self.certificate_path):
-                certificate = self.load_certificate(self.certificate_path)
+            if os.path.exists(self.certificate_chain_path):
+                certificate = self.load_certificate(self.certificate_chain_path)
             else:
-                logger.error(f"Certificate {self.certificate_path} not found")
+                logger.error(f"Certificate {self.certificate_chain_path} not found")
                 self.error = True
                 return False
 
