@@ -14,7 +14,11 @@ v0.13.0-rc1 (unreleased)
 
 Added
 ~~~~~
-- Output running config at loglevel DEBUG
+- Information about $SSH_ORIGINAL_COMMAND to docs
+
+Changed
+~~~~~~~
+- Show current log-level setting in first log message
 
 
 v0.13.0-beta2 (29-jun-2020)
