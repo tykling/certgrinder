@@ -11,6 +11,7 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.13.0-rc2-dev (unreleased)
 ----------------------------
+- Fix broken test client/certgrinder/tests/test_certgrinder.py::test_check_certificate_not_cert
 
 
 v0.13.0-rc1 (1-jul-2020)
