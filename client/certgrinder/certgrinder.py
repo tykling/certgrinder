@@ -860,7 +860,7 @@ class Certgrinder:
         san = certificate.extensions.get_extension_for_oid(
             cryptography.x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
         )
-        assert isinstance(san.value, x509.SubjectAlternativeName)
+        assert isinstance(san.value, cryptography.x509.SubjectAlternativeName)
         logger.info(
             f"Certificate SAN: {san.value.get_values_for_type(cryptography.x509.DNSName)}"
         )
