@@ -850,10 +850,19 @@ class Certgrinder:
             logger.error(f"Certificate {self.certificate_path} not found")
             return
         certificate = self.load_certificate(self.certificate_path)
+        logger.info(f"- Showing certificate for domain set: {self.domainset}")
+        logger.info(f"Certificate keypair path: {self.keypair_path}")
+        logger.info(f"Certificate chain path: {self.certificate_chain_path}")
+        logger.info(f"Certificate path: {self.certificate_path}")
         logger.info(f"Certificate serial: {certificate.serial_number}")
         logger.info(f"Certificate subject: {certificate.subject}")
+        logger.info(f"Certificate issuer: {certificate.issuer}")
+        san = certificate.extensions.get_extension_for_oid(
+            cryptography.x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+        )
+        assert isinstance(san.value, x509.SubjectAlternativeName)
         logger.info(
-            f"PEM formatted certificate:\n {certificate.public_bytes(primitives.serialization.Encoding.PEM).decode('ASCII')}"
+            f"Certificate SAN: {san.value.get_values_for_type(cryptography.x509.DNSName)}"
         )
 
     # POST RENEW HOOK METHOD
