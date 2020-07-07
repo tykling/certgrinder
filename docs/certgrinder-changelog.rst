@@ -9,8 +9,12 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-v0.13.0-rc2-dev (unreleased)
-----------------------------
+v0.13.0 (7-jul-2020)
+--------------------
+
+Changed
+~~~~~~~
+- Test suite now covers 100% of certgrinder.py
 
 Fixed
 ~~~~~
