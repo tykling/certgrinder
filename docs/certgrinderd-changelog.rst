@@ -9,8 +9,13 @@ All notable changes to ``certgrinderd`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-v0.14.0-dev (unreleased)
-------------------------
+v0.14.0 (unreleased)
+--------------------
+- No changes
+
+
+v0.13.1 (7-jul-2020)
+--------------------
 
 Changed
 ~~~~~~~
