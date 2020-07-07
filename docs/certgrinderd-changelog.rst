@@ -14,7 +14,7 @@ v0.14.0-dev (unreleased)
 
 Changed
 ~~~~~~~
-- Remove unused pid file option
+- Specify python3.7 and 3.8 as classifiers in setup.py
 
 
 v0.13.0 (7-jul-2020)

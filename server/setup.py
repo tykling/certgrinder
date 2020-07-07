@@ -22,7 +22,8 @@ setuptools.setup(
     packages=["certgrinderd"],
     entry_points={"console_scripts": ["certgrinderd = certgrinderd.certgrinderd:main"]},
     classifiers=[
-        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
     ],
