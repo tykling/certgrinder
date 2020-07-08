@@ -34,13 +34,18 @@ repos:
         entry: "make --directory docs/ man"
         language: "system"
         pass_filenames: False
-      - id: "sphinx-copy-manpages"
-        name: "sphinx manpage copy"
-        entry: "cp docs/_build/man/certgrinder.8 docs/_build/man/certgrinderd.8 man/"
+      - id: "sphinx-copy-certgrinder-manpage"
+        name: "sphinx certgrinder.8 manpage copy"
+        entry: "cp docs/_build/man/certgrinder.8 client/man/"
+        language: "system"
+        pass_filenames: False
+      - id: "sphinx-copy-certgrinderd-manpage"
+        name: "sphinx certgrinderd.8 manpage copy"
+        entry: "cp docs/_build/man/certgrinderd.8 server/man/"
         language: "system"
         pass_filenames: False
       - id: "sphinx-git-add-manpages"
         name: "sphinx manpage git add"
-        entry: "git add man/"
+        entry: "git add client/man server/man"
         language: "system"
         pass_filenames: False
