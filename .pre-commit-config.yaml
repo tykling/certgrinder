@@ -27,3 +27,20 @@ repos:
     rev: "5.0.2"
     hooks:
     - id: "pydocstyle"
+  - repo: "local"
+    hooks:
+      - id: "sphinx-build-manpages"
+        name: "sphinx manpage build"
+        entry: "make --directory docs/ man"
+        language: "system"
+        pass_filenames: False
+      - id: "sphinx-copy-manpages"
+        name: "sphinx manpage copy"
+        entry: "cp docs/_build/man/certgrinder.8 docs/_build/man/certgrinderd.8 man/"
+        language: "system"
+        pass_filenames: False
+      - id: "sphinx-git-add-manpages"
+        name: "sphinx manpage git add"
+        entry: "git add man/"
+        language: "system"
+        pass_filenames: False

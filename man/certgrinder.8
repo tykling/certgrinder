@@ -1,0 +1,1253 @@
+.\" Man page generated from reStructuredText.
+.
+.TH "CERTGRINDER" "8" "Jul 08, 2020" "0.14.0-dev" "Certgrinder"
+.SH NAME
+certgrinder \- Manpage for certgrinder
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.sp
+The \fBcertgrinder\fP client is responsible for generating a keypair and a CSR, which it uses to contact the Certgrinder server \fBcertgrinderd\fP over SSH to get a signed certificate. The following section explains how to install and configure it to get certificates from the Certgrinder server.
+.SH INSTALLATION
+.sp
+This section explains the steps to install a Certgrinder client. Repeat these steps on each server in need of certificates!
+.SS Install certgrinder
+.sp
+You can install certgrinder from pip with \fBpip install certgrinder\fP\&. This will install the latest \fBcertgrinder\fP release. It will pull in the dependencies it needs automatically.
+.sp
+You can also checkout the Github repo and install the deps from requirements.txt by hand if you prefer. If you want to install with pip directly from Git the following may help:
+\fBpip install "git+https://github.com/tykling/certgrinder/#egg=certgrinder&subdirectory=client"\fP
+.SS Create Certgrinder User
+.sp
+Since \fBcertgrinder\fP is designed to be run under a seperate system user one should be created. The user needs sudo access if (and only if) it is to be able to reload/restart services after renewing certificates. Sometimes it is also neccesary to add some system users to the certgrinder group so they can read certificates. More on that later.
+.sp
+The user also needs to run \fBssh\-keygen\fP and the SSH key needs to be added to the \fBauthorized_keys\fP file on the Certgrinder server. Make sure to test the SSH access works (hint: check firewalls, v4 vs v6 etc).
+.SS Configuration
+.sp
+Configuration of \fBcertgrinder\fP can be done using command\-line options, or a configuration file, or a combination of the two.
+.sp
+The \fBcertgrinder\fP configuration file is in YAML format. An example config named \fBcertgrinder.conf.dist\fP can be found in the distribution. use \fB\-\-config\-file\fP or \fB\-f\fP to specify the config file location.
+.sp
+Each config item can be specified either in the YAML config file as a \fBkey: value\fP pair, or on the commandline as \fB\-\-key value\fP \- the latter overriding the former if both are present. For example, if the configfile has \fBlog\-level: INFO\fP and the command\-line has \fB\-\-log\-level: DEBUG\fP then the effective log\-level would be \fBDEBUG\fP\&.
+.sp
+This is an alphabetical list of the configurable options:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.TP
+.B \fIcertgrinderd\fP
+The command to run as \fBcertgrinderd\fP\&. Usually this will be something like \fBssh certgrinderd@certgrinder.example.com \-T\fP, possibly also with a \fB\-\-config\-file\fP for \fBcertgrinderd\fP if needed.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIcert\-renew\-threshold\-days\fP
+A certificate will be renewed when it has less than this many days of lifetime left.
+.sp
+Default: \fB30\fP
+.TP
+.B \fIdomain\-list\fP
+Comma\-seperated lists of domains for the certificates. Can be specified multiple times on the command\-line, \fB\-\-domain\-list example.com,www.example.com \-\-domain\-list example.net\fP means two certificates, the first with two names, the second with one name.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIinvalid\-ca\-cn\-list\fP
+List of CommonName of certificate issuers to consider invalid. This is not a regular CA certificate validity check, it is used to detect certificates issued by LetsEncrypt staging servers as invalid.
+.sp
+Default: \fB["Fake LE Intermediate X1", "Fake LE Intermediate X2"]\fP
+.TP
+.B \fIlog\-level\fP
+Sets the verbosity level for console and syslog logging. One of DEBUG, INFO, WARNING, ERROR, CRITICAL.
+.sp
+Default: \fBINFO\fP
+.TP
+.B \fIname\-server\fP
+Set this to a DNS server IP (v4 or v6, no hostnames) to use that DNS server instead of the system resolver.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIpath\fP
+The directory used for keys, CSRs and certificates. Must exist and be writable by the user running Certgrinder.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIperiodic\-sleep\-minutes\fP
+Certgrinder will pick a random number of minutes between 0 and this number and sleep for that long before doing periodic actions. Set to 0 to disable sleeping.
+.sp
+Default: \fB60\fP
+.TP
+.B \fIpid\-dir\fP
+The directory to place the certgrinderd PID file in.
+.sp
+Default: \fB/tmp\fP
+.TP
+.B \fIpost\-renew\-hooks\fP
+A list of commands which \fBcertgrinder\fP must run after renewing one or more certificates. Use this to reload/restart services which need to be poked after the certificate changes. Can be specified multiple times on the command\-line. Remember to include sudo or whatever if needed.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIstaging\fP
+Enable staging mode. Adds \fB\-\-staging\fP to the \fBcertgrinderd\fP command, and sees certificates issued by LE staging servers as valid.
+.sp
+Default: \fBFalse\fP
+.TP
+.B \fIsyslog\-facility\fP
+Set this and syslog\-socket to enable logging to syslog. Must be a value supported by \fBlogging.handlers.SysLogHandler\fP like \fBLOG_USER\fP or \fBLOG_LOCAL0\fP\&.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIsyslog\-socket\fP
+Set this and syslog\-facility to enable logging to syslog.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fItlsa\-port\fP
+Set this to the port (like \fB443\fP) when using \fBshow tlsa\fP or \fBcheck tlsa\fP subcommands.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fItlsa\-protocol\fP
+Set this to the protocol (like \fBtcp\fP) when using \fBshow tlsa\fP or \fBcheck tlsa\fP subcommands.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fItlsa\-type\-list\fP
+Set this to enable a TLSA type (can be specified multiple times). The TLSA type must be specified as three integers, one of: \fB310\fP, \fB311\fP or \fB312\fP\&. Default: is all three pubkey types.
+.sp
+Default: \fB["310", "311", "312"]\fP
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS ACME Challenges
+.sp
+Finally you need to choose which challenge type to use for this \fBcertgrinder\fP client. If \fBDNS\-01\fP you need to create one or more \fBCNAME\fP record pointing somewhere. If \fBHTTP\-01\fP you need to create an HTTP redirect. See the section on challenges for more info.
+.SS Testing
+.sp
+At this point you should be ready to test! Start by checking with SSH manually to see that the SSH key is installed properly on the Certgrinder server, and firewalls are open. Certgrinder has a \fB\-\-staging\fP switch which makes \fBcertgrinderd\fP use the LetsEncrypt staging environment. Use this until everything works! \fBcertgrinder\fP outputs some info on what happens, and can output more with \fB\-d / \-\-debug\fP, but sometimes you need to check syslog on the Certgrinder server.
+.SS Crontab job
+.sp
+I run Certgrinder daily, although it only attempts renewal when less than 30 days validity remains. When everything above works it is time to automate it by adding it to crontab. The following line works for me (I vary the times between servers):
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+48 2 * * * certgrinder /usr/home/certgrinder/virtualenv/bin/certgrinder \-f /usr/home/certgrinder/certgrinder.yml
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Note that I call it inside the virtualenv directly to make sure the correct environment is used!
+.SH CLIENT COMMANDS
+.sp
+All the functionality in Certgrinder can be accessed by using \fBcommands\fP and \fBsubcommands\fP\&. The following \fBcommands\fP are available:
+.INDENT 0.0
+.IP \(bu 2
+\fI\%check certificate command\fP
+.IP \(bu 2
+\fI\%check tlsa command\fP
+.IP \(bu 2
+\fI\%get certificate command\fP
+.IP \(bu 2
+\fI\%help command\fP
+.IP \(bu 2
+\fI\%periodic command\fP
+.IP \(bu 2
+\fI\%show certificate command\fP
+.IP \(bu 2
+\fI\%show configuration command\fP
+.IP \(bu 2
+\fI\%show spki command\fP
+.IP \(bu 2
+\fI\%show tlsa command\fP
+.IP \(bu 2
+\fI\%version command\fP
+.UNINDENT
+.SS check commands
+.sp
+All the subcommands for the \fBcheck\fP commands return exit code 1 if a problem is found and 0 if everything is fine.
+.SS check certificate command
+.sp
+The \fBcheck certificate\fP subcommand loops over the configured domainsets and checks the validity of the certificate for each. If a problem is found \fBcertgrinder\fP will exit with exit code 1, if all is well the exit code will be 0.
+.SS check tlsa command
+.sp
+The \fBcheck tlsa\fP subcommand is like the \fBshow tlsa\fP subcommand but it goes one step further and actually checks in the \fBDNS\fP if the records could be found, and prints some output accordingly. The following example shows two runs of \fBcheck tlsa\fP mode. The first run finds no TLSA records and outputs what needs to be added:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[certgrinder@znc ~]$ ./virtualenv/bin/certgrinder \-f certgrinder.conf check tlsa 443 tcp
+2018\-02\-16 08:59:39 +0000 INFO: Processing domains: znc.tyknet.dk
+2018\-02\-16 08:59:39 +0000 INFO: Looking up TLSA records for _443._tcp.znc.tyknet.dk
+2018\-02\-16 08:59:39 +0000 WARNING: No TLSA records for name _443._tcp.znc.tyknet.dk of type 3 1 0 was found in DNS. This record needs to be added:
+2018\-02\-16 08:59:39 +0000 WARNING: _443._tcp.znc.tyknet.dk 3 1 0 30820222300d06092a864886f70d01010105000382020f003082020a0282020100bb852c1035ee7ce08d69a13f5cca95374dc872b2028e65ee34600478076c9185e79ff373d3acfc4aa29f152b9abcb515e449417ce7768f7f91915ff2d6e75d732e863021240ce4b24475220306e6ffd3f963dc4a8eafb4077f635d8a0d655b5921df2bcb2e6e610aa8db1d79b6da14d1fc7d842c1e5d4cbfa6697617aa9d2251be1a386fd7c14eccef21151c35d336ebba8f97d3160b35775c57079d2594b1d2a9d593bc408ccf2a01b171f4a3e65005b07df7efd77bac3d5f430b0aab5f161b7d7ebc40b600064ec3a4c59d64a1ec1f27c234a08a473aa0fcdf6008492161af6a1d9179a432622776e675f4d3dafb3d1d00b3189c4cdcd6de250721f012fc5f34426d06cb4b045b04ba2bd7ac2fcedce429dfde3dffcbb8b2df50cade99458c954de157b88751c26b79413d6eef5e26ab008e7aa7c69be3d6163f80f5d565b87f9030b54a23cf4c704e509cc84e618a446c75684893d65bd5fd38ef6b839d316b5616b06bbafbb7c2aa6f3db217b4df6e5f02b85d8685be14a9d480ee56c1b4454a88fc01a4532a55e926929fea70822088054f5ddf957e8c5ca2c3808c8a09b70c7eeda4883aaf6f1092033beeb0ff5621a8b8ddf3455f1d30d2398fe786038a39e0825bb6bac9865500de33eff67e3984a73b7592bde5897681b52da06c93447a0efa4d1fb52bc151811776ef501ca818c68fd1d4fe3d73c5e5526b4bf47f0203010001
+2018\-02\-16 08:59:39 +0000 WARNING: No TLSA records for name _443._tcp.znc.tyknet.dk of type 3 1 1 was found in DNS. This record needs to be added:
+2018\-02\-16 08:59:39 +0000 WARNING: _443._tcp.znc.tyknet.dk 3 1 1 5b95cb6ea387570f1f3dc4508794ca13a17a665733bab5f76b1e330f2fa13361
+2018\-02\-16 08:59:39 +0000 WARNING: No TLSA records for name _443._tcp.znc.tyknet.dk of type 3 1 2 was found in DNS. This record needs to be added:
+2018\-02\-16 08:59:39 +0000 WARNING: _443._tcp.znc.tyknet.dk 3 1 2 24d49f3c974129b9c28b5e6213892a404d8e9777c5a2e977333b88442d4e16ac0bc732001ec783df795c194704149bd18bbca21087111b33fa79e84dab05e760
+2018\-02\-16 08:59:39 +0000 INFO: Done processing domains: znc.tyknet.dk
+[certgrinder@znc ~]$
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The second run is after adding the suggested records to \fBDNS\fP:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[certgrinder@znc ~]$ ./virtualenv/bin/certgrinder \-f certgrinder.conf check tlsa 443 tcp
+2018\-02\-16 09:16:27 +0000 INFO: Processing domains: znc.tyknet.dk
+2018\-02\-16 09:16:27 +0000 INFO: Looking up TLSA records for _443._tcp.znc.tyknet.dk
+2018\-02\-16 09:16:27 +0000 INFO: TLSA record for name _443._tcp.znc.tyknet.dk type 3 1 0 found in DNS matches the local key, good.
+2018\-02\-16 09:16:27 +0000 INFO: TLSA record for name _443._tcp.znc.tyknet.dk type 3 1 1 found in DNS matches the local key, good.
+2018\-02\-16 09:16:27 +0000 INFO: TLSA record for name _443._tcp.znc.tyknet.dk type 3 1 2 found in DNS matches the local key, good.
+2018\-02\-16 09:16:27 +0000 INFO: Done processing domains: znc.tyknet.dk
+[certgrinder@znc ~]$
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+All \fBTLSA\fP records for this public key can now be found in the \fBDNS\fP\&.
+.sp
+\fINOTE\fP: As there might be additional records for the same name which do not belong to this server/key (for example in a loadbalanced or anycast setup), no attempts are made to warn about wrong/old/superflous \fBTLSA\fP records. This might be added in a future version as a switch to tell Certgrinder that the local public key is the only one in existence for this service.
+.SS get commands
+.sp
+The \fBget\fP subcommands do all the real work.
+.SS get certificate command
+.sp
+The \fBget certificate\fP subcommand loops over the configured domainsets and gets a new certificate for each, regardless of the current status of existing certificates. Use with care, only for troubleshooting. \fIDo not use from cron. Use the periodic command instead.\fP
+.SS help command
+.sp
+The \fBhelp\fP command is just a shortcut for \fB\-h\fP which shows commandline usage and help.
+.SS periodic command
+.sp
+The \fBperiodic\fP command sleeps for a random number of minutes between 0 and the config setting \fBperiodic\-sleep\-minutes\fP before doing anything. Set this setting to 0 to disable sleeping. After sleeping the certificates are checked and renewed as needed. This is meant to be run daily from cron or similar.
+.SS show commands
+.sp
+The \fBshow\fP subcommands show information but never change anything.
+.SS show certificate command
+.sp
+The \fBshow certificate\fP subcommand loops over configured domainsets and outputs information about each certificate (if any).
+.SS show configuration command
+.sp
+The \fBshow configuration\fP subcommand just dumps the active configuration as a pretty printed JSON object and exits. Useful for testing or debugging configuration issues.
+.SS show spki command
+.sp
+The \fBshow spki\fP subcommand outputs pin\-sha256 spki pins for the public keys. The \fBHPKP\fP standard \fI\%https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning\fP defined the \fBpin\-sha256\fP format for public key pins. While the \fBHPKP\fP standard didn\(aqt get much traction the pinning format is used in various places now, so \fBcertgrinder\fP can generate them.
+.sp
+The operation is pretty simple:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[certgrinder@znc ~]$ ./virtualenv/bin/certgrinder \-f certgrinder.conf show spki
+2018\-02\-16 09:28:37 +0000 INFO: Processing domains: znc.tyknet.dk
+2018\-02\-16 09:28:37 +0000 INFO: pin\-sha256="W5XLbqOHVw8fPcRQh5TKE6F6ZlczurX3ax4zDy+hM2E="
+2018\-02\-16 09:28:37 +0000 INFO: Done processing domains: znc.tyknet.dk
+[certgrinder@znc ~]$
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS show tlsa command
+.sp
+The \fBshow tlsa\fP subcommand loops over the configured domainsets and generates \fBTLSA\fP records for the public keys. The result is printed to the terminal in a format suitable for putting in the \fBDNS\fP\&. It looks something like this:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[certgrinder@znc ~]$ ./virtualenv/bin/certgrinder \-f certgrinder.conf show tlsa 443 tcp
+2018\-02\-16 08:42:18 +0000 INFO: Processing domains: znc.tyknet.dk
+2018\-02\-16 08:42:18 +0000 INFO: TLSA records for _443._tcp.znc.tyknet.dk:
+2018\-02\-16 08:42:18 +0000 INFO: _443._tcp.znc.tyknet.dk 3 1 0 30820222300d06092a864886f70d01010105000382020f003082020a0282020100bb852c1035ee7ce08d69a13f5cca95374dc872b2028e65ee34600478076c9185e79ff373d3acfc4aa29f152b9abcb515e449417ce7768f7f91915ff2d6e75d732e863021240ce4b24475220306e6ffd3f963dc4a8eafb4077f635d8a0d655b5921df2bcb2e6e610aa8db1d79b6da14d1fc7d842c1e5d4cbfa6697617aa9d2251be1a386fd7c14eccef21151c35d336ebba8f97d3160b35775c57079d2594b1d2a9d593bc408ccf2a01b171f4a3e65005b07df7efd77bac3d5f430b0aab5f161b7d7ebc40b600064ec3a4c59d64a1ec1f27c234a08a473aa0fcdf6008492161af6a1d9179a432622776e675f4d3dafb3d1d00b3189c4cdcd6de250721f012fc5f34426d06cb4b045b04ba2bd7ac2fcedce429dfde3dffcbb8b2df50cade99458c954de157b88751c26b79413d6eef5e26ab008e7aa7c69be3d6163f80f5d565b87f9030b54a23cf4c704e509cc84e618a446c75684893d65bd5fd38ef6b839d316b5616b06bbafbb7c2aa6f3db217b4df6e5f02b85d8685be14a9d480ee56c1b4454a88fc01a4532a55e926929fea70822088054f5ddf957e8c5ca2c3808c8a09b70c7eeda4883aaf6f1092033beeb0ff5621a8b8ddf3455f1d30d2398fe786038a39e0825bb6bac9865500de33eff67e3984a73b7592bde5897681b52da06c93447a0efa4d1fb52bc151811776ef501ca818c68fd1d4fe3d73c5e5526b4bf47f0203010001
+2018\-02\-16 08:42:18 +0000 INFO: _443._tcp.znc.tyknet.dk 3 1 1 5b95cb6ea387570f1f3dc4508794ca13a17a665733bab5f76b1e330f2fa13361
+2018\-02\-16 08:42:18 +0000 INFO: _443._tcp.znc.tyknet.dk 3 1 2 24d49f3c974129b9c28b5e6213892a404d8e9777c5a2e977333b88442d4e16ac0bc732001ec783df795c194704149bd18bbca21087111b33fa79e84dab05e760
+[certgrinder@znc ~]$
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Shown above is the \fBshow tlsa\fP subcommand in action. The value supplied should be the port and protocol of the service, in the example above it is a \fBHTTPS\fP service, so the \fBTLSA\fP record is the service hostname prefixed with \fB_443._tcp.\fP
+.SS version command
+.sp
+The \fBversion\fP command is just a shortcut for \fB\-v\fP which shows the Certgrinder version and exits.
+.SH COMMAND LINE USAGE
+.sp
+Certgrinder version 0.14.0\-dev. See the manpage or ReadTheDocs for more info.
+
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+usage: certgrinder [\-h] [\-\-certgrinderd CERTGRINDERD]
+                   [\-\-cert\-renew\-threshold\-days CERT\-RENEW\-THRESHOLD\-DAYS]
+                   [\-d] [\-D DOMAIN\-LIST]
+                   [\-\-invalid\-ca\-cn\-list INVALID\-CA\-CN\-LIST]
+                   [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-f CONFIG\-FILE]
+                   [\-n NAME\-SERVER] [\-\-now] [\-\-path PATH]
+                   [\-\-periodic\-sleep\-minutes PERIODIC\-SLEEP\-MINUTES]
+                   [\-p PID\-DIR] [\-\-post\-renew\-hooks POST\-RENEW\-HOOKS] [\-q]
+                   [\-s] [\-\-syslog\-facility SYSLOG\-FACILITY]
+                   [\-\-syslog\-socket SYSLOG\-SOCKET] [\-\-tlsa\-port TLSA\-PORT]
+                   [\-\-tlsa\-protocol TLSA\-PROTOCOL]
+                   [\-\-tlsa\-type\-list {310,311,312}] [\-v]
+                   {check,get,help,periodic,show,version} ...
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Positional Arguments
+.INDENT 0.0
+.TP
+.Bcommand
+Possible choices: check, get, help, periodic, show, version
+.sp
+Command (required)
+.UNINDENT
+.SS Named Arguments
+.INDENT 0.0
+.TP
+.B\-\-certgrinderd
+The command to reach the certgrinderd server, will get the CSR on stdin. Usually something like \(aqssh \fI\%certgrinderd@server\fP \-T\(aq
+.TP
+.B\-\-cert\-renew\-threshold\-days
+A certificate is renewed when it has less than this many days of lifetime left. Default: \fI30\fP
+.TP
+.B\-d, \-\-debug
+Debug mode. Equal to setting \-\-log\-level=DEBUG.
+.TP
+.B\-D, \-\-domain\-list
+Comma seperated list of domains for a certificate. Can be specified multiple times.
+.TP
+.B\-\-invalid\-ca\-cn\-list
+The CommonName of an issuer (CA intermediate) to consider invalid. Can be specified multiple times.
+.TP
+.B\-l, \-\-log\-level
+Possible choices: DEBUG, INFO, WARNING, ERROR, CRITICAL
+.sp
+Logging level. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Defaults to INFO.
+.TP
+.B\-f, \-\-config\-file
+The path to the certgrinder.yml config file to use, default ~/certgrinder.yml
+.TP
+.B\-n, \-\-name\-server
+Tell certgrinder to use this DNS server IP to lookup TLSA records. Only relevant with \-c / \-\-checktlsa. Only v4/v6 IPs, no hostnames.
+.TP
+.B\-\-now
+Run periodic command without delay. Equal to setting \-\-periodic\-sleep\-minutes 0.
+.TP
+.B\-\-path
+Tell certgrinder to use the specified directory for keys, CSRs and certificates. The directory must exist and be writeable by the user running certgrinder.
+.TP
+.B\-\-periodic\-sleep\-minutes
+Tell certgrinder to sleep for a random number of minutes between 0 and this number before doing anything when the periodic command is used. Set to 0 to disable sleeping.
+.TP
+.B\-p, \-\-pid\-dir
+The directory to store the PID file in
+.TP
+.B\-\-post\-renew\-hooks
+The list of commands to run after one or more certificates are renewed. Most such commands will need root access to run, remember to prefix the command with \(aqsudo\(aq as needed. Can be specified multiple times. Default: \fINone\fP
+.TP
+.B\-q, \-\-quiet
+Quiet mode. No output at all if there is nothing to do, and no errors are encountered. Equal to setting \-\-log\-level=WARNING.
+.TP
+.B\-s, \-\-staging
+Staging mode. Sets \-\-acme\-server\-url \fI\%https://acme\-staging\-v02.api.letsencrypt.org/directory\fP and \-\-invalid\-ca\-cn\-list empty. Use this while playing around to avoid hitting rate limits!
+.TP
+.B\-\-syslog\-facility
+The syslog facility to use. Set this and syslog\-socket to enable logging to syslog.
+.TP
+.B\-\-syslog\-socket
+The syslog socket to connect to. Set this and syslog\-facility to enable logging to syslog.
+.TP
+.B\-\-tlsa\-port
+The service port number (like 443) for TLSA operations.
+.TP
+.B\-\-tlsa\-protocol
+The service protocol (like tcp) for TLSA operations.
+.TP
+.B\-\-tlsa\-type\-list
+Possible choices: 310, 311, 312
+.sp
+Enables a TLSA type for TLSA operations. Can be specified multiple times.
+.TP
+.B\-v, \-\-version
+Show version and exit.
+.UNINDENT
+.SS Sub\-commands:
+.SS check
+.sp
+Use the "check" command to check certificates, OCSP responses and TLSA records. Returns exit code 0 if all is well, and 1 if something needs attention.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder check [\-h] {certificate,tlsa} ...
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Positional Arguments
+.INDENT 0.0
+.TP
+.Bsubcommand
+Possible choices: certificate, tlsa
+.sp
+Specify what to check using one of the available check sub\-commands.
+.UNINDENT
+.SS Sub\-commands:
+.SS certificate
+.sp
+Tell certgrinder to check certificate validity for all configured domainsets. Returns exit code 1 if any problem is found, exit code 0 if all is well.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder check certificate [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS tlsa
+.sp
+Tell certgrinder to lookup TLSA records for the given port and protocol in the DNS and compare with what we have locally, for example: \(aqcertgrinder check tlsa 853 tcp\(aq
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder check tlsa [\-h] tlsa\-port tlsa\-protocol
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Positional Arguments
+.INDENT 0.0
+.TP
+.Btlsa\-port
+The port of the service, for example 443
+.TP
+.Btlsa\-protocol
+The protocol of the service, for example tcp
+.UNINDENT
+.SS get
+.sp
+Use the "get" command to get certificates and OCSP responses
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder get [\-h] {certificate} ...
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Positional Arguments
+.INDENT 0.0
+.TP
+.Bsubcommand
+Possible choices: certificate
+.sp
+Specify what to get using one of the available get sub\-commands
+.UNINDENT
+.SS Sub\-commands:
+.SS certificate
+.sp
+Tell certgrinder to get new certificate(s), regardless of their current state. Rarely needed, use \(aqperiodic\(aq command instead.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder get certificate [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS help
+.sp
+The "help" command just outputs the usage help
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder help [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS periodic
+.sp
+The "periodic" command checks certificates and renews them as needed. Meant to be run from cron or similar daily.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder periodic [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS show
+.sp
+Use the "show" command to show certificates, TLSA records, SPKI pins or configuration.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder show [\-h] {certificate,configuration,spki,tlsa} ...
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Positional Arguments
+.INDENT 0.0
+.TP
+.Bsubcommand
+Possible choices: certificate, configuration, spki, tlsa
+.sp
+Specify what to show using one of the available show sub\-commands
+.UNINDENT
+.SS Sub\-commands:
+.SS certificate
+.sp
+Tell certgrinder to output information about certificates.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder show certificate [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS configuration
+.sp
+Tell certgrinder to output the current configuration
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder show configuration [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS spki
+.sp
+Tell certgrinder to generate and print the pin\-sha256 spki pins for the public keys it manages.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder show spki [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS tlsa
+.sp
+Use the \(aqshow tlsa\(aq sub\-command to tell certgrinder to generate and print TLSA records for the given service, for example: \(aqcertgrinder show tlsa 443 tcp\(aq
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder show tlsa [\-h] tlsa\-port tlsa\-protocol
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Positional Arguments
+.INDENT 0.0
+.TP
+.Btlsa\-port
+The port of the service, for example 443
+.TP
+.Btlsa\-protocol
+The protocol of the service, for example tcp
+.UNINDENT
+.SS version
+.sp
+The "version" command just outputs the version of Certgrinder
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder version [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH CLASS METHODS
+.INDENT 0.0
+.TP
+.B class certgrinder.Certgrinder
+The Certgrinder client class.
+.INDENT 7.0
+.TP
+.B __init__() -> None
+Define the default config.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B check_certificate(certificate: Optional[cryptography.x509.base.Certificate] = None, public_key: Union[cryptography.hazmat.backends.openssl.rsa._RSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey, None] = None) -> bool
+Check certificate validity and returns True or False.
+.sp
+This method is called by self.grind() once per domainset when the "check certificate"
+subcommand is invoked.
+It reads the certificate from self.certificate_path if there is no certificate arg
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate to be checked
+.IP \(bu 2
+\fBpublic_key\fP \-\- The keypair the certificate is based on
+.UNINDENT
+.TP
+.B Returns
+True if everything is OK, False otherwise
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static check_certificate_expiry(certificate: cryptography.x509.base.Certificate, threshold_days: int) -> bool
+Check the remaining validity of the certificate.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate to check
+.IP \(bu 2
+\fBthreshold_days\fP \-\- The lowest number of remaining days of validity that is considered valid
+.UNINDENT
+.TP
+.B Returns
+True if remaining certificate lifetime is >= threshold_days, False if not
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static check_certificate_issuer(certificate: cryptography.x509.base.Certificate, invalid_ca_cn_list: List[str]) -> bool
+Check the issuer of the certificate.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate to check
+.IP \(bu 2
+\fBinvalid_ca_cn_list\fP \-\- The list of CA CommonName strings to consider invalid
+.UNINDENT
+.TP
+.B Returns
+True if the certificate issuer CN is not in invalid_ca_cn_list
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static check_certificate_public_key(certificate: cryptography.x509.base.Certificate, public_key: Union[cryptography.hazmat.backends.openssl.rsa._RSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey]) -> bool
+Make sure certificate has the specified public key.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate to check
+.IP \(bu 2
+\fBpublic_key\fP \-\- The public key
+.UNINDENT
+.TP
+.B Returns
+True if the public key matches, False if not
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static check_certificate_san_names(certificate: cryptography.x509.base.Certificate, san_names: List[str]) -> bool
+Make sure the certificate has the provided list of names as SAN.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate to check
+.IP \(bu 2
+\fBsan_names\fP \-\- A list of the names to expect
+.UNINDENT
+.TP
+.B Returns
+True if all san_names were found in the cert, and no others.
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static check_certificate_subject(certificate: cryptography.x509.base.Certificate, subject: str) -> bool
+Make sure the certificate has the specified subject.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate to check
+.IP \(bu 2
+\fBsubject\fP \-\- The subject to expect
+.UNINDENT
+.TP
+.B Returns
+True if the subject matches the cert, False if not
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B classmethod check_certificate_validity(certificate: cryptography.x509.base.Certificate, invalid_ca_cn_list: List[str], threshold_days: int, san_names: List[str], public_key: Union[cryptography.hazmat.backends.openssl.rsa._RSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey, None] = None, subject: str = \(aq\(aq) -> bool
+Perform a few sanity checks of the certificate.
+.INDENT 7.0
+.IP \(bu 2
+Check that the issuer is valid
+.IP \(bu 2
+Check that the certificate expiry is not exceeded
+.IP \(bu 2
+Check that the public key is correct
+.IP \(bu 2
+Check that the subject is correct
+.IP \(bu 2
+Check that the SubjectAltName data is correct
+.UNINDENT
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate to check
+.IP \(bu 2
+\fBinvalid_ca_cn_list\fP \-\- A list of CA CommonNames to consider invalid
+.IP \(bu 2
+\fBthreshold_days\fP \-\- The minimum number of remaining days lifetime to considered valid.
+.IP \(bu 2
+\fBsan_names\fP \-\- A list of domain names to expect in SubjectAltName of the certificate.
+.IP \(bu 2
+\fBkeypair\fP \-\- The keypair the certificate is for.
+.UNINDENT
+.TP
+.B Returns
+False if a problem is found, True if all is well.
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B check_tlsa() -> None
+The \(aqcheck tlsa\(aq subcommand method, called for each domainset by \fBself.grind()\fP\&.
+.sp
+Loops over the configured TLSA types and calls \fBself.verify_tlsa_record()\fP which
+does the heavy lifting.
+.INDENT 7.0
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B configure(userconfig: Dict[str, Union[str, int, bool, List[str]]]) -> None
+Merge and check configuration and configure logging.
+.sp
+Merge the supplied userconfig dict with the default config,
+checks for missing required settings, and configures logging and syslog.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBuserconfig\fP \-\- dict of the config to be merged with the default config
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static generate_csr(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey], domains: List[str]) -> cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest
+Generate and return a new CSR based on the public key and list of domains.
+.sp
+Only set CN since everything else is removed by LetsEncrypt in the certificate anyway.
+Add all domains in subjectAltName, including the one put into CN.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBkeypair\fP \-\- The keypair to base the CSR on
+.IP \(bu 2
+\fBdomains\fP \-\- A list of domains to put in the CSR. First in the list will be cert CN.
+.UNINDENT
+.TP
+.B Returns
+The CSR object
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static generate_private_key(keytype: str = \(aqrsa\(aq) -> Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey]
+Generate and returns a private key.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBkeytype\fP \-\- "rsa" for RSA key, "ed25519" for EC
+.TP
+.B Returns
+The keypair object
+.TP
+.B Raises
+\fBValueError\fP \-\- For unsupported keytypes
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static generate_spki(derkey: bytes) -> str
+Generate and return a pin\-sha256 spki hpkp style pin for the provided public key.
+.INDENT 7.0
+.TP
+.B OpenSSL equivalent command is:
+openssl x509 \-in example.com.crt \-pubkey \-noout | openssl pkey \-pubin \-outform der | openssl dgst \-sha256 \-binary | openssl base64
+.UNINDENT
+.INDENT 7.0
+.TP
+.B Parameters
+\fBderkey\fP \-\- The bytes representing the public key in DER format
+.TP
+.B Returns
+A string of the SPKI pin
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static generate_tlsa_record(derkey: bytes, tlsatype: str) -> str
+Generate and return the data part of a TLSA record of the requested type.
+.sp
+TLSA record is generated from the DER formatted public key supplied.
+Returns an uppercase hex string.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBderkey\fP \-\- The bytes representing the public key in DER format
+.IP \(bu 2
+\fBtlsatype\fP \-\- The TLSA type (like "310")
+.UNINDENT
+.TP
+.B Returns
+String of the TLSA data
+.TP
+.B Raises
+\fBValueError\fP \-\- If an unknown TLSA type is passed
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_certgrinderd_command() -> List[str]
+Return the certgrinderd command to run.
+.sp
+Adds \fB\-\-log\-level\fP with the current \fBself.conf["log\-level"]\fP\&.
+.INDENT 7.0
+.TP
+.B Returns
+A list of the elements which make up the \fBcertgrinderd\fP command
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_certificate(csr: Optional[cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest] = None, stdout: Optional[bytes] = None) -> bool
+Get a new certificate for self.domainset.
+.sp
+This methods gets a new certificate regardless of the status of any
+existing certificate. It is called by \fBself.periodic()\fP as needed.
+It can also be called by the \fBget certificate\fP subcommand.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcsr\fP \-\- The CSR to use instead of generating one
+.IP \(bu 2
+\fBstdout\fP \-\- The stdout bytes to use instead of calling self.run_certgrinder(csr)
+.UNINDENT
+.TP
+.B Returns
+False something goes wrong, True if all is well
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static get_der_pubkey(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey]) -> bytes
+Return the DER formatted publickey.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBkeypair\fP \-\- The keypair which contains the public key
+.TP
+.B Returns
+The bytes representing the DER formatted public key
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B grind(args: argparse.Namespace) -> None
+Loop over domainsets in \fBself.conf["domain\-list"]\fP and call args.method for each.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static load_certificate(path: str) -> cryptography.x509.base.Certificate
+Reads PEM certificate data from the path and returns the object.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBpath\fP \-\- The path to read the certificate from
+.TP
+.B Returns
+The certificate object
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B load_domainset(domainset: List[str]) -> None
+Prepare paths and create/load private key.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBdomainset\fP \-\- The list of domains to load
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static load_keypair(path: str) -> Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey]
+Load keypair bytes from disk, load key and return the object.
+.sp
+Fixes keypair permissions to 640 if they are not 640.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBpath\fP \-\- The path to load the keypair from
+.TP
+.B Returns
+The keypair object
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static lookup_tlsa_record(domain: str, port: int, protocol: str, tlsatype: Optional[str] = None, nameserver: str = \(aq\(aq) -> Optional[List[str]]
+Lookup TLSA records in DNS for the configured domain, port, and protocol.
+.sp
+Loop over any responses and look for the requested tlsatype.
+Return a list of results, optionally limited to the specified tlsatype, or None.
+Use system resolver unless nameserver is specified.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBdomain\fP \-\- The service domain name (like \fBmail.example.com\fP)
+.IP \(bu 2
+\fBport\fP \-\- The service port (like \fB443\fP)
+.IP \(bu 2
+\fBprotocol\fP \-\- The service protocol (like \fBtcp\fP)
+.IP \(bu 2
+\fBtlsatype\fP \-\- The TLSA type (like \fB312\fP)
+.IP \(bu 2
+\fBnameserver\fP \-\- The DNS server IP to use instead of system resolver (optional)
+.UNINDENT
+.TP
+.B Returns
+A list of records or None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B classmethod output_spki(derkey: bytes) -> None
+Get and print the spki pin for the supplied DER public key.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBderkey\fP \-\- The bytes representation of the DER formatted public key
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B classmethod output_tlsa_record(derkey: bytes, domain: str, port: int, protocol: str, tlsatype: str, warning: bool = False) -> None
+Output the TLSA record for the given DER key, domain, port, protocol and tlsatype.
+.sp
+Call \fBself.generate_tlsa()\fP and output the result formatted as a DNS record
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBderkey\fP \-\- The bytes representation the public key in DER format
+.IP \(bu 2
+\fBdomain\fP \-\- The service domain name (like \fBmail.example.com\fP)
+.IP \(bu 2
+\fBport\fP \-\- The service port (like \fB443\fP)
+.IP \(bu 2
+\fBprotocol\fP \-\- The service protocol (like \fBtcp\fP)
+.IP \(bu 2
+\fBtlsatype\fP \-\- The TLSA type (like \fB312\fP)
+.IP \(bu 2
+\fBwarning\fP \-\- Set True to output at level \fBWARNING\fP (default \fBINFO\fP)
+.UNINDENT
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B parse_certgrinderd_output(certgrinderd_stdout: bytes, csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]]
+Split output chain into cert and intermediate.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertgrinderd_stdout\fP \-\- The bytes of the stdout from the certgrinderd call
+.IP \(bu 2
+\fBcsr\fP \-\- The CSR this certificate was issued from
+.UNINDENT
+.TP
+.B Returns
+A tuple of certificate, intermediate if the certificate chain is valid, None otherwise
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B periodic() -> bool
+The periodic method performs periodic maintenance tasks.
+.sp
+This method is called by the \(aqperiodic\(aq command, from cron or similar.
+It starts out by sleeping for a random period and then checks certificates and renews as needed.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B run_certgrinderd(csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[bytes]
+Run the configured \fBself.conf["certgrinderd"]\fP command with the CSR on stdin.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBcsr\fP \-\- The CSR to pass to the certgrinderd command
+.TP
+.B Returns
+The bytes representing the stdout from the subprocess call
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B run_post_renew_hooks() -> bool
+Loops over configured post_renew_hooks and runs them.
+.sp
+If the hook needs sudo or doas or similar that must be included in the command.
+.INDENT 7.0
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static save_certificate(certificate: cryptography.x509.base.Certificate, path: str, intermediate: Optional[cryptography.x509.base.Certificate] = None) -> None
+Save the PEM certificate to the path, optionally with an intermediate.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate to save
+.IP \(bu 2
+\fBpath\fP \-\- The path to save the certificate in
+.IP \(bu 2
+\fBintermediate\fP \-\- The intermediate to write after the certificate (if any)
+.UNINDENT
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B classmethod save_concat_certkey(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey], certificate: cryptography.x509.base.Certificate, intermediate: cryptography.x509.base.Certificate, path: str) -> None
+Create a single file with the private key, the cert and the intermediate, in that order.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBkeypair\fP \-\- The keypair to save in the concat file
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate to save in the concat file
+.IP \(bu 2
+\fBintermediate\fP \-\- The intermediate to save in the concat file
+.IP \(bu 2
+\fBpath\fP \-\- The path to save the concat file in
+.UNINDENT
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static save_csr(csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest, path: str) -> None
+Save the PEM version of the CSR to the path.
+.sp
+chmods the file 644 after writing.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcsr\fP \-\- The CSR to be saved
+.IP \(bu 2
+\fBpath\fP \-\- The path to save the CSR to
+.UNINDENT
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static save_keypair(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey], path: str) -> None
+Save keypair to disk.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBkeypair\fP \-\- The keypair to save
+.IP \(bu 2
+\fBpath\fP \-\- The path to save the keypair in
+.UNINDENT
+.TP
+.B Returns
+None
+.TP
+.B Raises
+\fBValueError\fP \-\- For unsupported keytypes
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B show_certificate() -> None
+The \fBshow certificate\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
+.INDENT 7.0
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B show_spki() -> None
+The \fBshow spki\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
+.sp
+Call \fBself.output_spki()\fP with the DER formatted public key and output the result.
+.INDENT 7.0
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B show_tlsa() -> None
+The \(aqshow tlsa\(aq subcommand method, called for each domainset by \fBself.grind()\fP\&.
+.INDENT 7.0
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B classmethod verify_tlsa_record(derkey: bytes, domain: str, port: int, protocol: str, tlsatype: str, nameserver: str = \(aq\(aq) -> bool
+Check the TLSA records for the port/protocol/domain and DER key in the DNS.
+.sp
+Output the info needed to fix things when missing records are found.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBderkey\fP \-\- The bytes representation the public key in DER format
+.IP \(bu 2
+\fBdomain\fP \-\- The service domain name (like \fBmail.example.com\fP)
+.IP \(bu 2
+\fBport\fP \-\- The service port (like \fB443\fP)
+.IP \(bu 2
+\fBprotocol\fP \-\- The service protocol (like \fBtcp\fP)
+.IP \(bu 2
+\fBtlsatype\fP \-\- The TLSA type (like \fB312\fP)
+.IP \(bu 2
+\fBnameserver\fP \-\- The DNS server IP to use instead of system resolver (optional)
+.UNINDENT
+.TP
+.B Returns
+True if all is well, False if one or more problems are found
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SH AUTHOR
+Thomas Steen Rasmussen
+.SH COPYRIGHT
+2020, Thomas Steen Rasmussen
+.\" Generated by docutils manpage writer.
+.

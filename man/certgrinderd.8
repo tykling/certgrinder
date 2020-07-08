@@ -1,0 +1,498 @@
+.\" Man page generated from reStructuredText.
+.
+.TH "CERTGRINDERD" "8" "Jul 08, 2020" "0.14.0-dev" "Certgrinder"
+.SH NAME
+certgrinderd \- Manpage for certgrinderd
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.sp
+The Certgrinder server \fBcertgrinderd\fP takes care of receiving the \fBCSR\fP, running Certbot, serving challenges, and finally outputs a certificate. It never acts on its own, it only does something when a Certgrinder client calls it with a CSR on stdin, usually over SSH.
+.sp
+The following sections explain the steps you need to setup a Certgrinder server.
+.SH INSTALL CERTGRINDER SERVER
+.sp
+Create a VM or Jail or Docker thing or whatever somewhere. This will be your Certgrinder server. Give it a hostname like \fBcertgrinder.example.com\fP\&.
+.sp
+This will be the hostname your Certgrinder clients use to SSH into (if you use SSH), and the hostname you use to serve HTTP challenges (if you use HTTP challenges).
+.sp
+Create DNS records (A+AAAA, and if you use SSH then an SSHFP record wouldn\(aqt hurt) for the new hostname and you should be ready to begin the install.
+.SH CREATE USER
+.sp
+Create a dedicated user to run the Certgrinder server, usually the username is just \fBcertgrinderd\fP\&. The user needs \fBsudo\fP access to run the \fBcertbot\fP binary, and to set a couple of environment variables. This works:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinderd ALL=(ALL) NOPASSWD: /usr/local/bin/certbot
+Defaults env_keep += "ACMEZONE WEBROOT"
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH INSTALL CERTGRINDERD
+.sp
+You can install \fBcertgrinderd\fP from pip with \fBpip install certgrinderd\fP\&. It will pull in the dependencies it needs automatically. Create a venv for it if you don\(aqt want to pollute the global Python env.
+.sp
+You can also checkout the Github repo and install the deps from \fBrequirements.txt\fP by hand if you prefer. If you want to install with pip directly from Github the following may help:
+\fBpip install "git+https://github.com/tykling/certgrinder/#egg=certgrinderd&subdirectory=server"\fP
+.sp
+The Certgrinder server needs to be reachable from the outside world on port 53/80 if you plan to serve DNS/HTTP challenges locally. It also needs to be accessible over SSH from all your Certgrinder clients if you plan to use SSH.
+.SH CONFIGURATION
+.sp
+Configuration of \fBcertgrinderd\fP can be done using command\-line options, or a configuration file, or a combination of the two.
+.sp
+The \fBcertgrinderd\fP configuration file is in YAML format. An example config named \fBcertgrinderd.conf.dist\fP can be found in the distribution. use \fB\-\-config\-file\fP or \fB\-f\fP to specify the config file location.
+.sp
+Each config item can be specified either in the YAML config file as a \fBkey: value\fP pair, or on the commandline as \fB\-\-key value\fP \- the latter overriding the former if both are present. For example, if the configfile has \fBlog\-level: INFO\fP and the command\-line has \fBlog\-level: DEBUG\fP then the effective log\-level would be \fBDEBUG\fP\&.
+.sp
+This is an alphabetical list of the configurable options:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.TP
+.B \fIacme\-email\fP
+The email to use for the ACME account creation. Only required for the first run.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIacme\-server\-url\fP
+The URL for the ACME server.
+.sp
+Default: \fBhttps://acme\-v02.api.letsencrypt.org/directory\fP
+.TP
+.B \fIacme\-zone\fP
+The DNS zone to pass to auth\-hook script as environment variable ACMEZONE. Leave this unset to disable DNS\-01 challenges.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIauth\-hook\fP
+The script to run to prepare challenges before running Certbot.
+.sp
+Default: \fBmanual\-auth\-hook.sh\fP
+.TP
+.B \fIcertbot\-command\fP
+The Certbot command to run between the auth hook and the cleanup hook.
+.sp
+Default: \fB/usr/local/bin/sudo /usr/local/bin/certbot\fP
+.TP
+.B \fIcertbot\-config\-dir\fP
+The path to pass to Certbot as \fB\-\-config\-dir\fP\&.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIcertbot\-logs\-dir\fP
+The path to pass to Certbot as \fB\-\-logs\-dir\fP\&.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIcertbot\-work\-dir\fP
+The path to pass to Certbot as \fB\-\-logs\-dir\fP\&.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIcleanup\-hook\fP
+The script to run to cleanup challenges after running Certbot.
+.sp
+Default: \fBmanual\-cleanup\-hook.sh\fP
+.TP
+.B \fIconfig\-file\fP
+The path to the configuration file. The file is in YAML format.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIdebug\fP
+Enables debug mode. This is the same as setting \-\-log\-level to DEBUG. Outputs lots info about the internal workings of certgrinderd.
+.sp
+Default: \fBFalse\fP
+.TP
+.B \fIlog\-level\fP
+Sets the verbosity level for console and syslog logging. One of DEBUG, INFO, WARNING, ERROR, CRITICAL.
+.sp
+Default: \fBINFO\fP
+.TP
+.B \fIpid\-dir\fP
+The directory to place the certgrinderd PID file in.
+.sp
+Default: \fB/tmp\fP
+.TP
+.B \fIskip\-acme\-server\-cert\-verify\fP
+Set to skip verification of the ACME servers TLS certificate. Used for testing, do not use in real world.
+.sp
+Default: \fBFalse\fP
+.TP
+.B \fIstaging\fP
+Enable staging mode. To make Certbot use the LetsEncrypt staging servers.
+.sp
+Default: \fBFalse\fP
+.TP
+.B \fIsyslog\-facility\fP
+Set this and syslog\-socket to enable logging to syslog. Must be a value supported by \fBlogging.handlers.SysLogHandler\fP like \fBLOG_USER\fP or \fBLOG_LOCAL0\fP\&.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIsyslog\-socket\fP
+Set this and syslog\-facility to enable logging to syslog.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fItemp\-dir\fP
+Set this to the directory to use for temporary files (CSR and certificates). Directory should be owned by the user running \fBcertgrinderd\fP\&. A directory will be created and deleted inside this temp\-dir for each run. Leave blank to create one automatically.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIweb\-root\fP
+The path to pass to the auth\-hook script as environment variable WEBROOT. Leave this blank to disable HTTP\-01 challenges.
+.sp
+Default: \fBNone\fP
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+Finally the permitted domains for the current client must be specified as an environment variable (see next section).
+.SH RESTRICTING CLIENT HOSTNAMES
+.sp
+To determine whether a Certgrinder client is authorised to get a certificate for a given list of hostnames \fBcertgrinderd\fP checks the environment variable named \fBCERTGRINDERD_DOMAINSETS\fP which must contain a semicolon\-seperated list of comma\-seperated lists of hostnames permitted for the current client.
+.sp
+For example, if the Certgrinder client was a webserver with two vhosts, one with the name \fBexample.net\fP and another vhost with the two names \fBexample.com\fP and \fBwww.example.com\fP\&. In this case the environment variable \fBCERTGRINDERD_DOMAINSETS="example.net;example.com,www.example.com"\fP would permit the client to get the two certificates it needs, and nothing else.
+.sp
+The list of hostnames is case insensitive. IDNA names need to be in ascii format, meaning \fBxn\-\-plse\-gra.example\fP rather than \fBpølse.example\fP\&. The order of the hostnames in the list does not matter.
+.SH CONFIGURE SSH ACCESS
+.sp
+Usually Certgrinder clients connect to the Certgrinder server using SSH, but other connection methods can be used if needed. The rest of this section is about configuring SSH access for clients.
+.sp
+Each Certgrinder client must generate an SSH key which is to be added to \fB~/.ssh/authorized_keys\fP on the Certgrinder server. Each entry must be restricted with:
+.INDENT 0.0
+.IP \(bu 2
+A \fBfrom=\fP specifying the IP the Certgrinder client connects from (optional but recommended).
+.IP \(bu 2
+An \fBenvironment=\fP restricting which names it may ask for, see above (required).
+.IP \(bu 2
+\fBcommand=\fP to restrict the command it can run (optional but recommended). Remember \fB$SSH_ORIGINAL_COMMAND\fP so \fBcertgrinder\fP can set \fBcertgrinderd\fP command\-line arguments.
+.IP \(bu 2
+The \fBrestrict\fP keyword to limit tunneling and forwarding and such (optional but recommended). The \fBrestrict\fP option was added to OpenSSH in version 7.4, it might not be available everywhere.
+.UNINDENT
+.sp
+Something like this works:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+from="2001:DB8::15",environment="CERTGRINDERD_DOMAINSETS=example.com,www.example.com;example.net",command="/path/to/certgrinderd $SSH_ORIGINAL_COMMAND",restrict ssh\-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOegnR+qnK2FEoaSrVwHgCIxjFkVEbW4VO31/Hd2mAwk ansible\-generated on webproxy2.example.com
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+To make the \fBenvironment=\fP foo work the option \fBPermitUserEnvironment=CERTGRINDERD_DOMAINSETS\fP needs to be added to \fBsshd_config\fP\&.
+.SH AUTH AND CLEANUP HOOKS
+.sp
+The configured \fBauth\-hook\fP and \fBcleanup\-hook\fP scripts can be adapted as needed to update whatever local or remote web\- or DNS\-server you decide to use to serve challenges.
+.sp
+Both scripts get the same environment variables to work with:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.TP
+.B \fI$CERTBOT_DOMAIN\fP
+The domain being authenticated, like www.example.com
+.TP
+.B \fI$CERTBOT_VALIDATION\fP
+The validation string (the secret which LE looks for)
+.TP
+.B \fI$CERTBOT_TOKEN\fP
+The filename containing the secret (only relevant for HTTP\-01)
+.TP
+.B \fI$ACMEZONE\fP
+The DNS zone used for challenges (only relevant for DNS\-01)
+.TP
+.B \fI$WEBROOT\fP
+The path to the webroot used for challenges (only relevant for HTTP\-01)
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+Both scripts must be able to handle the challenge type(s) you use. The same script will be called first for DNS\-01 (if enabled), then for HTTP\-01 (if enabled).
+.SH TESTING
+.sp
+When the server has been configured with hooks you can test from a client using just SSH and a manually generated CSR, with something like: \fBcat mail4.example.com.csr | ssh certgrinderd@certgrinder.example.org \-T \-\- \-\-staging\fP where \fB\-T\fP is to prevent SSH from allocating a TTY on the server, \fB\-\-\fP is to mark the end of the SSH args, and \fB\-\-staging\fP is to make \fBcertgrinderd\fP use the LetsEncrypt staging servers. If all goes well it should output some logging and a certificate chain.
+.SH COMMAND LINE USAGE
+.sp
+certgrinderd version 0.14.0\-dev. See the README.md file for more info.
+
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+usage: certgrinderd [\-h] [\-\-acme\-email ACME\-EMAIL]
+                    [\-\-acme\-server\-url ACME\-SERVER\-URL] [\-z ACME\-ZONE]
+                    [\-A AUTH\-HOOK] [\-\-certbot\-command CERTBOT\-COMMAND]
+                    [\-\-certbot\-config\-dir CERTBOT\-CONFIG\-DIR]
+                    [\-\-certbot\-logs\-dir CERTBOT\-LOGS\-DIR]
+                    [\-\-certbot\-work\-dir CERTBOT\-WORK\-DIR] [\-C CLEANUP\-HOOK]
+                    [\-f CONFIG\-FILE] [\-d]
+                    [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-p PID\-DIR]
+                    [\-\-skip\-acme\-server\-cert\-verify] [\-s]
+                    [\-\-syslog\-facility SYSLOG\-FACILITY]
+                    [\-\-syslog\-socket SYSLOG\-SOCKET] [\-t TEMP\-DIR]
+                    [\-w WEB\-ROOT]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Named Arguments
+.INDENT 0.0
+.TP
+.B\-\-acme\-email
+The email for the ACME account.
+.TP
+.B\-\-acme\-server\-url
+The url for the ACME server to use.
+.TP
+.B\-z, \-\-acme\-zone
+The DNS zone to pass to the auth hook script as env. var. ACMEZONE. For DNS\-01 challenges.
+.TP
+.B\-A, \-\-auth\-hook
+The hook script to call to prepare auth challenges before calling Certbot
+.TP
+.B\-\-certbot\-command
+The Certbot command to call between auth hook and cleanup hook
+.TP
+.B\-\-certbot\-config\-dir
+The path to pass to Certbot as \-\-config\-dir
+.TP
+.B\-\-certbot\-logs\-dir
+The path to pass to Certbot as \-\-logs\-dir
+.TP
+.B\-\-certbot\-work\-dir
+The path to pass to Certbot as \-\-work\-dir
+.TP
+.B\-C, \-\-cleanup\-hook
+The hook script to call to clean up auth challenges after calling Certbot
+.TP
+.B\-f, \-\-config\-file
+The path to the certgrinderd config file to use, in YML format.
+.TP
+.B\-d, \-\-debug
+Debug mode. Equal to setting \-\-log\-level=DEBUG.
+.TP
+.B\-l, \-\-log\-level
+Possible choices: DEBUG, INFO, WARNING, ERROR, CRITICAL
+.sp
+Logging level. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Defaults to INFO.
+.TP
+.B\-p, \-\-pid\-dir
+The directory to store the PID file in
+.TP
+.B\-\-skip\-acme\-server\-cert\-verify
+Do not verify the ACME servers certificate
+.TP
+.B\-s, \-\-staging
+Staging mode. Equal to setting \-\-acme\-server\-url \fI\%https://acme\-staging\-v02.api.letsencrypt.org/directory\fP
+.TP
+.B\-\-syslog\-facility
+The facility to use for syslog messages
+.TP
+.B\-\-syslog\-socket
+The socket to use for syslog messages
+.TP
+.B\-t, \-\-temp\-dir
+The directory to store temporary files in
+.TP
+.B\-w, \-\-web\-root
+The path to pass to the auth hook script as env WEBROOT to use for HTTP\-01 challenges.
+.UNINDENT
+.SH CLASS METHODS
+.INDENT 0.0
+.TP
+.B class certgrinderd.Certgrinderd(userconfig: Optional[Dict[str, Union[str, bool, None]]] = None)
+The Certgrinderd server class.
+.INDENT 7.0
+.TP
+.B __init__(userconfig: Optional[Dict[str, Union[str, bool, None]]] = None) -> None
+Merge userconfig with defaults and configure logging.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBuserconfig\fP \-\- A dict of configuration to merge with default config
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static check_csr(csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> bool
+Check that this CSR is valid, all things considered.
+.sp
+First check that the CSR has exactly one \fBCommonName\fP, and that that CN is
+also present in the list of \fBSubjectAltNames\fP\&.
+.sp
+Then make sure that the environment var \fBCERTGRINDERD_DOMAINSETS\fP exists
+and contains all the names from the CSR in one of the domainsets.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBcsr\fP \-\- The CSR object
+.TP
+.B Returns
+True if the CSR is OK, False otherwise
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_certbot_command(challengetype: str, csrpath: str, fullchainpath: str, certpath: str, chainpath: str) -> List[str]
+Put the certbot command together.
+.sp
+Start with \fBself.conf["certbot\-command"]\fP and append all the needed options.
+.sp
+Optionally add \fB\-\-email\fP and a bunch of certbot settings as needed.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBchallengetype\fP \-\- The type of challenge, \fBdns\fP or \fBhttp\fP
+.IP \(bu 2
+\fBcsrpath\fP \-\- The path to the CSR
+.IP \(bu 2
+\fBfullchainpath\fP \-\- The path to save the certificate+intermediate
+.IP \(bu 2
+\fBcertpath\fP \-\- The path to save the certificate (without intermediate)
+.IP \(bu 2
+\fBchainpath\fP \-\- The path to save the intermediate (without certificate)
+.UNINDENT
+.TP
+.B Returns
+The certbot command as a list
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_certificate(csrpath: str) -> None
+Get a cert using \fBDNS\-01\fP or \fBHTTP\-01\fP by calling \fBself.run_certbot()\fP for each.
+.sp
+If \fBself.conf["acme\-zone"]\fP is set then \fBDNS\-01\fP is attempted. Return if it
+results in a new certificate.
+.sp
+If \fBself.conf["web\-root"]\fP is set then \fBHTTP\-01\fP is attempted. Return if it
+results in a new certificate.
+.sp
+If there is still no certificate log an error and return anyway.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBcsrpath\fP \-\- The path to the CSR
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B grind() -> None
+Load the CSR, use it to get a certificate, and cleanup.
+.sp
+Calls \fBself.parse_csr()\fP followed by \fBself.check_csr()\fP, and then exists if any
+problems are found with the CSR.
+.sp
+Then \fBself.get_certificate()\fP is called, which in turn calls Certbot, which writes
+the certificate to stdout.
+.sp
+Finally the CSR is deleted.
+.INDENT 7.0
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static parse_csr(csrstring: str = \(aq\(aq) -> cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest
+Parse CSR with cryptography.x509.load_pem_x509_csr(), return CSR object.
+.sp
+Takes the CSR data from \fBsys.stdin\fP if the \fBcsrstring\fP argument is empty.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBcsrstring\fP \-\- The PEM formatted CSR as a string (optional)
+.TP
+.B Returns
+The CSR object
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B run_certbot(command: List[str], env: Dict[str, str], fullchainpath: str) -> bool
+Call certbot, check exitcode, output cert, return bool success.
+.sp
+Do not log an error message regardless of Certbot exitcode. The calling method
+will take care of that.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcommand\fP \-\- A list of certbot command elements
+.IP \(bu 2
+\fBenv\fP \-\- A dictionary of the environment to pass to subprocess.run()
+.IP \(bu 2
+\fBfullchainpath\fP \-\- The path to read the certificate+chain from after Certbot runs
+.UNINDENT
+.TP
+.B Returns
+True if Certbot command exitcode was 0, False otherwise
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static save_csr(csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest, path: str) -> None
+Save the CSR object to the path in PEM format.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcsr\fP \-\- The CSR object
+.IP \(bu 2
+\fBpath\fP \-\- The path to save it in
+.UNINDENT
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SH AUTHOR
+Thomas Steen Rasmussen
+.SH COPYRIGHT
+2020, Thomas Steen Rasmussen
+.\" Generated by docutils manpage writer.
+.
