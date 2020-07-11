@@ -11,7 +11,10 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.14.0 (unreleased)
 --------------------
-- No changes
+
+Added
+~~~~~
+- Manpage to MANIFEST.in to include it in the distribution
 
 
 v0.13.1 (7-jul-2020)

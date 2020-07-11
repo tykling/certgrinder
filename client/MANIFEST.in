@@ -1,2 +1,2 @@
 include certgrinder/certgrinder.conf.dist
-
+include man/certgrinder.8
