@@ -359,9 +359,6 @@ class Certgrinderd:
     ) -> bool:
         """Call certbot, check exitcode, output cert, return bool success.
 
-        Do not log an error message regardless of Certbot exitcode. The calling method
-        will take care of that.
-
         Args:
             command: A list of certbot command elements
             env: A dictionary of the environment to pass to subprocess.run()

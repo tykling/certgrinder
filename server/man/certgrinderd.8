@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDERD" "8" "Jul 11, 2020" "0.14.0-dev" "Certgrinder"
+.TH "CERTGRINDERD" "8" "Jul 12, 2020" "0.14.0-dev" "Certgrinder"
 .SH NAME
 certgrinderd \- Manpage for certgrinderd
 .
@@ -452,9 +452,6 @@ The CSR object
 .TP
 .B run_certbot(command: List[str], env: Dict[str, str], fullchainpath: str) -> bool
 Call certbot, check exitcode, output cert, return bool success.
-.sp
-Do not log an error message regardless of Certbot exitcode. The calling method
-will take care of that.
 .INDENT 7.0
 .TP
 .B Parameters
