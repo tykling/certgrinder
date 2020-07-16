@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDER" "8" "Jul 12, 2020" "0.14.0-dev" "Certgrinder"
+.TH "CERTGRINDER" "8" "Jul 16, 2020" "0.14.0-dev" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .
@@ -316,7 +316,7 @@ usage: certgrinder [\-h] [\-\-certgrinderd CERTGRINDERD]
                    [\-\-cert\-renew\-threshold\-days CERT\-RENEW\-THRESHOLD\-DAYS]
                    [\-d] [\-D DOMAIN\-LIST]
                    [\-\-invalid\-ca\-cn\-list INVALID\-CA\-CN\-LIST]
-                   [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-f CONFIG\-FILE]
+                   [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-c CONFIG\-FILE]
                    [\-n NAME\-SERVER] [\-\-now] [\-\-path PATH]
                    [\-\-periodic\-sleep\-minutes PERIODIC\-SLEEP\-MINUTES]
                    [\-p PID\-DIR] [\-\-post\-renew\-hooks POST\-RENEW\-HOOKS] [\-q]
@@ -360,8 +360,8 @@ Possible choices: DEBUG, INFO, WARNING, ERROR, CRITICAL
 .sp
 Logging level. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Defaults to INFO.
 .TP
-.B\-f, \-\-config\-file
-The path to the certgrinder.yml config file to use, default ~/certgrinder.yml
+.B\-c, \-\-config\-file
+The path to the certgrinder.yml config file to use
 .TP
 .B\-n, \-\-name\-server
 Tell certgrinder to use this DNS server IP to lookup TLSA records. Only relevant with \-c / \-\-checktlsa. Only v4/v6 IPs, no hostnames.

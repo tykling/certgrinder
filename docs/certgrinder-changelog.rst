@@ -11,7 +11,10 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.14.0-dev (unreleased)
 ------------------------
-- No changes
+
+Changed
+~~~~~~~
+- Change short command for --config-file from -f to -c
 
 
 v0.13.2 (11-jul-2020)

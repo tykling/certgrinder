@@ -1499,10 +1499,10 @@ def get_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
-        "-f",
+        "-c",
         "--config-file",
         dest="config-file",
-        help="The path to the certgrinder.yml config file to use, default ~/certgrinder.yml",
+        help="The path to the certgrinder.yml config file to use",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
