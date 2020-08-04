@@ -16,6 +16,9 @@ Changed
 ~~~~~~~
 - Change short command for --config-file from -f to -c
 
+Fixed
+~~~~~
+- Changed certgrinder syslog ident from "certgrinderd" to "certgrinder"
 
 v0.13.2 (11-jul-2020)
 ---------------------

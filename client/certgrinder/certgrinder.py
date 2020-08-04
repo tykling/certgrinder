@@ -153,7 +153,7 @@ class Certgrinder:
             syslog_handler = logging.handlers.SysLogHandler(
                 address=str(self.conf["syslog-socket"]), facility=facility
             )
-            syslog_format = logging.Formatter("certgrinderd: %(message)s")
+            syslog_format = logging.Formatter("certgrinder: %(message)s")
             syslog_handler.setFormatter(syslog_format)
             logger.addHandler(syslog_handler)
             # usually SysLogHandler is lazy and doesn't connect the socket until
