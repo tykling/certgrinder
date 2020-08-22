@@ -19,7 +19,11 @@ def pebble_server():
     print("Getting pebble sources ...")
     proc = subprocess.run(
         args=[shutil.which("go"), "get", "-u", "github.com/letsencrypt/pebble/..."],
-        env={"GOPATH": pathlib.Path.home() / "go"},
+        env={
+            "GOPATH": pathlib.Path.home() / "go",
+            "PATH": "/bin:/usr/bin:/usr/local/bin:"
+            + str(pathlib.Path(shutil.which("git")).parent),
+        },
     )
     assert proc.returncode == 0
 
