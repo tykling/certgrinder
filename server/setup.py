@@ -28,6 +28,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.7",
-    install_requires=["certbot", "PyYAML"],
+    install_requires=["certbot", "PyYAML", "requests"],
     include_package_data=True,
 )

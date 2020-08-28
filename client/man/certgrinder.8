@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDER" "8" "Aug 23, 2020" "0.14.0-dev" "Certgrinder"
+.TH "CERTGRINDER" "8" "Aug 28, 2020" "0.14.0-dev" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .
@@ -416,7 +416,7 @@ Use the "check" command to check certificates, OCSP responses and TLSA records. 
 .sp
 .nf
 .ft C
-certgrinder check [\-h] {certificate,tlsa} ...
+certgrinder check [\-h] {certificate,ocsp,tlsa} ...
 .ft P
 .fi
 .UNINDENT
@@ -425,7 +425,7 @@ certgrinder check [\-h] {certificate,tlsa} ...
 .INDENT 0.0
 .TP
 .Bsubcommand
-Possible choices: certificate, tlsa
+Possible choices: certificate, ocsp, tlsa
 .sp
 Specify what to check using one of the available check sub\-commands.
 .UNINDENT
@@ -439,6 +439,19 @@ Tell certgrinder to check certificate validity for all configured domainsets. Re
 .nf
 .ft C
 certgrinder check certificate [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS ocsp
+.sp
+Tell certgrinder to check the OCSP response validity for certificates for all configured domainsets. Returns exit code 1 if any problem is found, exit code 0 if all is well.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder check ocsp [\-h]
 .ft P
 .fi
 .UNINDENT
@@ -473,7 +486,7 @@ Use the "get" command to get certificates and OCSP responses
 .sp
 .nf
 .ft C
-certgrinder get [\-h] {certificate} ...
+certgrinder get [\-h] {certificate,ocsp} ...
 .ft P
 .fi
 .UNINDENT
@@ -482,7 +495,7 @@ certgrinder get [\-h] {certificate} ...
 .INDENT 0.0
 .TP
 .Bsubcommand
-Possible choices: certificate
+Possible choices: certificate, ocsp
 .sp
 Specify what to get using one of the available get sub\-commands
 .UNINDENT
@@ -496,6 +509,19 @@ Tell certgrinder to get new certificate(s), regardless of their current state. R
 .nf
 .ft C
 certgrinder get certificate [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS ocsp
+.sp
+Tell certgrinder to get OCSP responses for the configured domainset(s). Rarely needed, use \(aqperiodic\(aq command instead.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder get ocsp [\-h]
 .ft P
 .fi
 .UNINDENT
@@ -534,7 +560,7 @@ Use the "show" command to show certificates, TLSA records, SPKI pins or configur
 .sp
 .nf
 .ft C
-certgrinder show [\-h] {certificate,configuration,spki,tlsa} ...
+certgrinder show [\-h] {certificate,configuration,ocsp,spki,tlsa} ...
 .ft P
 .fi
 .UNINDENT
@@ -543,7 +569,7 @@ certgrinder show [\-h] {certificate,configuration,spki,tlsa} ...
 .INDENT 0.0
 .TP
 .Bsubcommand
-Possible choices: certificate, configuration, spki, tlsa
+Possible choices: certificate, configuration, ocsp, spki, tlsa
 .sp
 Specify what to show using one of the available show sub\-commands
 .UNINDENT
@@ -570,6 +596,19 @@ Tell certgrinder to output the current configuration
 .nf
 .ft C
 certgrinder show configuration [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS ocsp
+.sp
+Tell certgrinder to output information about OCSP responses.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder show ocsp [\-h]
 .ft P
 .fi
 .UNINDENT
@@ -782,6 +821,16 @@ False if a problem is found, True if all is well.
 .UNINDENT
 .INDENT 7.0
 .TP
+.B check_ocsp() -> bool
+The \fBcheck ocsp\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
+.INDENT 7.0
+.TP
+.B Returns
+True if the OCSP response was found, False otherwise
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
 .B check_tlsa() -> None
 The \(aqcheck tlsa\(aq subcommand method, called for each domainset by \fBself.grind()\fP\&.
 .sp
@@ -890,11 +939,14 @@ String of the TLSA data
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_certgrinderd_command() -> List[str]
+.B get_certgrinderd_command(subcommand: List[str]) -> List[str]
 Return the certgrinderd command to run.
 .sp
 Adds \fB\-\-log\-level\fP with the current \fBself.conf["log\-level"]\fP\&.
 .INDENT 7.0
+.TP
+.B Parameters
+\fBsubcommand\fP \-\- The certgrinderd subcommand to run as a list, like ["get", "ocsp"]
 .TP
 .B Returns
 A list of the elements which make up the \fBcertgrinderd\fP command
@@ -933,6 +985,26 @@ Return the DER formatted publickey.
 .TP
 .B Returns
 The bytes representing the DER formatted public key
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_ocsp(certificate: Optional[cryptography.x509.base.Certificate] = None, issuer: Optional[cryptography.x509.base.Certificate] = None, stdout: Optional[bytes] = None) -> bool
+The \fBget ocsp\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate to get OCSP response for (optional)
+.IP \(bu 2
+\fBissuer\fP \-\- The issuer of the certificate to get OCSP response for (optional)
+.IP \(bu 2
+\fBstdout\fP \-\- The OCSP response to use instead of calling certgrinderd (optional)
+.UNINDENT
+.TP
+.B Returns
+None
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
@@ -979,6 +1051,19 @@ Fixes keypair permissions to 640 if they are not 640.
 .TP
 .B Returns
 The keypair object
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static load_ocsp_response(path: str) -> cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
+Reads OCSP response in DER format from the path and returns the object.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBpath\fP \-\- The path to read the OCSP response from
+.TP
+.B Returns
+The OCSP response object
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
@@ -1052,7 +1137,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B parse_certgrinderd_output(certgrinderd_stdout: bytes, csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]]
+.B parse_certgrinderd_certificate_output(certgrinderd_stdout: bytes, csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]]
 Split output chain into cert and intermediate.
 .INDENT 7.0
 .TP
@@ -1070,6 +1155,19 @@ A tuple of certificate, intermediate if the certificate chain is valid, None oth
 .UNINDENT
 .INDENT 7.0
 .TP
+.B static parse_certgrinderd_ocsp_output(certgrinderd_stdout: bytes) -> Optional[cryptography.hazmat.backends.openssl.ocsp._OCSPResponse]
+Parse a DER encoded binary OCSP response as returned by Certgrinderd.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBcertgrinderd_output\fP \-\- The bytes representing the OCSP response in DER format
+.TP
+.B Returns
+cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
 .B periodic() -> bool
 The periodic method performs periodic maintenance tasks.
 .sp
@@ -1078,12 +1176,25 @@ It starts out by sleeping for a random period and then checks certificates and r
 .UNINDENT
 .INDENT 7.0
 .TP
-.B run_certgrinderd(csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[bytes]
-Run the configured \fBself.conf["certgrinderd"]\fP command with the CSR on stdin.
+.B run_certgrinderd(stdin: bytes, command: List[str], certgrinderd_stdout: Optional[bytes] = None, certgrinderd_stderr: Optional[bytes] = None) -> Optional[bytes]
+Run the configured \fBself.conf["certgrinderd"]\fP command.
+.sp
+The stdin argument will be passed to stdin of the command. A CSR is needed for
+the "get certificate" certgrinderd command, and a certificate chain is needed for
+the "get ocsp" command.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcsr\fP \-\- The CSR to pass to the certgrinderd command
+.INDENT 7.0
+.IP \(bu 2
+\fBstdin\fP \-\- bytes representing CSR or cert chain to pass to the certgrinderd command
+.IP \(bu 2
+\fBcommand\fP \-\- The certgrinderd command and subcommand to call
+.IP \(bu 2
+\fBcertgrinderd_stdout\fP \-\- Mocked certgrinderd stdout to use instead of calling the command
+.IP \(bu 2
+\fBeertgrinderd_stderr\fP \-\- Mocked certgrinderd stderr to use instead of calling the command
+.UNINDENT
 .TP
 .B Returns
 The bytes representing the stdout from the subprocess call
@@ -1186,8 +1297,36 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
+.B static save_ocsp_response(ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse, path: str) -> None
+Save the OCSP response to disk in DER format.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBocsp_response\fP \-\- The OCSP response to save
+.IP \(bu 2
+\fBpath\fP \-\- The path to save in
+.UNINDENT
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
 .B show_certificate() -> None
 The \fBshow certificate\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
+.INDENT 7.0
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B show_ocsp() -> None
+The \fBshow ocsp\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
 .INDENT 7.0
 .TP
 .B Returns

@@ -40,7 +40,7 @@ class Certgrinder:
     def __init__(self) -> None:
         """Define the default config."""
         self.conf: typing.Dict[str, typing.Union[str, int, bool, typing.List[str]]] = {
-            "certgrinderd": "",
+            "certgrinderd": "certgrinderd",
             "cert-renew-threshold-days": 30,
             "domain-list": [],
             "invalid-ca-cn-list": [
@@ -71,6 +71,7 @@ class Certgrinder:
         self.certificate_chain_path: str = ""
         self.intermediate_path: str = ""
         self.concat_path: str = ""
+        self.ocsp_response_path: str = ""
 
         # this is set to True if an error occurs
         self.error: bool = False
@@ -113,13 +114,6 @@ class Certgrinder:
         if not self.conf["domain-list"]:
             logger.error(
                 "No domain-list(s) configured. Specify --domain-list example.com[,www.example.com] (once per certificate) or define domain-list: in the config file."
-            )
-            sys.exit(1)
-
-        # check if we have a certgrinderd command
-        if not self.conf["certgrinderd"]:
-            logger.error(
-                "No certgrinderd command configured. Specify --certgrinderd or define certgrinderd: in the config file."
             )
             sys.exit(1)
 
@@ -203,7 +197,8 @@ class Certgrinder:
             os.chmod(path, 0o640)
 
         # read keypair
-        keypair_bytes = open(path, "rb").read()
+        with open(path, "rb") as f:
+            keypair_bytes = f.read()
 
         # parse and return keypair
         return primitives.serialization.load_pem_private_key(
@@ -369,7 +364,8 @@ class Certgrinder:
         Returns:
             The certificate object
         """
-        pem_data = open(path, "rb").read()
+        with open(path, "rb") as f:
+            pem_data = f.read()
         return cryptography.x509.load_pem_x509_certificate(pem_data, default_backend())
 
     @staticmethod
@@ -594,15 +590,20 @@ class Certgrinder:
             f.write(intermediate.public_bytes(primitives.serialization.Encoding.PEM))
         os.chmod(path, 0o640)
 
-    def get_certgrinderd_command(self) -> typing.List[str]:
+    def get_certgrinderd_command(
+        self, subcommand: typing.List[str]
+    ) -> typing.List[str]:
         """Return the certgrinderd command to run.
 
         Adds ``--log-level`` with the current ``self.conf["log-level"]``.
 
+        Args:
+            subcommand: The certgrinderd subcommand to run as a list, like ["get", "ocsp"]
+
         Returns:
             A list of the elements which make up the ``certgrinderd`` command
         """
-        # put the command together
+        # put the command together, first the base command, then the args, then subcommand
         command = str(self.conf["certgrinderd"])
         commandlist = [str(x) for x in command.split(" ")]
 
@@ -615,39 +616,76 @@ class Certgrinder:
             commandlist.append("--acme-server-url")
             commandlist.append(str(self.conf["acme-server-url"]))
 
+        # add the requested certgrinderd command and subcommand,
+        # "get certificate" or "get ocsp" mostly
+        commandlist += subcommand
+
         # all good
         return commandlist
 
     def run_certgrinderd(
-        self, csr: x509._CertificateSigningRequest
+        self,
+        stdin: bytes,
+        command: typing.List[str],
+        certgrinderd_stdout: typing.Optional[bytes] = None,
+        certgrinderd_stderr: typing.Optional[bytes] = None,
     ) -> typing.Optional[bytes]:
-        """Run the configured ``self.conf["certgrinderd"]`` command with the CSR on stdin.
+        """Run the configured ``self.conf["certgrinderd"]`` command.
+
+        The stdin argument will be passed to stdin of the command. A CSR is needed for
+        the "get certificate" certgrinderd command, and a certificate chain is needed for
+        the "get ocsp" command.
 
         Args:
-            csr: The CSR to pass to the certgrinderd command
+            stdin: bytes representing CSR or cert chain to pass to the certgrinderd command
+            command: The certgrinderd command and subcommand to call
+            certgrinderd_stdout: Mocked certgrinderd stdout to use instead of calling the command
+            eertgrinderd_stderr: Mocked certgrinderd stderr to use instead of calling the command
 
         Returns:
             The bytes representing the stdout from the subprocess call
         """
-        commandlist = self.get_certgrinderd_command()
-        logger.debug("Running certgrinderd command: %s" % commandlist)
-        p = subprocess.Popen(
-            commandlist,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+        if not certgrinderd_stdout and not certgrinderd_stderr:
+            commandlist = self.get_certgrinderd_command(subcommand=command)
+            logger.debug("Running certgrinderd command: %s" % commandlist)
+            p = subprocess.Popen(
+                commandlist,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
 
-        # send the CSR to stdin and save stdout (the cert chain) + stderr (the certgrinderd logging)
-        certgrinderd_stdout, certgrinderd_stderr = p.communicate(
-            input=csr.public_bytes(primitives.serialization.Encoding.PEM)
-        )
+            # send stdin and save stdout (the certificate chain/OCSP response) +
+            # stderr (the certgrinderd logging)
+            certgrinderd_stdout, certgrinderd_stderr = p.communicate(input=stdin)
 
-        # output certgrinderd_stderr (which contains all the logging from certgrinderd) to sys.stderr
-        print(certgrinderd_stderr.strip().decode("utf-8"), sep="\n", file=sys.stderr)
+        # log certgrinderd_stderr (which contains all the certgrinderd logging) at the level it was logged to, as possible
+        if isinstance(certgrinderd_stderr, bytes):
+            for line in certgrinderd_stderr.strip().decode("utf-8").split("\n"):
+                # do not log empty lines
+                if not line:
+                    continue
+
+                # split line in words
+                words = line.split(" ")
+                if len(words) < 5:
+                    # cannot parse, log the whole line
+                    logger.warning(line)
+                    continue
+
+                # get the loglevel
+                level = words[4]
+                message = " ".join(words[5:])
+                if hasattr(logger, level.lower()):
+                    getattr(logger, level.lower())(message)
+                else:
+                    # cannot grok, log the whole line
+                    logger.warning(line)
+
+        # finally return the actual output to caller
         return certgrinderd_stdout
 
-    def parse_certgrinderd_output(
+    def parse_certgrinderd_certificate_output(
         self, certgrinderd_stdout: bytes, csr: x509._CertificateSigningRequest
     ) -> typing.Optional[
         typing.Tuple[cryptography.x509.Certificate, cryptography.x509.Certificate]
@@ -763,11 +801,15 @@ class Certgrinder:
 
         if not stdout:
             # get certificate
-            stdout = self.run_certgrinderd(csr)
+            stdout = self.run_certgrinderd(
+                stdin=csr.public_bytes(primitives.serialization.Encoding.PEM),
+                command=["get", "certificate"],
+            )
+
         if not stdout:
-            logger.error("Did not get any output from certgrinderd")
+            logger.error("Did not get any certificate in stdout from certgrinderd")
             return False
-        result = self.parse_certgrinderd_output(stdout, csr)
+        result = self.parse_certgrinderd_certificate_output(stdout, csr)
         if result:
             certificate, intermediate = result
         else:
@@ -781,6 +823,7 @@ class Certgrinder:
         # save cert, chain and concat
         self.save_certificate(certificate, self.certificate_path)
         self.save_certificate(certificate, self.certificate_chain_path, intermediate)
+        self.save_certificate(intermediate, self.intermediate_path)
         self.save_concat_certkey(
             self.keypair, certificate, intermediate, self.concat_path
         )
@@ -864,6 +907,139 @@ class Certgrinder:
         logger.info(
             f"Certificate SAN: {san.value.get_values_for_type(cryptography.x509.DNSName)}"
         )
+
+    # OCSP METHODS
+
+    @staticmethod
+    def load_ocsp_response(
+        path: str
+    ) -> cryptography.hazmat.backends.openssl.ocsp._OCSPResponse:
+        """Reads OCSP response in DER format from the path and returns the object.
+
+        Args:
+            path: The path to read the OCSP response from
+
+        Returns:
+            The OCSP response object
+        """
+        with open(path, "rb") as f:
+            ocsp_response_data = f.read()
+        return cryptography.x509.ocsp.load_der_ocsp_response(ocsp_response_data)
+
+    def get_ocsp(
+        self,
+        certificate: typing.Optional[cryptography.x509.Certificate] = None,
+        issuer: typing.Optional[cryptography.x509.Certificate] = None,
+        stdout: typing.Optional[bytes] = None,
+    ) -> bool:
+        """The ``get ocsp`` subcommand method, called for each domainset by ``self.grind()``.
+
+        Args:
+            certificate: The certificate to get OCSP response for (optional)
+            issuer: The issuer of the certificate to get OCSP response for (optional)
+            stdout: The OCSP response to use instead of calling certgrinderd (optional)
+
+        Returns:
+            None
+        """
+        if not certificate or not issuer:
+            certificate = self.load_certificate(path=self.certificate_path)
+            issuer = self.load_certificate(path=self.intermediate_path)
+
+        stdin = certificate.public_bytes(primitives.serialization.Encoding.PEM)
+        stdin += issuer.public_bytes(primitives.serialization.Encoding.PEM)
+
+        if stdout is None:
+            # get ocsp response from certgrinderd
+            stdout = self.run_certgrinderd(stdin=stdin, command=["get", "ocsp"])
+
+        if not stdout:
+            logger.error("Did not get an OCSP response in stdout from certgrinderd")
+            return False
+
+        ocsp_response = self.parse_certgrinderd_ocsp_output(stdout)
+        if not ocsp_response:
+            logger.error("Did not get an OCSP response :(")
+            return False
+
+        logger.info(f"Success! Got OCSP response from certgrinderd.")
+
+        # save OCSP response
+        self.save_ocsp_response(
+            ocsp_response=ocsp_response, path=self.ocsp_response_path
+        )
+
+        # all done
+        self.hook_needed = True
+        logger.debug(f"Saved new OCSP response to file {self.ocsp_response_path}")
+        return True
+
+    def check_ocsp(self) -> bool:
+        """The ``check ocsp`` subcommand method, called for each domainset by ``self.grind()``.
+
+        Returns:
+            True if the OCSP response was found, False otherwise
+        """
+        if not os.path.exists(self.ocsp_response_path):
+            logger.error(f"OCSP response not found for domainset: {self.domainset}")
+            self.error = True
+            return False
+        self.load_ocsp_response(self.ocsp_response_path)
+        return True
+
+    def show_ocsp(self) -> None:
+        """The ``show ocsp`` subcommand method, called for each domainset by ``self.grind()``.
+
+        Returns:
+            None
+        """
+        if not os.path.exists(self.ocsp_response_path):
+            logger.error(f"OCSP response not found for domainset: {self.domainset}")
+            return
+
+        ocsp_response = self.load_ocsp_response(self.ocsp_response_path)
+        logger.info(f"- Showing OCSP response for domain set: {self.domainset}")
+        logger.info(f"Certificate status: {ocsp_response.certificate_status}")
+        logger.info(f"This update: {ocsp_response.this_update}")
+        logger.info(f"Produced at: {ocsp_response.produced_at}")
+        logger.info(f"Next update: {ocsp_response.next_update}")
+        logger.info(f"Revocation time: {ocsp_response.revocation_time}")
+        logger.info(f"Revocation reason: {ocsp_response.revocation_reason}")
+
+    @staticmethod
+    def parse_certgrinderd_ocsp_output(
+        certgrinderd_stdout: bytes
+    ) -> typing.Optional[cryptography.hazmat.backends.openssl.ocsp._OCSPResponse]:
+        """Parse a DER encoded binary OCSP response as returned by Certgrinderd.
+
+        Args:
+            certgrinderd_output: The bytes representing the OCSP response in DER format
+
+        Returns:
+            cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
+        """
+        try:
+            return cryptography.x509.ocsp.load_der_ocsp_response(certgrinderd_stdout)
+        except ValueError:
+            logger.error("Unable to parse OCSP response")
+            return False
+
+    @staticmethod
+    def save_ocsp_response(
+        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
+        path: str,
+    ) -> None:
+        """Save the OCSP response to disk in DER format.
+
+        Args:
+            ocsp_response: The OCSP response to save
+            path: The path to save in
+
+        Returns:
+            None
+        """
+        with open(path, "wb") as f:
+            f.write(ocsp_response.public_bytes(primitives.serialization.Encoding.DER))
 
     # POST RENEW HOOK METHOD
 
@@ -1236,7 +1412,8 @@ class Certgrinder:
             sleep = random.randint(0, self.conf["periodic-sleep-minutes"])
             logger.debug(f"Sleeping for {sleep} minutes before doing periodic...")
             time.sleep(sleep * 60)
-        # check if we have a valid certificate
+
+        # check if we have a valid certificate for this domainset
         if not self.check_certificate():
             # certificate is not valid, get new
             if not self.get_certificate():
@@ -1245,7 +1422,18 @@ class Certgrinder:
                     f"Failed getting a new certificate for domainset: {self.domainset}"
                 )
                 return False
-        # we have a valid certificate
+
+        # check if we have valid OCSP responses
+        if not self.check_ocsp():
+            # OCSP response not valid, get new
+            if not self.get_ocsp():
+                # unable to get new OCSP response
+                logger.error(
+                    f"Failed getting a new OCSP response for domainset: {self.domainset}"
+                )
+                return False
+
+        # all good
         return True
 
     def load_domainset(self, domainset: typing.List[str]) -> None:
@@ -1291,6 +1479,10 @@ class Certgrinder:
         # concat of privkey + chain
         self.concat_path = os.path.join(self.conf["path"], f"{filename}-concat.pem")
         logger.debug("concat path: %s" % self.concat_path)
+
+        # OCSP response
+        self.ocsp_response_path = os.path.join(self.conf["path"], f"{filename}.ocsp")
+        logger.debug("OCSP response path: %s" % self.ocsp_response_path)
 
         # finally load or create the keypair
         if os.path.exists(self.keypair_path):
@@ -1366,6 +1558,13 @@ def get_parser() -> argparse.ArgumentParser:
     )
     check_certificate_parser.set_defaults(method="check_certificate")
 
+    # "check ocsp" subcommand
+    check_ocsp_parser = check_subparsers.add_parser(
+        "ocsp",
+        help="Tell certgrinder to check the OCSP response validity for certificates for all configured domainsets. Returns exit code 1 if any problem is found, exit code 0 if all is well.",
+    )
+    check_ocsp_parser.set_defaults(method="check_ocsp")
+
     # "check tlsa" subcommand
     check_tlsa_parser = check_subparsers.add_parser(
         "tlsa",
@@ -1395,6 +1594,13 @@ def get_parser() -> argparse.ArgumentParser:
         help="Tell certgrinder to get new certificate(s), regardless of their current state. Rarely needed, use 'periodic' command instead.",
     )
     get_cert_parser.set_defaults(method="get_certificate")
+
+    # "get ocsp" subcommand
+    get_ocsp_parser = get_subparsers.add_parser(
+        "ocsp",
+        help="Tell certgrinder to get OCSP responses for the configured domainset(s). Rarely needed, use 'periodic' command instead.",
+    )
+    get_ocsp_parser.set_defaults(method="get_ocsp")
 
     # "help" command
     subparsers.add_parser("help", help='The "help" command just outputs the usage help')
@@ -1427,6 +1633,12 @@ def get_parser() -> argparse.ArgumentParser:
     show_subparsers.add_parser(
         "configuration", help="Tell certgrinder to output the current configuration"
     )
+
+    # "show ocsp" subcommand
+    show_ocsp_parser = show_subparsers.add_parser(
+        "ocsp", help="Tell certgrinder to output information about OCSP responses."
+    )
+    show_ocsp_parser.set_defaults(method="show_ocsp")
 
     # "show spki" subcommand
     show_spki_parser = show_subparsers.add_parser(

@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDERD" "8" "Aug 23, 2020" "0.14.0-dev" "Certgrinder"
+.TH "CERTGRINDERD" "8" "Aug 28, 2020" "0.14.0-dev" "Certgrinder"
 .SH NAME
 certgrinderd \- Manpage for certgrinderd
 .
@@ -244,7 +244,7 @@ Both scripts must be able to handle the challenge type(s) you use. The same scri
 When the server has been configured with hooks you can test from a client using just SSH and a manually generated CSR, with something like: \fBcat mail4.example.com.csr | ssh certgrinderd@certgrinder.example.org \-T \-\- \-\-staging\fP where \fB\-T\fP is to prevent SSH from allocating a TTY on the server, \fB\-\-\fP is to mark the end of the SSH args, and \fB\-\-staging\fP is to make \fBcertgrinderd\fP use the LetsEncrypt staging servers. If all goes well it should output some logging and a certificate chain.
 .SH COMMAND LINE USAGE
 .sp
-certgrinderd version 0.14.0\-dev. See the README.md file for more info.
+certgrinderd version 0.14.0\-dev. See the manpage certgrinderd(8) or ReadTheDocs for more info.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -257,15 +257,25 @@ usage: certgrinderd [\-h] [\-\-acme\-email ACME\-EMAIL]
                     [\-\-certbot\-config\-dir CERTBOT\-CONFIG\-DIR]
                     [\-\-certbot\-logs\-dir CERTBOT\-LOGS\-DIR]
                     [\-\-certbot\-work\-dir CERTBOT\-WORK\-DIR] [\-C CLEANUP\-HOOK]
-                    [\-f CONFIG\-FILE] [\-d]
+                    [\-c CONFIG\-FILE] [\-\-certificate\-file CERTIFICATE\-FILE]
+                    [\-\-csr\-file CSR\-FILE] [\-d]
                     [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-p PID\-DIR]
                     [\-\-skip\-acme\-server\-cert\-verify] [\-s]
                     [\-\-syslog\-facility SYSLOG\-FACILITY]
                     [\-\-syslog\-socket SYSLOG\-SOCKET] [\-t TEMP\-DIR]
                     [\-w WEB\-ROOT]
+                    {get,show,help} ...
 .ft P
 .fi
 .UNINDENT
+.UNINDENT
+.SS Positional Arguments
+.INDENT 0.0
+.TP
+.Bcommand
+Possible choices: get, show, help
+.sp
+Command (required)
 .UNINDENT
 .SS Named Arguments
 .INDENT 0.0
@@ -297,8 +307,14 @@ The path to pass to Certbot as \-\-work\-dir
 .B\-C, \-\-cleanup\-hook
 The hook script to call to clean up auth challenges after calling Certbot
 .TP
-.B\-f, \-\-config\-file
+.B\-c, \-\-config\-file
 The path to the certgrinderd config file to use, in YML format.
+.TP
+.B\-\-certificate\-file
+The path to the PEM formatted certificate chain file to use instead of getting it from stdin.
+.TP
+.B\-\-csr\-file
+The path to the PEM formatted CSR file to use instead of getting it from stdin.
 .TP
 .B\-d, \-\-debug
 Debug mode. Equal to setting \-\-log\-level=DEBUG.
@@ -328,6 +344,129 @@ The directory to store temporary files in
 .TP
 .B\-w, \-\-web\-root
 The path to pass to the auth hook script as env WEBROOT to use for HTTP\-01 challenges.
+.UNINDENT
+.SS Sub\-commands:
+.SS get
+.sp
+Use the "get" command to get certificates or OCSP responses
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinderd get [\-h] {certificate,ocsp} ...
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Positional Arguments
+.INDENT 0.0
+.TP
+.Bsubcommand
+Possible choices: certificate, ocsp
+.sp
+Specify what to get using one of the available get sub\-commands
+.UNINDENT
+.SS Sub\-commands:
+.SS certificate
+.sp
+Get a new certificate. Requires a CSR.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinderd get certificate [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS ocsp
+.sp
+Get an OCSP response for the provided certificate.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinderd get ocsp [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS show
+.sp
+Use the "show" command to show configuration, CSR info, or certificate info.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinderd show [\-h] {certificate,csr,configuration} ...
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Positional Arguments
+.INDENT 0.0
+.TP
+.Bsubcommand
+Possible choices: certificate, csr, configuration
+.sp
+Specify what to show using one of the available show sub\-commands
+.UNINDENT
+.SS Sub\-commands:
+.SS certificate
+.sp
+Tell certgrinder to output information about the provided certificate.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinderd show certificate [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS csr
+.sp
+Tell certgrinder to output information about the provided CSR.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinderd show csr [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS configuration
+.sp
+Tell certgrinder to output the current configuration
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinderd show configuration [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS help
+.sp
+The "help" command just outputs the usage help
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinderd help [\-h]
+.ft P
+.fi
+.UNINDENT
 .UNINDENT
 .SH CLASS METHODS
 .INDENT 0.0
@@ -364,6 +503,92 @@ and contains all the names from the CSR in one of the domainsets.
 .TP
 .B Returns
 True if the CSR is OK, False otherwise
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B classmethod check_ocsp_response(ocsp_request: cryptography.hazmat.backends.openssl.ocsp._OCSPRequest, ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse, certificate: cryptography.x509.base.Certificate, issuer: cryptography.x509.base.Certificate) -> bool
+Check that the OCSP response is valid for the OCSP request and cert/issuer.
+.sp
+Return True if the OCSP response is good, regardless of the certificate revocation status. Implements all the checks in RFC2560 3.2.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBocsp_request\fP \-\- The OCSP request object to check
+.IP \(bu 2
+\fBocsp_response\fP \-\- The OCSP response object to check
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate the OCSP request is for
+.IP \(bu 2
+\fBissuer\fP \-\- The issuer of the certificate
+.UNINDENT
+.TP
+.B Returns
+True if the OCSP response is valid, False if not
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static check_ocsp_response_issuer(ocsp_request: cryptography.hazmat.backends.openssl.ocsp._OCSPRequest, ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse) -> bool
+Check that the response matches the request.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBocsp_request\fP \-\- The OCSP request object
+.IP \(bu 2
+\fBocsp_response\fP \-\- The OCSP response object
+.UNINDENT
+.TP
+.B Returns
+Boolean \- True if all is well, False if a problem was found
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B classmethod check_ocsp_response_signature(ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse, issuer: cryptography.x509.base.Certificate) -> bool
+Check the signature of the OCSP response.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBocsp_response\fP \-\- The OCSP response to check
+.TP
+.B Returns
+Boolean \- True if all is well, False if a problem was found
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static check_ocsp_response_timing(ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse) -> bool
+Check the timestamps of the OCSP response.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBocsp_response\fP \-\- The OCSP response object to check
+.TP
+.B Returns
+Boolean \- True if all is well, False if a problem was found
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B classmethod create_ocsp_request(certificate: cryptography.x509.base.Certificate, issuer: cryptography.x509.base.Certificate) -> cryptography.hazmat.backends.openssl.ocsp._OCSPRequest
+Create and return an OCSP request based on the cert+issuer.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate to create an OCSP request for
+.IP \(bu 2
+\fBissuer\fP \-\- The issuer of the certificate
+.UNINDENT
+.TP
+.B Returns
+The OCSP request
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
@@ -417,20 +642,56 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B grind() -> None
-Load the CSR, use it to get a certificate, and cleanup.
-.sp
-Calls \fBself.parse_csr()\fP followed by \fBself.check_csr()\fP, and then exists if any
-problems are found with the CSR.
-.sp
-Then \fBself.get_certificate()\fP is called, which in turn calls Certbot, which writes
-the certificate to stdout.
-.sp
-Finally the CSR is deleted.
+.B get_certificate_command() -> None
+This method is called when the \fIget certificate\fP subcommand is used.
 .INDENT 7.0
+.TP
+.B Parameters
+\fBNone\fP \-\- 
 .TP
 .B Returns
 None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_ocsp_command() -> None
+This method is called when the \fIget ocsp\fP subcommand is used.
+.sp
+It simply prints the DER formatted OCSP response to stdout if we get one.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBNone\fP \-\- 
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B classmethod get_ocsp_response(certpath: Optional[str]) -> cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
+Parse certificate, get and return OCSP response.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBcertpath\fP \-\- The path of the certificate chain to get OCSP response for (optional)
+.TP
+.B Returns
+The OCSPRequest object
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static parse_certificate_chain(certpath: Optional[str]) -> Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]
+Parse certificate chain from path or stdin.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBcertpath\fP \-\- The path of the certificate chain to parse (optional)
+.TP
+.B Returns
+A tuple of (certificate, issuer) cryptography.x509.Certificate objects
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
@@ -446,6 +707,27 @@ Takes the CSR data from \fBsys.stdin\fP if the \fBcsrstring\fP argument is empty
 .TP
 .B Returns
 The CSR object
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B process_csr(csrpath: str = \(aq\(aq) -> None
+Load the CSR, use it to get a certificate, and cleanup.
+.sp
+Calls \fBself.parse_csr()\fP followed by \fBself.check_csr()\fP, and then exists if any
+problems are found with the CSR.
+.sp
+Then \fBself.get_certificate()\fP is called, which in turn calls Certbot, which writes
+the certificate to stdout.
+.sp
+Finally the CSR is deleted.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBNone\fP \-\- 
+.TP
+.B Returns
+None
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
@@ -484,6 +766,27 @@ Save the CSR object to the path in PEM format.
 .TP
 .B Returns
 None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static verify_signature(pubkey: Union[cryptography.hazmat.primitives.asymmetric.dsa.DSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey, cryptography.hazmat.primitives.asymmetric.ed448.Ed448PublicKey, cryptography.hazmat.primitives.asymmetric.ec.EllipticCurvePublicKey, cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey], signature: bytes, payload: bytes, hashalgo: cryptography.hazmat.primitives.hashes.HashAlgorithm) -> bool
+Verify a signature on a payload using the provided public key and hash algorithm.
+.sp
+Supports RSA and EC public keys. Assumes PKCS1v15 padding for RSA keys.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBpubkey\fP \-\- The public key
+.IP \(bu 2
+\fBsignature\fP \-\- The bytes representing the signature
+.IP \(bu 2
+\fBpayload\fP \-\- The bytes representing the signed data
+.IP \(bu 2
+\fBhashalgo\fP \-\- The hashing algorithm used for the signature
+.UNINDENT
 .UNINDENT
 .UNINDENT
 .UNINDENT

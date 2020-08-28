@@ -12,8 +12,10 @@ import subprocess
 import sys
 import tempfile
 import typing
+from datetime import datetime, timedelta
 
 import cryptography.x509
+import requests
 import yaml
 from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend
@@ -25,6 +27,9 @@ __version__ = "0.14.0-dev"
 
 class Certgrinderd:
     """The Certgrinderd server class."""
+
+    # save version as a class attribute
+    __version__ = __version__
 
     def __init__(
         self,
@@ -47,19 +52,21 @@ class Certgrinderd:
             "acme-zone": None,
             "auth-hook": "manual-auth-hook.sh",
             "certbot-command": "/usr/local/bin/sudo /usr/local/bin/certbot",
-            "certbot-config-dir": None,
-            "certbot-logs-dir": None,
-            "certbot-work-dir": None,
+            "certbot-config-dir": "",
+            "certbot-logs-dir": "",
+            "certbot-work-dir": "",
+            "certificate-file": "",
             "cleanup-hook": "manual-cleanup-hook.sh",
-            "config-file": None,
+            "config-file": "",
+            "csr-path": "",
             "debug": False,
             "log-level": "INFO",
             "pid-dir": "/tmp",
             "skip-acme-server-cert-verify": False,
             "syslog-facility": None,
             "syslog-socket": None,
-            "temp-dir": None,
-            "web-root": None,
+            "temp-dir": "",
+            "web-root": "",
         }
 
         if userconfig:
@@ -107,6 +114,8 @@ class Certgrinderd:
         )
         logger.debug("Running with config: %s" % self.conf)
 
+    # CSR methods
+
     @staticmethod
     def parse_csr(csrstring: str = "") -> x509._CertificateSigningRequest:
         """Parse CSR with cryptography.x509.load_pem_x509_csr(), return CSR object.
@@ -121,12 +130,57 @@ class Certgrinderd:
         """
         if not csrstring:
             # get the CSR from stdin
+            logger.debug("Reading PEM CSR from stdin ...")
             csrstring = sys.stdin.read()
 
         # parse and return the csr
         return cryptography.x509.load_pem_x509_csr(
             csrstring.encode("ascii"), default_backend()
         )
+
+    def process_csr(self, csrpath: str = "") -> None:
+        """Load the CSR, use it to get a certificate, and cleanup.
+
+        Calls ``self.parse_csr()`` followed by ``self.check_csr()``, and then exists if any
+        problems are found with the CSR.
+
+        Then ``self.get_certificate()`` is called, which in turn calls Certbot, which writes
+        the certificate to stdout.
+
+        Finally the CSR is deleted.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        # get the CSR from stdin or file
+        if csrpath:
+            with open(csrpath, "r") as f:
+                csrstring = f.read()
+        else:
+            csrstring = ""
+        csr = self.parse_csr(csrstring)
+
+        # get temp path for the csr so we can save it to disk
+        csrfd, csrpath = tempfile.mkstemp(
+            suffix=".csr", prefix="certgrinderd-", dir=str(self.conf["temp-dir"])
+        )
+
+        # save the csr to disk
+        self.save_csr(csr, csrpath)
+
+        # check CSR creaminess
+        if not self.check_csr(csr):
+            # something is fucky with the CSR
+            sys.exit(1)
+
+        # alright, get the cert for this CSR
+        self.get_certificate(csrpath)
+
+        # clean up temp file
+        os.remove(csrpath)
 
     @staticmethod
     def save_csr(csr: x509._CertificateSigningRequest, path: str) -> None:
@@ -219,6 +273,19 @@ class Certgrinderd:
 
         # all good
         return True
+
+    # certificate methods
+
+    def get_certificate_command(self) -> None:
+        """This method is called when the `get certificate` subcommand is used.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        self.process_csr(csrpath=str(self.conf["csr-path"]))
 
     def get_certbot_command(
         self,
@@ -336,7 +403,7 @@ class Certgrinderd:
 
         # then try HTTP-01, if we have a web-root
         if self.conf["web-root"]:
-            logger.debug(f"Attempting HTTP-01 with zone {self.conf['web-root']} ...")
+            logger.debug(f"Attempting HTTP-01 with webroot {self.conf['web-root']} ...")
             env = os.environ.copy()
             env.update({"WEBROOT": str(self.conf["web-root"])})
             command = self.get_certbot_command(
@@ -369,7 +436,12 @@ class Certgrinderd:
         """
         # call certbot
         logger.debug(f"Running certbot command with env {env}: {command}")
-        p = subprocess.run(command, capture_output=True, env=env)
+        p = subprocess.Popen(
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
+        )
+
+        certbot_stdout, certbot_stderr = p.communicate()
+
         if p.returncode == 0:
             # success, output chain to stdout
             with open(str(fullchainpath)) as f:
@@ -377,51 +449,568 @@ class Certgrinderd:
             return True
         else:
             logger.error("certbot command returned non-zero exit code")
+            logger.error("certbot stderr:")
+            for line in certbot_stderr.strip().decode("utf-8").split("\n"):
+                logger.error(line)
             return False
 
-    def grind(self) -> None:
-        """Load the CSR, use it to get a certificate, and cleanup.
+    @staticmethod
+    def parse_certificate_chain(
+        certpath: typing.Optional[str]
+    ) -> typing.Tuple[cryptography.x509.Certificate, cryptography.x509.Certificate]:
+        """Parse certificate chain from path or stdin.
 
-        Calls ``self.parse_csr()`` followed by ``self.check_csr()``, and then exists if any
-        problems are found with the CSR.
+        Args:
+            certpath: The path of the certificate chain to parse (optional)
 
-        Then ``self.get_certificate()`` is called, which in turn calls Certbot, which writes
-        the certificate to stdout.
+        Returns:
+            A tuple of (certificate, issuer) cryptography.x509.Certificate objects
+        """
+        if certpath:
+            logger.debug(f"Reading PEM cert chain from file {certpath} ...")
+            with open(certpath, "rb") as f:
+                certbytes = f.read()
+        else:
+            # get the PEM chain from stdin
+            logger.debug("Reading PEM cert chain from stdin ...")
+            certbytes = sys.stdin.read().encode("ASCII")
 
-        Finally the CSR is deleted.
+        # decode stdout as ASCII and split into lines
+        chain_list = certbytes.decode("ASCII").split("\n")
+
+        # do we have something resembling a PEM cert?
+        if "-----BEGIN CERTIFICATE-----" not in chain_list:
+            logger.error("The input is not a valid PEM formatted certificate chain.")
+            sys.exit(1)
+
+        # split chain in cert and intermediate
+        cert_end_index = chain_list.index("-----END CERTIFICATE-----")
+        certificate_bytes = "\n".join(chain_list[0 : cert_end_index + 1]).encode(
+            "ASCII"
+        )
+        intermediate_bytes = "\n".join(chain_list[cert_end_index + 1 :]).encode("ASCII")
+
+        # parse certificate
+        try:
+            certificate = cryptography.x509.load_pem_x509_certificate(
+                certificate_bytes, default_backend()
+            )
+        except Exception:
+            logger.error(
+                "The input resembles a valid PEM formatted certificate chain, but parsing certificate failed."
+            )
+            sys.exit(1)
+
+        # parse intermediate
+        try:
+            intermediate = cryptography.x509.load_pem_x509_certificate(
+                intermediate_bytes, default_backend()
+            )
+        except Exception:
+            logger.error(
+                "The input resembles a valid PEM formatted certificate chain, but parsing intermediate failed."
+            )
+            sys.exit(1)
+
+        return certificate, intermediate
+
+    # OCSP methods
+
+    def get_ocsp_command(self) -> None:
+        """This method is called when the `get ocsp` subcommand is used.
+
+        It simply prints the DER formatted OCSP response to stdout if we get one.
+
+        Args:
+            None
 
         Returns:
             None
         """
-        # get the CSR from stdin
-        csr = self.parse_csr()
+        assert isinstance(self.conf["certificate-file"], str)
+        ocsp_response = self.get_ocsp_response(certpath=self.conf["certificate-file"])
+        der = ocsp_response.public_bytes(primitives.serialization.Encoding.DER)
+        logger.debug(f"Outputting {len(der)} bytes DER encoded OCSP response to stdout")
+        sys.stdout.buffer.write(der)
 
-        # get temp path for the csr so we can save it to disk
-        csrfd, csrpath = tempfile.mkstemp(
-            suffix=".csr", prefix="certgrinderd-", dir=str(self.conf["temp-dir"])
+    @classmethod
+    def create_ocsp_request(
+        cls,
+        certificate: cryptography.x509.Certificate,
+        issuer: cryptography.x509.Certificate,
+    ) -> cryptography.hazmat.backends.openssl.ocsp._OCSPRequest:
+        """Create and return an OCSP request based on the cert+issuer.
+
+        Args:
+            certificate: The certificate to create an OCSP request for
+            issuer: The issuer of the certificate
+
+        Returns:
+            The OCSP request
+        """
+        # create OCSP request
+        builder = cryptography.x509.ocsp.OCSPRequestBuilder()
+        builder = builder.add_certificate(certificate, issuer, primitives.hashes.SHA1())
+        ocsp_request_object = builder.build()
+        return ocsp_request_object
+
+    @classmethod
+    def get_ocsp_response(
+        cls, certpath: typing.Optional[str]
+    ) -> cryptography.hazmat.backends.openssl.ocsp._OCSPResponse:
+        """Parse certificate, get and return OCSP response.
+
+        Args:
+            certpath: The path of the certificate chain to get OCSP response for (optional)
+
+        Returns:
+            The OCSPRequest object
+        """
+        # parse certificates
+        certificate, issuer = cls.parse_certificate_chain(certpath)
+        logger.debug(f"Getting OCSP response for cert {certificate.subject}")
+
+        ocsp_request_object = cls.create_ocsp_request(certificate, issuer)
+        ocsp_request_bytes = ocsp_request_object.public_bytes(
+            primitives.serialization.Encoding.DER
         )
+        logger.debug(f"Raw OCSP request: {ocsp_request_bytes}")
 
-        # save the csr to disk
-        self.save_csr(csr, csrpath)
-
-        # check CSR creaminess
-        if not self.check_csr(csr):
-            # something is fucky with the CSR
+        # get AuthorityInformationAccess extensions
+        try:
+            aias = certificate.extensions.get_extension_for_oid(
+                cryptography.x509.oid.ExtensionOID.AUTHORITY_INFORMATION_ACCESS
+            )
+        except cryptography.x509.extensions.ExtensionNotFound:
+            logger.error(
+                "No AUTHORITY_INFORMATION_ACCESS extension found in the certificate"
+            )
             sys.exit(1)
 
-        # alright, get the cert for this CSR
-        self.get_certificate(csrpath)
+        # loop over AuthorityInformationAccess extensions in the cert and try each OCSP server
+        for aia in aias.value:  # type: ignore
+            # we only understand OCSP servers
+            assert (
+                aia.access_method._name == "OCSP"
+            ), "Unsupported access method, please file a certgrinder bug"
 
-        # clean up temp file
-        os.remove(csrpath)
+            # get the OCSP server URL
+            url = aia.access_location.value
+
+            # wrap the HTTP request in a try/except in case something goes wrong
+            try:
+                r = requests.post(
+                    url,
+                    ocsp_request_bytes,
+                    headers={
+                        "Accept": "application/ocsp-response",
+                        "Content-Type": "application/ocsp-request",
+                    },
+                )
+            except requests.exceptions.RequestException:
+                logger.exception(
+                    f"OCSP request failed for URL {url} - trying next OCSP server"
+                )
+                continue
+
+            # check the HTTP response status code
+            if r.status_code != 200:
+                logger.error(
+                    f"OCSP request failed for URL {url} with HTTP status code {r.status_code} - trying next OCSP server"
+                )
+                continue
+
+            # parse the OCSP response from the HTTP response body
+            ocsp_response_object = cryptography.x509.ocsp.load_der_ocsp_response(
+                r.content
+            )
+
+            logger.debug(
+                f"Received response with HTTP status code {r.status_code} and OCSP response status {ocsp_response_object.response_status}"
+            )
+            if cls.check_ocsp_response(
+                ocsp_request_object, ocsp_response_object, certificate, issuer
+            ):
+                logger.debug(
+                    f"Certificate status: {ocsp_response_object.certificate_status}"
+                )
+                logger.debug(f"This update: {ocsp_response_object.this_update}")
+                logger.debug(f"Produced at: {ocsp_response_object.produced_at}")
+                logger.debug(f"Next update: {ocsp_response_object.next_update}")
+                logger.debug(f"Revocation time: {ocsp_response_object.revocation_time}")
+                logger.debug(
+                    f"Revocation reason: {ocsp_response_object.revocation_reason}"
+                )
+                return ocsp_response_object
+
+        # if we got this far we either didn't find any OCSP servers, or none of them worked
+        logger.error("Unable to get OCSP response.")
+        sys.exit(1)
+
+    @classmethod
+    def check_ocsp_response(
+        cls,
+        ocsp_request: cryptography.hazmat.backends.openssl.ocsp._OCSPRequest,
+        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
+        certificate: cryptography.x509.Certificate,
+        issuer: cryptography.x509.Certificate,
+    ) -> bool:
+        """Check that the OCSP response is valid for the OCSP request and cert/issuer.
+
+        Return True if the OCSP response is good, regardless of the certificate revocation status. Implements all the checks in RFC2560 3.2.
+
+        Args:
+            ocsp_request: The OCSP request object to check
+            ocsp_response: The OCSP response object to check
+            certificate: The certificate the OCSP request is for
+            issuer: The issuer of the certificate
+
+        Returns:
+            True if the OCSP response is valid, False if not
+        """
+        logger.debug(f"Checking validity of OCSP response")
+
+        # Check OCSP response status
+        if (
+            ocsp_response.response_status
+            != cryptography.x509.ocsp.OCSPResponseStatus.SUCCESSFUL
+        ):
+            logger.error(
+                f"OCSP response status is not SUCCESSFUL, it is {ocsp_response.response_status}"
+            )
+            return False
+
+        if not cls.check_ocsp_response_issuer(ocsp_request, ocsp_response):
+            logger.error("Check issuer failed")
+            return False
+
+        if not cls.check_ocsp_response_timing(ocsp_response):
+            logger.error("Check timing failed")
+            return False
+
+        if not cls.check_ocsp_response_signature(ocsp_response, issuer):
+            logger.error("Check signature failed")
+            return False
+
+        if (
+            ocsp_response.certificate_status
+            == cryptography.x509.ocsp.OCSPCertStatus.UNKNOWN
+        ):
+            logger.error("OCSP response is valid, but certificate status is UNKNOWN")
+            return False
+
+        # all good
+        logger.debug(f"OCSP response is valid!")
+        return True
+
+    @staticmethod
+    def check_ocsp_response_issuer(
+        ocsp_request: cryptography.hazmat.backends.openssl.ocsp._OCSPRequest,
+        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
+    ) -> bool:
+        """Check that the response matches the request.
+
+        Args:
+            ocsp_request: The OCSP request object
+            ocsp_response: The OCSP response object
+
+        Returns:
+            Boolean - True if all is well, False if a problem was found
+        """
+        # check that serial number matches
+        if ocsp_request.serial_number != ocsp_response.serial_number:
+            logger.error(
+                "The OCSP response has a different serial_number than the OCSP request"
+            )
+            return False
+
+        # check that the hash algorithm matches
+        if not isinstance(
+            ocsp_request.hash_algorithm, type(ocsp_response.hash_algorithm)
+        ):
+            logger.error(
+                "The OCSP response has a different hash_algorithm than the OCSP request"
+            )
+            return False
+
+        # check that the issuer key hash matches
+        if ocsp_request.issuer_key_hash != ocsp_response.issuer_key_hash:
+            logger.error(
+                "The OCSP response has a different issuer_key_hash than the OCSP request"
+            )
+            return False
+
+        # all good
+        return True
+
+    @staticmethod
+    def check_ocsp_response_timing(
+        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
+    ) -> bool:
+        """Check the timestamps of the OCSP response.
+
+        Args:
+            ocsp_response: The OCSP response object to check
+
+        Returns:
+            Boolean - True if all is well, False if a problem was found
+        """
+        # check that this_update is in the past
+        if ocsp_response.this_update > datetime.utcnow() + timedelta(minutes=5):
+            logger.error(
+                f"The this_update parameter of the OCSP response is in the future: {ocsp_response.this_update}"
+            )
+            return False
+
+        # check that we have a next_update attribute
+        if not ocsp_response.next_update:
+            logger.error(
+                "OCSP response has no nextUpdate attribute. This violates RFC5019 2.2.4."
+            )
+            return False
+
+        # check that next_update is in the future
+        if ocsp_response.next_update < datetime.utcnow() - timedelta(minutes=5):
+            logger.error(
+                f"The next_update parameter of the OCSP response is in the past: {ocsp_response.this_update}"
+            )
+            return False
+
+        # all good
+        return True
+
+    @classmethod
+    def check_ocsp_response_signature(
+        cls,
+        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
+        issuer: cryptography.x509.Certificate,
+    ) -> bool:
+        """Check the signature of the OCSP response.
+
+        Args:
+            ocsp_response: The OCSP response to check
+
+        Returns:
+            Boolean - True if all is well, False if a problem was found
+        """
+        # to check the signature we need to know if the responder is also the issuer
+        if (
+            ocsp_response.responder_name == issuer.subject
+            or ocsp_response.responder_key_hash
+            == cryptography.x509.SubjectKeyIdentifier.from_public_key(
+                issuer.public_key()
+            ).digest
+        ):
+            # The OCSP responder is the issuer
+            logger.debug("This OCSP response is signed by the issuer")
+            ocsp_responder_cert = issuer
+        else:
+            # The issuer delegated to an OCSP responder
+            logger.debug(
+                "This OCSP response is signed by a delegated OCSP responder, looking for responder cert"
+            )
+
+            # loop over certificates in the response and find the responder cert
+            for cert in ocsp_response.certificates:
+                if (
+                    cert.subject == ocsp_response.responder_name
+                    or cryptography.x509.SubjectKeyIdentifier.from_public_key(
+                        cert.public_key()
+                    ).digest
+                    == ocsp_response.responder_key_hash
+                ):
+                    ocsp_responder_cert = cert
+                    logger.debug(
+                        f"Found OCSP responder cert with the right namehash and keyhash in OCSP response: {ocsp_responder_cert.subject} serial {ocsp_responder_cert.serial_number}"
+                    )
+                    break
+            else:
+                logger.error("Unable to find delegated OCSP responder certificate")
+                return False
+
+            # check that the issuer signed the responder cert
+            if ocsp_responder_cert.issuer != issuer.subject:
+                logger.error(
+                    "The OCSP responder certificate is not signed by certificate issuer"
+                )
+                return False
+
+            # verify the issuer signature
+            logger.debug(
+                "Verifying issuer signature on delegated responder certificate"
+            )
+            if not cls.verify_signature(
+                pubkey=issuer.public_key(),
+                signature=ocsp_responder_cert.signature,
+                payload=ocsp_responder_cert.tbs_certificate_bytes,
+                hashalgo=ocsp_responder_cert.signature_hash_algorithm,
+            ):
+                logger.error(
+                    "The issuer signature on the responder certificate is invalid"
+                )
+                return False
+
+            # get the ExtendedKeyUsage extension to check for OCSP_SIGNING capability
+            try:
+                extension = ocsp_responder_cert.extensions.get_extension_for_class(
+                    cryptography.x509.ExtendedKeyUsage
+                )
+            except cryptography.x509.extensions.ExtensionNotFound:
+                logger.error(
+                    "No ExtendedKeyUsage extension found in delegated OCSP responder certificate"
+                )
+                return False
+
+            # check if the delegated responder cert is permitted to sign OCSP responses
+            if (
+                cryptography.x509.oid.ExtendedKeyUsageOID.OCSP_SIGNING  # type: ignore
+                not in extension.value
+            ):
+                logger.error(
+                    "Delegated OCSP responder certificate is not permitted to sign OCSP responses"
+                )
+                return False
+
+        # check that the ocsp responder (cert issuer or delegated) signed the OCSP response we got
+        logger.debug("Verifying OCSP response signature")
+        if not cls.verify_signature(
+            pubkey=ocsp_responder_cert.public_key(),
+            signature=ocsp_response.signature,
+            payload=ocsp_response.tbs_response_bytes,
+            hashalgo=ocsp_response.signature_hash_algorithm,
+        ):
+            logger.error(f"The OCSP response signature is invalid")
+            return False
+
+        # all good
+        return True
+
+    # utility methods
+
+    @staticmethod
+    def verify_signature(
+        pubkey: typing.Union[
+            primitives.asymmetric.dsa.DSAPublicKey,
+            primitives.asymmetric.ed25519.Ed25519PublicKey,
+            primitives.asymmetric.ed448.Ed448PublicKey,
+            primitives.asymmetric.ec.EllipticCurvePublicKey,
+            primitives.asymmetric.rsa.RSAPublicKey,
+        ],
+        signature: bytes,
+        payload: bytes,
+        hashalgo: cryptography.hazmat.primitives.hashes.HashAlgorithm,
+    ) -> bool:
+        """Verify a signature on a payload using the provided public key and hash algorithm.
+
+        Supports RSA and EC public keys. Assumes PKCS1v15 padding for RSA keys.
+
+        Args:
+            pubkey: The public key
+            signature: The bytes representing the signature
+            payload: The bytes representing the signed data
+            hashalgo: The hashing algorithm used for the signature
+        """
+        logger.debug(
+            f"Verifying {type(pubkey)} signature with hash algorithm {hashalgo}. Payload is {len(payload)} bytes."
+        )
+        try:
+            if isinstance(pubkey, primitives.asymmetric.rsa.RSAPublicKey):
+                pubkey.verify(
+                    signature=signature,
+                    data=payload,
+                    padding=primitives.asymmetric.padding.PKCS1v15(),
+                    algorithm=hashalgo,
+                )
+            elif isinstance(pubkey, primitives.asymmetric.ec.EllipticCurvePublicKey):
+                pubkey.verify(
+                    signature=signature,
+                    data=payload,
+                    signature_algorithm=primitives.asymmetric.ec.ECDSA(hashalgo),
+                )
+            else:
+                logger.error(
+                    "The public key type is not supported, unable to verify signature, returning False"
+                )
+                return False
+        except cryptography.exceptions.InvalidSignature:  # type: ignore
+            logger.error("Got exception while verifying signature")
+            return False
+
+        # all good
+        logger.debug(f"Signature is valid")
+        return True
 
 
 def get_parser() -> argparse.ArgumentParser:
     """Create and return the argparse object."""
     parser = argparse.ArgumentParser(
-        description="certgrinderd version %s. See the README.md file for more info."
+        description="certgrinderd version %s. See the manpage certgrinderd(8) or ReadTheDocs for more info."
         % __version__
     )
+
+    # add topmost subparser for main command
+    subparsers = parser.add_subparsers(
+        help="Command (required)", dest="command", required=True
+    )
+
+    # "get" command
+    get_parser = subparsers.add_parser(
+        "get", help='Use the "get" command to get certificates or OCSP responses'
+    )
+    get_subparsers = get_parser.add_subparsers(
+        help="Specify what to get using one of the available get sub-commands",
+        dest="subcommand",
+        required=True,
+    )
+
+    # "get certificate" subcommand
+    get_cert_parser = get_subparsers.add_parser(
+        "certificate", help="Get a new certificate. Requires a CSR."
+    )
+    get_cert_parser.set_defaults(method="get_certificate_command")
+
+    # "get ocsp" subcommand
+    get_ocsp_parser = get_subparsers.add_parser(
+        "ocsp", help="Get an OCSP response for the provided certificate."
+    )
+    get_ocsp_parser.set_defaults(method="get_ocsp_command")
+
+    # "show" command
+    show_parser = subparsers.add_parser(
+        "show",
+        help='Use the "show" command to show configuration, CSR info, or certificate info.',
+    )
+    show_subparsers = show_parser.add_subparsers(
+        help="Specify what to show using one of the available show sub-commands",
+        dest="subcommand",
+        required=True,
+    )
+
+    # "show certificate" subcommand
+    show_certificate_parser = show_subparsers.add_parser(
+        "certificate",
+        help="Tell certgrinder to output information about the provided certificate.",
+    )
+    show_certificate_parser.set_defaults(method="show_certificate_command")
+
+    # "show csr" subcommand
+    show_csr_parser = show_subparsers.add_parser(
+        "csr", help="Tell certgrinder to output information about the provided CSR."
+    )
+    show_csr_parser.set_defaults(method="show_csr_command")
+
+    # "show configuration" subcommand
+    show_configuration_parser = show_subparsers.add_parser(
+        "configuration", help="Tell certgrinder to output the current configuration"
+    )
+    show_configuration_parser.set_defaults(method="show_configuration_command")
+
+    # "help" command
+    help_parser = subparsers.add_parser(
+        "help", help='The "help" command just outputs the usage help'
+    )
+    help_parser.set_defaults(method="help_command")
+
     parser.add_argument(
         "--acme-email",
         dest="acme-email",
@@ -480,10 +1069,22 @@ def get_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
-        "-f",
+        "-c",
         "--config-file",
         dest="config-file",
         help="The path to the certgrinderd config file to use, in YML format.",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--certificate-file",
+        dest="certificate-file",
+        help="The path to the PEM formatted certificate chain file to use instead of getting it from stdin.",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--csr-file",
+        dest="csr-file",
+        help="The path to the PEM formatted CSR file to use instead of getting it from stdin.",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
@@ -557,30 +1158,30 @@ def get_parser() -> argparse.ArgumentParser:
 
 def parse_args(
     mockargs: typing.Optional[typing.List[str]] = None
-) -> argparse.Namespace:
+) -> typing.Tuple[argparse.ArgumentParser, argparse.Namespace]:
     """Parse and return command-line args."""
     parser = get_parser()
     args = parser.parse_args(mockargs if mockargs else sys.argv[1:])
-    return args
+    return parser, args
 
 
 def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
-    """Make the neccesary preparations before calling Certgrinderd.grind().
+    """Make the initial preparations before calling the requested (sub)command.
 
     - Read config from file and/or commandline args
     - Configure temporary paths
     - Configure logging
 
-    Finally instantiate the Certgrinderd class with the config and grind()
+    Finally instantiate the Certgrinderd class with the config and call the method.
 
     Args:
-        None
+        mockargs: A list of args to use instead of command-line arguments. Optional.
 
     Returns:
         None
     """
     # get commandline arguments
-    args = parse_args(mockargs)
+    parser, args = parse_args(mockargs)
 
     # read and parse the config file
     if hasattr(args, "config-file"):
@@ -599,6 +1200,12 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
     # command line arguments override config file settings
     config.update(vars(args))
 
+    # remove command and subcommand (part of argparse internals)
+    if "command" in config:
+        del config["command"]
+    if "subcommand" in config:
+        del config["subcommand"]
+
     # create tempfile directory if needed
     kwargs = {"prefix": "certgrinderd-temp-"}
     if "temp-dir" in config and config["temp-dir"]:
@@ -606,11 +1213,14 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
     tempdir = tempfile.TemporaryDirectory(**kwargs)
     config["temp-dir"] = tempdir.name
 
+    # instantiate Certgrinderd class
+    certgrinderd = Certgrinderd(userconfig=config)
+
     # all good
     try:
-        # instantiate Certgrinderd class
-        certgrinderd = Certgrinderd(userconfig=config)
-        certgrinderd.grind()
+        logger.debug(f"Calling method {args.method}")
+        method = getattr(certgrinderd, args.method)
+        method()
     finally:
         tempdir.cleanup()
 

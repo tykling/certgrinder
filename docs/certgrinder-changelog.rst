@@ -11,10 +11,18 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.14.0-dev (unreleased)
 ------------------------
+Added
+~~~~~
+- OCSP response support
+- Log certgrinderd output at the level certgrinderd logs it at, when possible (otherwise log at WARNING)
+- Tests for the new functionality
 
 Changed
 ~~~~~~~
+- Support the new certgrinderd commands and subcommands
 - Change short command for --config-file from -f to -c
+- Set default certgrinder command to "certgrinderd"
+- Use with for opening files a few places to avoid leaving open fds
 
 Fixed
 ~~~~~

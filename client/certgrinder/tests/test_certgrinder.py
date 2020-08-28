@@ -27,7 +27,7 @@ from cryptography.x509.oid import ExtensionOID, NameOID
 
 
 def test_certgrinderd_broken_configfile(
-    tmpdir_factory, capsys, certgrinderd_broken_yaml_configfile
+    tmpdir_factory, caplog, certgrinderd_broken_yaml_configfile
 ):
     """Test certgrinderd with a broken config."""
     mockargs = [
@@ -44,11 +44,10 @@ def test_certgrinderd_broken_configfile(
     with pytest.raises(SystemExit) as E:
         main(mockargs)
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
-    captured = capsys.readouterr()
-    assert "Unable to parse YAML config file" in captured.err
+    assert "Unable to parse YAML config file" in caplog.text
 
 
-def test_certgrinderd_fail(tmpdir_factory, certgrinderd_env, capsys):
+def test_certgrinderd_fail(tmpdir_factory, certgrinderd_env, caplog):
     """Test a failing certbot."""
     mockargs = [
         "--path",
@@ -64,8 +63,7 @@ def test_certgrinderd_fail(tmpdir_factory, certgrinderd_env, capsys):
     with pytest.raises(SystemExit) as E:
         main(mockargs)
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
-    captured = capsys.readouterr()
-    assert "certbot command returned non-zero exit code" in captured.err
+    assert "certbot command returned non-zero exit code" in caplog.text
 
 
 def test_certgrinderd_broken_csr(
@@ -81,6 +79,8 @@ def test_certgrinderd_broken_csr(
             "server/certgrinderd/certgrinderd.py",
             "--config-file",
             certgrinderd_configfile[1],
+            "get",
+            "certificate",
         ],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
@@ -99,14 +99,19 @@ def test_certgrinderd_broken_csr(
 
 def test_get_certificate(
     pebble_server,
+    pebble_intermediate,
     certgrinderd_configfile,
     tmp_path_factory,
     certgrinderd_env,
     caplog,
     capsys,
     tmpdir_factory,
+    ocsp_ca_index_file,
 ):
-    """Get a couple of certificates and check that they look right."""
+    """Get a couple of certificates and check that they look right.
+
+    Also get OCSP responses for the certificates.
+    """
     caplog.set_level(logging.DEBUG)
     mockargs = [
         "--path",
@@ -143,9 +148,8 @@ def test_get_certificate(
 
     # only check certs if we expect to get any
     if certgrinderd_configfile[0] == "":
-        captured = capsys.readouterr()
         assert (
-            "No more challenge types to try, unable to get certificate" in captured.err
+            "No more challenge types to try, unable to get certificate" in caplog.text
         ), "Did not find expected errormessage with no challenge types enabled"
     else:
         # check that the certificates were issued correctly
@@ -176,6 +180,65 @@ def test_get_certificate(
                 main(mockargs + ["show", "certificate"])
             assert str(certificate.serial_number) in caplog.text
             assert str(certificate.subject) in caplog.text
+
+            # write certificate info to pebble ocsp index file
+            subject = [f"/{x.rfc4514_string()}" for x in certificate.subject]
+            with open(ocsp_ca_index_file, "a+") as f:
+                f.write(
+                    f"V	{certificate.not_valid_after.strftime('%y%m%d%H%M%SZ')}		{hex(certificate.serial_number).upper()[2:]}	unknown	{''.join(subject)}\n"
+                )
+            print(f"wrote cert info to CA index file {ocsp_ca_index_file}")
+
+        # try to get OCSP responses before starting the responder to provoke failure
+        with pytest.raises(SystemExit) as E:
+            main(mockargs + ["get", "ocsp"])
+        assert (
+            "OCSP request failed for URL" in caplog.text
+        ), "Expected error message not found with no ocsp responder running"
+
+        # make clean before doing the next OCSP stuff
+        caplog.clear()
+
+        print(f"Running openssl ocsp responder...")
+        proc = subprocess.Popen(
+            args=[
+                "openssl",
+                "ocsp",
+                "-index",
+                ocsp_ca_index_file,
+                "-port",
+                "8888",
+                "-rsigner",
+                pebble_intermediate[1],
+                "-rkey",
+                pebble_intermediate[0],
+                "-CA",
+                pebble_intermediate[1],
+                "-text",
+                # nextupdate in 7 days
+                "-ndays",
+                "7",
+            ]
+        )
+        time.sleep(5)
+
+        # get OCSP responses for both certificates
+        with pytest.raises(SystemExit) as E:
+            main(mockargs + ["get", "ocsp"])
+        print(f"Killing openssl ocsp responder...")
+        proc.kill()
+        assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+        assert "Did not get an OCSP response" not in caplog.text
+
+        with pytest.raises(SystemExit) as E:
+            main(mockargs + ["show", "ocsp"])
+        assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+        assert "OCSP response not found" not in caplog.text
+
+        with pytest.raises(SystemExit) as E:
+            main(mockargs + ["check", "ocsp"])
+        assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+        assert "OCSP response not found" not in caplog.text
 
 
 def test_show_spki(tmp_path_factory, caplog, tmpdir_factory):
@@ -287,15 +350,6 @@ def test_no_domainlist(caplog):
         certgrinder.configure({})
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
     assert "No domain-list(s) configured." in caplog.text
-
-
-def test_no_certgrinderd(caplog):
-    """Test Certgrinder with no certgrinderd in config."""
-    certgrinder = Certgrinder()
-    with pytest.raises(SystemExit) as E:
-        certgrinder.configure({"domain-list": ["example.com"]})
-    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
-    assert "No certgrinderd command configured." in caplog.text
 
 
 def test_no_path(caplog):
@@ -527,7 +581,7 @@ def test_get_certgrinderd_command_staging(
     )
     certgrinder = Certgrinder()
     certgrinder.configure(userconfig=vars(args))
-    command = certgrinder.get_certgrinderd_command()
+    command = certgrinder.get_certgrinderd_command(subcommand=["get", "certificate"])
     assert "https://acme-staging-v02.api.letsencrypt.org/directory" in command
     assert "'invalid-ca-cn-list': []" in caplog.text
 
@@ -547,7 +601,7 @@ def test_parse_certgrinderd_output_not_pem(
     )
     csr = x509.load_pem_x509_csr(known_csr.encode("ascii"), default_backend())
     assert (
-        certgrinder.parse_certgrinderd_output(
+        certgrinder.parse_certgrinderd_certificate_output(
             certgrinderd_stdout=b"NOT_A_PEM_CERT", csr=csr
         )
         is None
@@ -563,7 +617,9 @@ NOT_A_PEM
 ALSO_NOT_A_PEM
 -----END CERTIFICATE-----"""
     assert (
-        certgrinder.parse_certgrinderd_output(certgrinderd_stdout=stdout, csr=csr)
+        certgrinder.parse_certgrinderd_certificate_output(
+            certgrinderd_stdout=stdout, csr=csr
+        )
         is None
     ), "The parse_certgrinderd_output() method did not return None with a PEM-ish but invalid certificate input"
     assert "This is stdout from the certgrinderd call" in caplog.text
@@ -575,7 +631,9 @@ ALSO_NOT_A_PEM
 ALSO_NOT_A_PEM
 -----END CERTIFICATE-----"""
     assert (
-        certgrinder.parse_certgrinderd_output(certgrinderd_stdout=stdout, csr=csr)
+        certgrinder.parse_certgrinderd_certificate_output(
+            certgrinderd_stdout=stdout, csr=csr
+        )
         is None
     ), "The parse_certgrinderd_output() method did not return None with a non-PEM certificate input"
     assert (
@@ -1125,9 +1183,21 @@ def mock_get_certificate_ok():
     return True
 
 
+def mock_get_ocsp_ok():
+    """A fake certgrinder.get_ocsp() which just returns True."""
+    print("pretending we got an ocsp response")
+    return True
+
+
 def mock_get_certificate_fail():
     """A fake certgrinder.get_certificate() which just returns False."""
     print("pretending we didn't get a certificate")
+    return False
+
+
+def mock_get_ocsp_fail():
+    """A fake certgrinder.get_ocsp() which just returns False."""
+    print("pretending we didn't get an ocsp response")
     return False
 
 
@@ -1148,10 +1218,16 @@ def test_periodic(caplog, tmpdir_factory, monkeypatch):
     monkeypatch.setattr(time, "sleep", mock_time_sleep)
 
     monkeypatch.setattr(certgrinder, "get_certificate", mock_get_certificate_ok)
+    monkeypatch.setattr(certgrinder, "get_ocsp", mock_get_ocsp_ok)
     result = certgrinder.periodic()
     assert result is True, "periodic() did not return True as expected"
 
     monkeypatch.setattr(certgrinder, "get_certificate", mock_get_certificate_fail)
+    result = certgrinder.periodic()
+    assert result is False, "periodic() did not return False as expected"
+
+    monkeypatch.setattr(certgrinder, "get_certificate", mock_get_certificate_ok)
+    monkeypatch.setattr(certgrinder, "get_ocsp", mock_get_ocsp_fail)
     result = certgrinder.periodic()
     assert result is False, "periodic() did not return False as expected"
 
@@ -1162,3 +1238,88 @@ def test_init(monkeypatch):
     monkeypatch.setattr(certgrinder.certgrinder, "__name__", "__main__")
     with pytest.raises(SystemExit):
         certgrinder.certgrinder.init()
+
+
+def test_check_ocsp_response_not_found(caplog, tmpdir_factory):
+    """Test that the check ocsp subcommand fails as expected with a missing OCSP response."""
+    caplog.set_level(logging.DEBUG)
+    mockargs = [
+        "--path",
+        str(tmpdir_factory.mktemp("certificates")),
+        "--domain-list",
+        "example.com,www.example.com",
+        "--domain-list",
+        "example.net",
+        "--debug",
+    ]
+    with pytest.raises(SystemExit) as E:
+        main(mockargs + ["check", "ocsp"])
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    assert "OCSP response not found for domainset" in caplog.text
+
+
+def test_show_ocsp_response_not_found(caplog, tmpdir_factory):
+    """Test the show ocsp subcommand with no OCSP file on disk."""
+    caplog.set_level(logging.DEBUG)
+    mockargs = [
+        "--path",
+        str(tmpdir_factory.mktemp("certificates")),
+        "--domain-list",
+        "example.com,www.example.com",
+        "--domain-list",
+        "example.net",
+        "--debug",
+    ]
+    with pytest.raises(SystemExit) as E:
+        main(mockargs + ["show", "ocsp"])
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    assert "OCSP response not found for domainset" in caplog.text
+
+
+def test_get_ocsp_falsy_input(signed_certificate, caplog):
+    """Test the get_ocsp() method with a falsy input."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.get_ocsp(
+        certificate=signed_certificate, issuer=signed_certificate, stdout=False
+    )
+    assert "Did not get an OCSP response in stdout from certgrinderd" in caplog.text
+
+
+def test_get_ocsp_wrong_input(signed_certificate, caplog):
+    """Test the get_ocsp() method with a non-cert input."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.get_ocsp(
+        certificate=signed_certificate, issuer=signed_certificate, stdout=b"not-a-cert"
+    )
+    assert "Unable to parse OCSP response" in caplog.text
+
+
+def test_run_certgrinderd_unparseable_output(
+    tmpdir_factory, caplog, certgrinderd_broken_yaml_configfile
+):
+    """Test run_certgrinderd() with unparseable certgrinderd output."""
+    parser, args = parse_args(
+        [
+            "--path",
+            str(tmpdir_factory.mktemp("certificates")),
+            "--domain-list",
+            "example.com,www.example.com",
+            "show",
+            "certificate",
+        ]
+    )
+    certgrinder = Certgrinder()
+    certgrinder.configure(userconfig=vars(args))
+    assert (
+        certgrinder.run_certgrinderd(
+            stdin=b"",
+            command=["get", "certificate"],
+            certgrinderd_stdout=b"stdout here",
+            certgrinderd_stderr=b"hello\nworld",
+        )
+        == b"stdout here"
+    ), "did not get expected output from run_certgrinderd()"
+    assert "hello" in caplog.text
+    assert "world" in caplog.text

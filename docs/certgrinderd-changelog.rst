@@ -11,7 +11,19 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.14.0-dev (unreleased)
 ------------------------
-- No changes
+
+Added
+~~~~~
+- Introduce commands and subcommands (like "get certificate" or "get ocsp")
+- Add OCSP response fetching and verifying functionality
+- Add requests to requirements (for getting OCSP responses)
+- Tests for the new functionality
+
+Changed
+~~~~~~~
+- Refactor code to fit the commands/subcommand structure
+- Log certbot stderr at level ERROR
+- Change some default config from None to "" to keep it as str
 
 
 v0.13.2 (11-jul-2020)

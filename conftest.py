@@ -1,11 +1,13 @@
 """pytest configuration file for Certgrinder project."""
 import datetime
+import json
 import pathlib
 import shutil
 import subprocess
 import sys
 
 import pytest
+import requests
 import yaml
 from cryptography import x509
 from cryptography.hazmat import primitives
@@ -35,26 +37,73 @@ def pebble_server():
     )
     assert proc.returncode == 0
 
+    print("Patching pebble config file...")
+    pebbleconfig = (
+        pathlib.Path.home()
+        / "go/src/github.com/letsencrypt/pebble/test/config/pebble-config.json"
+    )
+    with open(pebbleconfig, "r") as f:
+        conf = json.loads(f.read())
+    conf["pebble"].update({"ocspResponderURL": "http://127.0.0.1:8888"})
+    with open(pebbleconfig, "w") as f:
+        f.write(json.dumps(conf))
+
     print("Running pebble server...")
     proc = subprocess.Popen(
-        args=[
-            pathlib.Path.home() / "go/bin/pebble",
-            "-config",
-            pathlib.Path.home()
-            / "go/src/github.com/letsencrypt/pebble/test/config/pebble-config.json",
-        ],
+        args=[pathlib.Path.home() / "go/bin/pebble", "-config", pebbleconfig],
         env={"PEBBLE_VA_ALWAYS_VALID": "1"},
         cwd=pathlib.Path.home() / "go/src/github.com/letsencrypt/pebble",
     )
 
+    import time
+
+    time.sleep(2)
     print("Setup finished - pebble is running!")
 
+    # end buildup
     yield
+    # begin teardown
+    # time.sleep(600)
 
     print("Beginning teardown")
     print("Stopping pebble server...")
     proc.terminate()
     print("Teardown finished!")
+
+
+@pytest.fixture(scope="session")
+def pebble_intermediate(tmp_path_factory):
+    """Download intermediate cert and key from pebble and write it to a temp file."""
+    certpath = tmp_path_factory.mktemp("pebble") / "pebble-intermediate.crt"
+    r = requests.get(
+        "https://127.0.0.1:15000/intermediates/0",
+        verify=pathlib.Path.home()
+        / "go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem",
+    )
+    with open(certpath, "wb") as f:
+        f.write(r.content)
+
+    keypath = tmp_path_factory.mktemp("pebble") / "pebble-intermediate.key"
+    r = requests.get(
+        "https://localhost:15000/intermediate-keys/0",
+        verify=pathlib.Path.home()
+        / "go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem",
+    )
+    with open(keypath, "wb") as f:
+        f.write(r.content)
+
+    # return both paths
+    return keypath, certpath
+
+
+@pytest.fixture(scope="function")
+def ocsp_ca_index_file(tmp_path_factory):
+    """Return path to the CA index file to use for testing."""
+    indexpath = tmp_path_factory.mktemp("pebble") / "pebble-ocsp-index.ca"
+    print(f"Path to CA index for this test session is {indexpath}")
+    with open(indexpath, "w") as _:
+        pass
+    return indexpath
 
 
 @pytest.fixture
@@ -188,6 +237,186 @@ HwF+PNSHb6y7kOLR+j1ktU0THC9wn2pMoqd0K5rmAdC503NckCptyR50H8stVqE7
 y6YqtYzY+4LLTqPT6+83hw189mPXI58acQeaqhTAiNZZYFoAjB44uavJ5XEA
 -----END RSA PRIVATE KEY-----
 """
+    return primitives.serialization.load_pem_private_key(
+        pem_private_key.encode("ascii"), backend=default_backend(), password=None
+    )
+
+
+@pytest.fixture()
+def known_private_key_2():
+    """Define, parse and return another known private key."""
+    pem_private_key = """
+-----BEGIN RSA PRIVATE KEY-----
+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
+-----END RSA PRIVATE KEY-----"""
+    return primitives.serialization.load_pem_private_key(
+        pem_private_key.encode("ascii"), backend=default_backend(), password=None
+    )
+
+
+@pytest.fixture()
+def known_private_key_3():
+    """Define, parse and return yet another known private key."""
+    pem_private_key = """
+-----BEGIN RSA PRIVATE KEY-----
+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
+-----END RSA PRIVATE KEY-----"""
+    return primitives.serialization.load_pem_private_key(
+        pem_private_key.encode("ascii"), backend=default_backend(), password=None
+    )
+
+
+@pytest.fixture()
+def known_private_key_4():
+    """Define, parse and return one more known private key."""
+    pem_private_key = """
+-----BEGIN RSA PRIVATE KEY-----
+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
+-----END RSA PRIVATE KEY-----"""
     return primitives.serialization.load_pem_private_key(
         pem_private_key.encode("ascii"), backend=default_backend(), password=None
     )
@@ -382,7 +611,7 @@ def no_certgrinderd_env(monkeypatch):
 
 
 @pytest.fixture
-def selfsigned_certificate(known_private_key):
+def selfsigned_certificate(known_private_key_2):
     """Return a selfsigned certificate, only valid for 10 days."""
     subject = issuer = x509.Name(
         [
@@ -394,29 +623,55 @@ def selfsigned_certificate(known_private_key):
         x509.CertificateBuilder()
         .subject_name(subject)
         .issuer_name(issuer)
-        .public_key(known_private_key.public_key())
+        .public_key(known_private_key_2.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(
-            # Our certificate will be valid for 10 days
-            datetime.datetime.utcnow()
-            + datetime.timedelta(days=10)
-        )
+        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=10))
         .add_extension(
             x509.SubjectAlternativeName(
                 [x509.DNSName("example.com"), x509.DNSName("www.example.com")]
             ),
             critical=False,
-            # Sign our certificate with our private key
         )
-        .sign(known_private_key, primitives.hashes.SHA256(), default_backend())
+        .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
     )
     return cert
 
 
 @pytest.fixture
-def signed_certificate(known_private_key):
-    """Return a certificate selfsigned but with different issuer and subject."""
+def selfsigned_certificate_2(known_private_key_4):
+    """Return a selfsigned certificate with another key valid 90 days."""
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "selfsigned.example"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(known_private_key_4.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.utcnow())
+        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
+        .add_extension(
+            x509.SubjectAlternativeName(
+                [
+                    x509.DNSName("selfsigned.example"),
+                    x509.DNSName("www.selfsigned.example"),
+                ]
+            ),
+            critical=True,
+        )
+        .sign(known_private_key_4, primitives.hashes.SHA256(), default_backend())
+    )
+    return cert
+
+
+@pytest.fixture
+def signed_certificate(known_private_key, known_private_key_2):
+    """Return a signed certificate."""
     subject = x509.Name(
         [
             x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
@@ -436,16 +691,390 @@ def signed_certificate(known_private_key):
         .public_key(known_private_key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.utcnow())
+        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
+        .add_extension(
+            x509.SubjectAlternativeName([x509.DNSName("example.com")]), critical=False
+        )
+        .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
+    )
+    return cert
+
+
+@pytest.fixture
+def signed_certificate_2(known_private_key, known_private_key_2):
+    """Return a signed certificate with same keys but another name."""
+    subject = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "example.org"),
+        ]
+    )
+    issuer = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "certgrinder.example"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(known_private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.utcnow())
         .not_valid_after(
-            # Our certificate will be valid for 90 days
+            # the certificate will be valid for 90 days
             datetime.datetime.utcnow()
             + datetime.timedelta(days=90)
         )
         .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName("example.com")]),
-            critical=False,
-            # Sign our certificate with our private key
+            x509.SubjectAlternativeName([x509.DNSName("example.org")]), critical=False
         )
-        .sign(known_private_key, primitives.hashes.SHA256(), default_backend())
+        # Sign the certificate with the private key
+        .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
     )
     return cert
+
+
+@pytest.fixture
+def delegated_signer_certificate_not_signed_by_issuer(
+    known_private_key_3, known_private_key_4
+):
+    """Return a signed certificate with the ocsp signing permission, but not signed by the issuer."""
+    subject = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(
+                x509.oid.NameOID.COMMON_NAME, "delegatedresponder.example"
+            ),
+        ]
+    )
+    issuer = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "delegatedissuer.example"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(known_private_key_3.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.utcnow())
+        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
+        .add_extension(
+            x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
+            critical=True,
+        )
+        .add_extension(
+            x509.ExtendedKeyUsage(usages=[x509.oid.ExtendedKeyUsageOID.OCSP_SIGNING]),
+            critical=True,
+        )
+        .sign(known_private_key_4, primitives.hashes.SHA256(), default_backend())
+    )
+    return cert
+
+
+@pytest.fixture
+def delegated_signer_certificate(known_private_key_3, known_private_key_2):
+    """Return a signed certificate with the ocsp signing permission."""
+    subject = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(
+                x509.oid.NameOID.COMMON_NAME, "delegatedresponder.example"
+            ),
+        ]
+    )
+    issuer = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "example.com"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(known_private_key_3.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.utcnow())
+        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
+        .add_extension(
+            x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
+            critical=True,
+        )
+        .add_extension(
+            x509.ExtendedKeyUsage(usages=[x509.oid.ExtendedKeyUsageOID.OCSP_SIGNING]),
+            critical=True,
+        )
+        .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
+    )
+    return cert
+
+
+@pytest.fixture
+def delegated_signer_certificate_no_eku(known_private_key_3, known_private_key_2):
+    """Return a delegated signer certificate without ExtendedKeyUsage extension."""
+    subject = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(
+                x509.oid.NameOID.COMMON_NAME, "delegatedresponder.example"
+            ),
+        ]
+    )
+    issuer = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "example.com"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(known_private_key_3.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.utcnow())
+        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
+        .add_extension(
+            x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
+            critical=True,
+        )
+        .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
+    )
+    return cert
+
+
+@pytest.fixture
+def delegated_signer_certificate_no_ocsp_perm(known_private_key_3, known_private_key_2):
+    """Return a signed certificate with eku but no ocsp signing permission."""
+    subject = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(
+                x509.oid.NameOID.COMMON_NAME, "delegatedresponder.example"
+            ),
+        ]
+    )
+    issuer = x509.Name(
+        [
+            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
+            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "example.com"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(known_private_key_3.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.utcnow())
+        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
+        .add_extension(
+            x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
+            critical=True,
+        )
+        .add_extension(
+            x509.ExtendedKeyUsage(usages=[x509.oid.ExtendedKeyUsageOID.CODE_SIGNING]),
+            critical=True,
+        )
+        .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
+    )
+    return cert
+
+
+@pytest.fixture
+def certificate_chain_file(tmp_path_factory):
+    """Return a PEM formatted certificate chain."""
+    certpath = tmp_path_factory.mktemp("certificates") / "example.com.crt"
+    chain = """-----BEGIN CERTIFICATE-----
+MIIEnTCCA4WgAwIBAgIIJfMqOpI92mgwDQYJKoZIhvcNAQELBQAwKDEmMCQGA1UE
+AxMdUGViYmxlIEludGVybWVkaWF0ZSBDQSAwN2E2OWQwHhcNMjAwODI3MjEwOTI1
+WhcNMjUwODI3MjEwOTI1WjAWMRQwEgYDVQQDEwtleGFtcGxlLmNvbTCCAiIwDQYJ
+KoZIhvcNAQEBBQADggIPADCCAgoCggIBAL/ktXP5JKtwgsNRpxmTM4326x5w6Vc2
+7lMWxmQKHj9GWHly+IiRegX4Z/EvGfMKsejfDduO19TWT7ox5+s5yIHiuKOu2l7e
+wdDG9VATvUSunThOsNZfERAbb02LHKW+/LLzUwWfzJMaX1fr9OC4yFsktZAJAzgf
+etQDUNS4CsZzeijTp/Dus58/OoQDHmoZ4IXH8SujOs0BcNkSYvL3bDvOCmorriKs
+byNrzYL1gxixX8FQUjYUgdrXTHJZyETmf3v27z3JMpQ68ymB6P+Mnd8OC3DC4WN5
+V68BUavt7ONehL2rjrvZf36i3IcfWPLzwSLgB514Hp++bEHPSlXIthzYoyCYJ0BV
+gxrKKM4mlrHs2vZY/CYN9EwgZt7krPYA/7jVbVRyhdbsaaVnHOkb7jdqVU8jysF+
+yR+x53T1qmQsDWpOS6aSy1eku0qcDSwlzMjRBpjlpgPKJfnT5og+tkU6HiMJI4XJ
+vt/QX2/1/ZKwCpg+iWekynZv3QvTmaOJVNfW/IhaKD8dqr8ZTd5+rSv1QI1fX/0z
+hTsZ2rruyq3kZ6gRQfia79qEfERE/bboxk5YwZQVHFUBELF/BOoCM4W8UpBFS1jI
+LV9rD0sxE9/R9BXPQ48wiWRhXt4b9ot7SbSkuBKXvk6DclFiA9e4ti7eMrEiDECD
+rwqGrBuR0Yn9AgMBAAGjgdwwgdkwDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQG
+CCsGAQUFBwMBBggrBgEFBQcDAjAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBT44sOi
+jKhrhmB2DnPjLW8gJ6uKwDAfBgNVHSMEGDAWgBTGg0QCjUOiYfRi7xIqJErMHQLt
+fzAxBggrBgEFBQcBAQQlMCMwIQYIKwYBBQUHMAGGFWh0dHA6Ly8xMjcuMC4wLjE6
+ODg4ODAnBgNVHREEIDAeggtleGFtcGxlLmNvbYIPd3d3LmV4YW1wbGUuY29tMA0G
+CSqGSIb3DQEBCwUAA4IBAQA/EIgQhYRiUTsAxFXRO/GfDaA0Xly012eSx3pLeoFy
+SYGD7nEKCCfSbfJ9ZfBkDVEeEfQX5hpQRmsbSx3YHzkAaT0UXKE2djPzylHRhUjZ
+AvCbRX8Vbtu0zE2d9isJzRC5VrTKoHixairJuhkqiGl6DEvTrdzmUORlj+WYHqL2
+1riv3PC5AelR2fP8fWvwEvEdEE7y8a9o/dcYDilELoG6UAuah1SJOY3yfitST44e
+HlgnIoGrPZwTpa1cViUfSCEpBzKHHu4lS97ZVtli6uiOfFftVi5rc2+BLTkQOKbk
+fuhmbiA5k35QDGQ69N2ZGveE2VJ6nOU1zOOyCGGwzxSh
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIDUDCCAjigAwIBAgIIGNqbINwL+g0wDQYJKoZIhvcNAQELBQAwIDEeMBwGA1UE
+AxMVUGViYmxlIFJvb3QgQ0EgMmZjMjZkMCAXDTIwMDgyNzIxMDg1NVoYDzIwNTAw
+ODI3MjIwODU1WjAoMSYwJAYDVQQDEx1QZWJibGUgSW50ZXJtZWRpYXRlIENBIDA3
+YTY5ZDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKPKzG5/lRLbBWhp
+qRcG/0Bfdfs6D6RZGQnPHVOymFkoDXMv4Nva9EGPo875Hdc6stz3a/bvGVZJd0Ud
+F94QmCUspDFy0f6+VRI1UGoPpHwpRPaBmAXuuHrY8qiF/ZoNmsTPUmdlhzWGXegK
+WAVTtDUaVJobXC2LEL1cWiUlb7pzIdLMODDqXM5v6dkcp/r6nvHVyV1jk56cyXVo
+dvxKK7lW1E5fYgNlwU7Lp94qdnphaSIeZYcvoiBVvKxCAPW63F4SaKabxv9U+iql
+Tbvep2/+2lWSrg0e6FNU7JMBw5af6ziZl0YElbRh0Es7VnTItP4W0m/VKBPEXnxn
+uboViA0CAwEAAaOBgzCBgDAOBgNVHQ8BAf8EBAMCAoQwHQYDVR0lBBYwFAYIKwYB
+BQUHAwEGCCsGAQUFBwMCMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFMaDRAKN
+Q6Jh9GLvEiokSswdAu1/MB8GA1UdIwQYMBaAFJjeDmkMtjjHIRrMownx6qFHf0Qs
+MA0GCSqGSIb3DQEBCwUAA4IBAQBtKwt/c/DwgGTJVwvafH/K2WMJVmos/TztNsT8
+uwOGcbZV2GIM1EtBuT/0Iqdp/ICH9sRuYSfljEsUPEHtBBK6EsnK/VZb6bED0EM2
+IqRXUUdx6t1mWJDLnfGllIDWmxEyUmqwMcMLEkYVg4RdZL16AmPRU1gEXmr5qY5B
+8V9OQteW42Q9O3DcFkqOKuNoYZKt+FUqRKyK+azFoElDGBEtf7Nci6Tu1fICGnYs
+4ps029spwvtZAh+xFaza1ScWrllQf/mA5a7/Hd3xm3WC6ho5rUtdC1NpSWh0rJGc
+M6lczEk5TdIIKWGEOnqAxLwxXYa6xe+z6mr1bJMQZHuJS9sQ
+-----END CERTIFICATE-----"""
+    with open(certpath, "wb") as f:
+        f.write(chain.encode("ASCII"))
+    return certpath
+
+
+@pytest.fixture
+def certificate_chain_file_broken_cert(tmp_path_factory):
+    """Return a PEM formatted certificate chain where the cert is invalid."""
+    certpath = tmp_path_factory.mktemp("certificates") / "example.com-certbroken.crt"
+    chain = """-----BEGIN CERTIFICATE-----
+foo
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIDUDCCAjigAwIBAgIIGNqbINwL+g0wDQYJKoZIhvcNAQELBQAwIDEeMBwGA1UE
+AxMVUGViYmxlIFJvb3QgQ0EgMmZjMjZkMCAXDTIwMDgyNzIxMDg1NVoYDzIwNTAw
+ODI3MjIwODU1WjAoMSYwJAYDVQQDEx1QZWJibGUgSW50ZXJtZWRpYXRlIENBIDA3
+YTY5ZDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKPKzG5/lRLbBWhp
+qRcG/0Bfdfs6D6RZGQnPHVOymFkoDXMv4Nva9EGPo875Hdc6stz3a/bvGVZJd0Ud
+F94QmCUspDFy0f6+VRI1UGoPpHwpRPaBmAXuuHrY8qiF/ZoNmsTPUmdlhzWGXegK
+WAVTtDUaVJobXC2LEL1cWiUlb7pzIdLMODDqXM5v6dkcp/r6nvHVyV1jk56cyXVo
+dvxKK7lW1E5fYgNlwU7Lp94qdnphaSIeZYcvoiBVvKxCAPW63F4SaKabxv9U+iql
+Tbvep2/+2lWSrg0e6FNU7JMBw5af6ziZl0YElbRh0Es7VnTItP4W0m/VKBPEXnxn
+uboViA0CAwEAAaOBgzCBgDAOBgNVHQ8BAf8EBAMCAoQwHQYDVR0lBBYwFAYIKwYB
+BQUHAwEGCCsGAQUFBwMCMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFMaDRAKN
+Q6Jh9GLvEiokSswdAu1/MB8GA1UdIwQYMBaAFJjeDmkMtjjHIRrMownx6qFHf0Qs
+MA0GCSqGSIb3DQEBCwUAA4IBAQBtKwt/c/DwgGTJVwvafH/K2WMJVmos/TztNsT8
+uwOGcbZV2GIM1EtBuT/0Iqdp/ICH9sRuYSfljEsUPEHtBBK6EsnK/VZb6bED0EM2
+IqRXUUdx6t1mWJDLnfGllIDWmxEyUmqwMcMLEkYVg4RdZL16AmPRU1gEXmr5qY5B
+8V9OQteW42Q9O3DcFkqOKuNoYZKt+FUqRKyK+azFoElDGBEtf7Nci6Tu1fICGnYs
+4ps029spwvtZAh+xFaza1ScWrllQf/mA5a7/Hd3xm3WC6ho5rUtdC1NpSWh0rJGc
+M6lczEk5TdIIKWGEOnqAxLwxXYa6xe+z6mr1bJMQZHuJS9sQ
+-----END CERTIFICATE-----"""
+    with open(certpath, "wb") as f:
+        f.write(chain.encode("ASCII"))
+    return certpath
+
+
+@pytest.fixture
+def certificate_chain_file_broken_intermediate(tmp_path_factory):
+    """Return a PEM formatted certificate chain where the intermediate is invalid."""
+    certpath = (
+        tmp_path_factory.mktemp("certificates") / "example.com-intermediatebroken.crt"
+    )
+    chain = """-----BEGIN CERTIFICATE-----
+MIIEnTCCA4WgAwIBAgIIJfMqOpI92mgwDQYJKoZIhvcNAQELBQAwKDEmMCQGA1UE
+AxMdUGViYmxlIEludGVybWVkaWF0ZSBDQSAwN2E2OWQwHhcNMjAwODI3MjEwOTI1
+WhcNMjUwODI3MjEwOTI1WjAWMRQwEgYDVQQDEwtleGFtcGxlLmNvbTCCAiIwDQYJ
+KoZIhvcNAQEBBQADggIPADCCAgoCggIBAL/ktXP5JKtwgsNRpxmTM4326x5w6Vc2
+7lMWxmQKHj9GWHly+IiRegX4Z/EvGfMKsejfDduO19TWT7ox5+s5yIHiuKOu2l7e
+wdDG9VATvUSunThOsNZfERAbb02LHKW+/LLzUwWfzJMaX1fr9OC4yFsktZAJAzgf
+etQDUNS4CsZzeijTp/Dus58/OoQDHmoZ4IXH8SujOs0BcNkSYvL3bDvOCmorriKs
+byNrzYL1gxixX8FQUjYUgdrXTHJZyETmf3v27z3JMpQ68ymB6P+Mnd8OC3DC4WN5
+V68BUavt7ONehL2rjrvZf36i3IcfWPLzwSLgB514Hp++bEHPSlXIthzYoyCYJ0BV
+gxrKKM4mlrHs2vZY/CYN9EwgZt7krPYA/7jVbVRyhdbsaaVnHOkb7jdqVU8jysF+
+yR+x53T1qmQsDWpOS6aSy1eku0qcDSwlzMjRBpjlpgPKJfnT5og+tkU6HiMJI4XJ
+vt/QX2/1/ZKwCpg+iWekynZv3QvTmaOJVNfW/IhaKD8dqr8ZTd5+rSv1QI1fX/0z
+hTsZ2rruyq3kZ6gRQfia79qEfERE/bboxk5YwZQVHFUBELF/BOoCM4W8UpBFS1jI
+LV9rD0sxE9/R9BXPQ48wiWRhXt4b9ot7SbSkuBKXvk6DclFiA9e4ti7eMrEiDECD
+rwqGrBuR0Yn9AgMBAAGjgdwwgdkwDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQG
+CCsGAQUFBwMBBggrBgEFBQcDAjAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBT44sOi
+jKhrhmB2DnPjLW8gJ6uKwDAfBgNVHSMEGDAWgBTGg0QCjUOiYfRi7xIqJErMHQLt
+fzAxBggrBgEFBQcBAQQlMCMwIQYIKwYBBQUHMAGGFWh0dHA6Ly8xMjcuMC4wLjE6
+ODg4ODAnBgNVHREEIDAeggtleGFtcGxlLmNvbYIPd3d3LmV4YW1wbGUuY29tMA0G
+CSqGSIb3DQEBCwUAA4IBAQA/EIgQhYRiUTsAxFXRO/GfDaA0Xly012eSx3pLeoFy
+SYGD7nEKCCfSbfJ9ZfBkDVEeEfQX5hpQRmsbSx3YHzkAaT0UXKE2djPzylHRhUjZ
+AvCbRX8Vbtu0zE2d9isJzRC5VrTKoHixairJuhkqiGl6DEvTrdzmUORlj+WYHqL2
+1riv3PC5AelR2fP8fWvwEvEdEE7y8a9o/dcYDilELoG6UAuah1SJOY3yfitST44e
+HlgnIoGrPZwTpa1cViUfSCEpBzKHHu4lS97ZVtli6uiOfFftVi5rc2+BLTkQOKbk
+fuhmbiA5k35QDGQ69N2ZGveE2VJ6nOU1zOOyCGGwzxSh
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+foo
+-----END CERTIFICATE-----"""
+    with open(certpath, "wb") as f:
+        f.write(chain.encode("ASCII"))
+    return certpath
+
+
+@pytest.fixture
+def certificate_chain_file_not_a_pem(tmp_path_factory):
+    """Return something which is not a PEM formatted certificate chain."""
+    certpath = tmp_path_factory.mktemp("certificates") / "example.com-not-a-pem.crt"
+    chain = "foo"
+    with open(certpath, "wb") as f:
+        f.write(chain.encode("ASCII"))
+    return certpath
+
+
+@pytest.fixture
+def certificate_file_no_aia(tmp_path_factory):
+    """Return a cert with no AUTHORITY_INFORMATION_ACCESS extension."""
+    certpath = tmp_path_factory.mktemp("certificates") / "example.com-no-aia.crt"
+    cert = """-----BEGIN CERTIFICATE-----
+MIIEWTCCA0GgAwIBAgIINaRKcLY1618wDQYJKoZIhvcNAQELBQAwKDEmMCQGA1UE
+AxMdUGViYmxlIEludGVybWVkaWF0ZSBDQSAxNzY2ZmUwHhcNMjAwODI4MDUzODAw
+WhcNMjUwODI4MDUzODAwWjAWMRQwEgYDVQQDEwtleGFtcGxlLm5ldDCCAiIwDQYJ
+KoZIhvcNAQEBBQADggIPADCCAgoCggIBAJNRb78bno1y9h8GO+vHGNkZ5hlcUt3x
+F70WPU9H09K1WCl5QoVsfDOTYl6tl9k1GaIaNM9cBxgAen9+7AGBjJ0HQQdaHjEP
+Hdcrf/M7YBNdAkrZr4mUWTOjvQW8RdEyzprTRVErVuoKojuipyieAOnYBkIRqZZR
++PRAeizMsPSgGt2gOCAGbNuheScN8Ms6jFh/Lkh/2lYFzeZGq/xrQeiRIWha+1OQ
+kCqRy+NckI+oI3fE2gUIuqo2uwVvC4Wxfrhi+Ktw45s997ZbU+KxUujPbDpwNGZJ
+Blipis1XwqcoER9L1KTvTpcJxZL/xM9K2wCP1VZ63QOz3AsGG12lNJ5v5BPdl1LE
+/myTIo4KWfLx41AUIefYw++JPlp+P7ET8NgTMUOQeTJslQ5k2AMmtE+FnCHhbyyr
+QcDdRrAjKlo2CvrOxpSOnEW2slU6vLvQ8FUiXPXHccX9YUAkaRn7FPG1eGci8MHy
+kUvqshSw3xshEmg+4WJIe7+xPwdaByiqD/b9kKTPwwfPjiKNrzl6NTdC9sJ/474B
+/L6AvwjPWplhWBTFgIrfGfT0GUmsVq61Dp85Esr7bQRSoxwaW+uwTfY2glCBMGjt
+CPp5zdqIvaLSlUwBBRnDdpsrE+jf2LTcQ4beqNfyWHp0O2MzThldRLHe5vTtrtew
+Xr7I8xKkNqlRAgMBAAGjgZgwgZUwDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQG
+CCsGAQUFBwMBBggrBgEFBQcDAjAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBSdAsMM
+6+jpZX6pgsMWkkM82UqjCjAfBgNVHSMEGDAWgBScLIFnUPMB9ZpvS+OUFdiFnR8x
+GjAWBgNVHREEDzANggtleGFtcGxlLm5ldDANBgkqhkiG9w0BAQsFAAOCAQEAS6w6
+MTUgd32WbdOZjeneFchx6hhGgMRqg/6FcqV+gQj1q/EJ156RVmuauZZEgoqCcSn5
+TTdhGHPO/h/T+JkGB7A5jvonryI2NLe0lUfGY2aLBKq3ed8/qZr7jTRkj9Og5TRC
+g/xFXgUYEjb3ijP95RwP6W14lYTK4W3ABB6UYEQxTix67ni9rpNP39ZqRhnmjGX3
+nyTwBJgxVFABWTBh5Vzv54BPEQFQfWB72ffRAqYStxKsobLRzDxUmzd2QzitHGJF
+zZC9LXgI3UpjUOifit9TK/BHHRx+LXncqL/0qRqQbYgbKU1HiKEUeCVAkgq53Wxx
++OQudBN9Bp+X/ybAsw==
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIDUDCCAjigAwIBAgIIGNqbINwL+g0wDQYJKoZIhvcNAQELBQAwIDEeMBwGA1UE
+AxMVUGViYmxlIFJvb3QgQ0EgMmZjMjZkMCAXDTIwMDgyNzIxMDg1NVoYDzIwNTAw
+ODI3MjIwODU1WjAoMSYwJAYDVQQDEx1QZWJibGUgSW50ZXJtZWRpYXRlIENBIDA3
+YTY5ZDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKPKzG5/lRLbBWhp
+qRcG/0Bfdfs6D6RZGQnPHVOymFkoDXMv4Nva9EGPo875Hdc6stz3a/bvGVZJd0Ud
+F94QmCUspDFy0f6+VRI1UGoPpHwpRPaBmAXuuHrY8qiF/ZoNmsTPUmdlhzWGXegK
+WAVTtDUaVJobXC2LEL1cWiUlb7pzIdLMODDqXM5v6dkcp/r6nvHVyV1jk56cyXVo
+dvxKK7lW1E5fYgNlwU7Lp94qdnphaSIeZYcvoiBVvKxCAPW63F4SaKabxv9U+iql
+Tbvep2/+2lWSrg0e6FNU7JMBw5af6ziZl0YElbRh0Es7VnTItP4W0m/VKBPEXnxn
+uboViA0CAwEAAaOBgzCBgDAOBgNVHQ8BAf8EBAMCAoQwHQYDVR0lBBYwFAYIKwYB
+BQUHAwEGCCsGAQUFBwMCMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFMaDRAKN
+Q6Jh9GLvEiokSswdAu1/MB8GA1UdIwQYMBaAFJjeDmkMtjjHIRrMownx6qFHf0Qs
+MA0GCSqGSIb3DQEBCwUAA4IBAQBtKwt/c/DwgGTJVwvafH/K2WMJVmos/TztNsT8
+uwOGcbZV2GIM1EtBuT/0Iqdp/ICH9sRuYSfljEsUPEHtBBK6EsnK/VZb6bED0EM2
+IqRXUUdx6t1mWJDLnfGllIDWmxEyUmqwMcMLEkYVg4RdZL16AmPRU1gEXmr5qY5B
+8V9OQteW42Q9O3DcFkqOKuNoYZKt+FUqRKyK+azFoElDGBEtf7Nci6Tu1fICGnYs
+4ps029spwvtZAh+xFaza1ScWrllQf/mA5a7/Hd3xm3WC6ho5rUtdC1NpSWh0rJGc
+M6lczEk5TdIIKWGEOnqAxLwxXYa6xe+z6mr1bJMQZHuJS9sQ
+-----END CERTIFICATE-----"""
+    with open(certpath, "wb") as f:
+        f.write(cert.encode("ASCII"))
+    return certpath
