@@ -1537,10 +1537,10 @@ class Certgrinder:
             # run the requested method
             getattr(self, args.method)()
 
-        # do we need to run a post-renew hook?
+        # do we need to run post-renew hooks?
         if self.hook_needed:
             logger.info(
-                "At least one certificate was renewed, running post renew hooks..."
+                "At least one certificate or OCSP response was renewed, running post renew hooks..."
             )
             self.run_post_renew_hooks()
 
