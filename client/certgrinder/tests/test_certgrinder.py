@@ -189,6 +189,12 @@ def test_get_certificate(
                 )
             print(f"wrote cert info to CA index file {ocsp_ca_index_file}")
 
+            # delete the intermediates to test the intermediate splitter
+            intermediate_path = os.path.join(
+                mockargs[1], domains[0] + "-intermediate.crt"
+            )
+            os.unlink(intermediate_path)
+
         # try to get OCSP responses before starting the responder to provoke failure
         with pytest.raises(SystemExit) as E:
             main(mockargs + ["get", "ocsp"])

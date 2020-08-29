@@ -1155,7 +1155,7 @@ None
 .INDENT 7.0
 .TP
 .B parse_certgrinderd_certificate_output(certgrinderd_stdout: bytes, csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]]
-Split output chain into cert and intermediate.
+Split output chain into cert and intermediate, parse both certs, and validate them.
 .INDENT 7.0
 .TP
 .B Parameters
@@ -1370,6 +1370,19 @@ The \(aqshow tlsa\(aq subcommand method, called for each domainset by \fBself.gr
 .TP
 .B Returns
 None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static split_pem_chain(pem_chain_bytes: bytes) -> List[bytes]
+Split a PEM chain into a list of bytes of the individual PEM certificates.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBpem_chain_bytes\fP \-\- The bytes representing the PEM chain
+.TP
+.B Returns
+A list of 0 or more bytes chunks representing each certificate
 .UNINDENT
 .UNINDENT
 .INDENT 7.0

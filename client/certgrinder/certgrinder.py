@@ -685,12 +685,32 @@ class Certgrinder:
         # finally return the actual output to caller
         return certgrinderd_stdout
 
+    @staticmethod
+    def split_pem_chain(pem_chain_bytes: bytes) -> typing.List[bytes]:
+        """Split a PEM chain into a list of bytes of the individual PEM certificates.
+
+        Args:
+            pem_chain_bytes: The bytes representing the PEM chain
+
+        Returns:
+            A list of 0 or more bytes chunks representing each certificate
+        """
+        logger.debug(f"Parsing certificates from {len(pem_chain_bytes)} bytes input")
+        certificates = []
+        cert_list = pem_chain_bytes.decode("ASCII").split("-----BEGIN CERTIFICATE-----")
+        for cert in cert_list[1:]:
+            certificates.append(("-----BEGIN CERTIFICATE-----" + cert).encode("ASCII"))
+        logger.debug(
+            f"Returning a list of {len(certificates)} chunks of bytes resembling PEM certificates"
+        )
+        return certificates
+
     def parse_certgrinderd_certificate_output(
         self, certgrinderd_stdout: bytes, csr: x509._CertificateSigningRequest
     ) -> typing.Optional[
         typing.Tuple[cryptography.x509.Certificate, cryptography.x509.Certificate]
     ]:
-        """Split output chain into cert and intermediate.
+        """Split output chain into cert and intermediate, parse both certs, and validate them.
 
         Args:
             certgrinderd_stdout: The bytes of the stdout from the certgrinderd call
@@ -699,25 +719,16 @@ class Certgrinder:
         Returns:
             A tuple of certificate, intermediate if the certificate chain is valid, None otherwise
         """
-        # decode stdout as ASCII and split into lines
-        chain_list = certgrinderd_stdout.decode("ASCII").split("\n")
-
-        # do we have something resembling a PEM cert?
-        if "-----BEGIN CERTIFICATE-----" not in chain_list:
+        certs = self.split_pem_chain(certgrinderd_stdout)
+        if len(certs) == 2:
+            certificate_bytes, intermediate_bytes = certs
+        else:
             logger.error(
-                "The Certgrinder server did not return a valid PEM formatted certificate."
+                "The Certgrinder server did not return a certificate chain with two PEM formatted certificates. This is stdout from the certgrinderd call:"
             )
-            logger.debug("This is stdout from the certgrinderd call:")
             logger.debug(certgrinderd_stdout.strip().decode("ASCII"))
             # we dont have a valid certificate
             return None
-
-        # split chain in cert and intermediate
-        cert_end_index = chain_list.index("-----END CERTIFICATE-----")
-        certificate_bytes = "\n".join(chain_list[0 : cert_end_index + 1]).encode(
-            "ASCII"
-        )
-        intermediate_bytes = "\n".join(chain_list[cert_end_index + 1 :]).encode("ASCII")
 
         # parse certificate
         try:
@@ -944,7 +955,21 @@ class Certgrinder:
         """
         if not certificate or not issuer:
             certificate = self.load_certificate(path=self.certificate_path)
-            issuer = self.load_certificate(path=self.intermediate_path)
+            try:
+                issuer = self.load_certificate(path=self.intermediate_path)
+            except FileNotFoundError:
+                logger.warning(
+                    f"Intermediate cert {self.intermediate_path} not found, parsing intermediate from chain (this is a workaround for upgrades from older versions where foo-intermediate.crt was not written seperately)."
+                )
+                with open(self.certificate_chain_path, "rb") as f:
+                    certificate_bytes, intermediate_bytes = self.split_pem_chain(
+                        f.read()
+                    )
+                intermediate = cryptography.x509.load_pem_x509_certificate(
+                    intermediate_bytes, default_backend()
+                )
+                self.save_certificate(intermediate, self.intermediate_path)
+                issuer = self.load_certificate(path=self.intermediate_path)
 
         stdin = certificate.public_bytes(primitives.serialization.Encoding.PEM)
         stdin += issuer.public_bytes(primitives.serialization.Encoding.PEM)
