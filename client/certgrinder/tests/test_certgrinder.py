@@ -224,8 +224,8 @@ def test_get_certificate(
         time.sleep(5)
         proc.poll()
         assert (
-            proc.returncode is not None
-        ), "OpenSSL OCSP responder not running, it quit with exit code {proc.returncode}"
+            proc.returncode is None
+        ), f"OpenSSL OCSP responder not running, it quit with exit code {proc.returncode}"
 
         # get OCSP responses for both certificates
         with pytest.raises(SystemExit) as E:
