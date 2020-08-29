@@ -207,7 +207,7 @@ def test_get_certificate(
                 "-index",
                 ocsp_ca_index_file,
                 "-port",
-                "8888",
+                "8080",
                 "-rsigner",
                 pebble_intermediate[1],
                 "-rkey",

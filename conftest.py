@@ -45,7 +45,7 @@ def pebble_server():
     )
     with open(pebbleconfig, "r") as f:
         conf = json.loads(f.read())
-    conf["pebble"].update({"ocspResponderURL": "http://127.0.0.1:8888"})
+    conf["pebble"].update({"ocspResponderURL": "http://127.0.0.1:8080"})
     with open(pebbleconfig, "w") as f:
         f.write(json.dumps(conf))
 
