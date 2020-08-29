@@ -530,7 +530,9 @@ class Certgrinderd:
         assert isinstance(self.conf["certificate-file"], str)
         ocsp_response = self.get_ocsp_response(certpath=self.conf["certificate-file"])
         der = ocsp_response.public_bytes(primitives.serialization.Encoding.DER)
-        logger.debug(f"Outputting {len(der)} bytes DER encoded OCSP response to stdout")
+        logger.info(
+            f"Success, got a new OCSP response, outputting {len(der)} bytes DER encoded data to stdout"
+        )
         sys.stdout.buffer.write(der)
 
     @classmethod

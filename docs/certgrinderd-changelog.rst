@@ -11,7 +11,10 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.14.0-rc1 (unreleased)
 ------------------------
-- No changes
+
+Changed
+~~~~~~~
+- Change log message to INFO when getting a new OCSP response
 
 
 v0.14.0-beta2 (29-aug-2020)
