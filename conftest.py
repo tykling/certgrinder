@@ -5,6 +5,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import time
 
 import pytest
 import requests
@@ -56,15 +57,12 @@ def pebble_server():
         cwd=pathlib.Path.home() / "go/src/github.com/letsencrypt/pebble",
     )
 
-    import time
-
     time.sleep(2)
     print("Setup finished - pebble is running!")
 
     # end buildup
     yield
     # begin teardown
-    # time.sleep(600)
 
     print("Beginning teardown")
     print("Stopping pebble server...")
@@ -640,37 +638,6 @@ def selfsigned_certificate(known_private_key_2):
 
 
 @pytest.fixture
-def selfsigned_certificate_2(known_private_key_4):
-    """Return a selfsigned certificate with another key valid 90 days."""
-    subject = issuer = x509.Name(
-        [
-            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
-            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "selfsigned.example"),
-        ]
-    )
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(known_private_key_4.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
-        .add_extension(
-            x509.SubjectAlternativeName(
-                [
-                    x509.DNSName("selfsigned.example"),
-                    x509.DNSName("www.selfsigned.example"),
-                ]
-            ),
-            critical=True,
-        )
-        .sign(known_private_key_4, primitives.hashes.SHA256(), default_backend())
-    )
-    return cert
-
-
-@pytest.fixture
 def signed_certificate(known_private_key, known_private_key_2):
     """Return a signed certificate."""
     subject = x509.Name(
@@ -696,42 +663,6 @@ def signed_certificate(known_private_key, known_private_key_2):
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName("example.com")]), critical=False
         )
-        .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
-    )
-    return cert
-
-
-@pytest.fixture
-def signed_certificate_2(known_private_key, known_private_key_2):
-    """Return a signed certificate with same keys but another name."""
-    subject = x509.Name(
-        [
-            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
-            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "example.org"),
-        ]
-    )
-    issuer = x509.Name(
-        [
-            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
-            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "certgrinder.example"),
-        ]
-    )
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(known_private_key.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(
-            # the certificate will be valid for 90 days
-            datetime.datetime.utcnow()
-            + datetime.timedelta(days=90)
-        )
-        .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName("example.org")]), critical=False
-        )
-        # Sign the certificate with the private key
         .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
     )
     return cert
