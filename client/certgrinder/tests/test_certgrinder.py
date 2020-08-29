@@ -222,19 +222,19 @@ def test_get_certificate(
         )
         # wait for it to start up
         time.sleep(5)
+        proc.poll()
+        assert (
+            proc.returncode is not None
+        ), "OpenSSL OCSP responder not running, it quit with exit code {proc.returncode}"
 
         # get OCSP responses for both certificates
         with pytest.raises(SystemExit) as E:
             main(mockargs + ["get", "ocsp"])
 
         print(f"Killing openssl ocsp responder with pid {proc.pid}...")
-        proc.kill()
-        # wait for it to exit
-        time.sleep(2)
-        if proc.poll():
-            print(f"openssl ocsp responder exit code {proc.returncode}")
-        else:
-            print(f"openssl ocsp responder still running with {proc.pid}")
+        os.kill(proc.pid, 9)
+        # wait for it to exit before continuing
+        time.sleep(5)
 
         assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
         assert "Did not get an OCSP response" not in caplog.text
