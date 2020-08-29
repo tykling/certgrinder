@@ -26,7 +26,6 @@ def pebble_server():
             "GOPATH": pathlib.Path.home() / "go",
             "PATH": "/bin:/usr/bin:/usr/local/bin:"
             + str(pathlib.Path(shutil.which("git")).parent),
-            "PEBBLE_WFE_NONCEREJECT": "0",
         },
     )
     assert proc.returncode == 0
@@ -53,7 +52,7 @@ def pebble_server():
     print("Running pebble server...")
     proc = subprocess.Popen(
         args=[pathlib.Path.home() / "go/bin/pebble", "-config", pebbleconfig],
-        env={"PEBBLE_VA_ALWAYS_VALID": "1"},
+        env={"PEBBLE_VA_ALWAYS_VALID": "1", "PEBBLE_WFE_NONCEREJECT": "0"},
         cwd=pathlib.Path.home() / "go/src/github.com/letsencrypt/pebble",
     )
 
