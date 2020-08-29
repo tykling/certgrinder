@@ -218,9 +218,6 @@ def test_get_certificate(
                 # nextupdate in 7 days
                 "-ndays",
                 "7",
-                # only answer two requests before exiting
-                "-nrequest",
-                "2",
             ]
         )
         time.sleep(5)
@@ -229,7 +226,7 @@ def test_get_certificate(
         with pytest.raises(SystemExit) as E:
             main(mockargs + ["get", "ocsp"])
         print(f"Killing openssl ocsp responder...")
-        proc.kill()
+        proc.terminate()
         assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
         assert "Did not get an OCSP response" not in caplog.text
 
