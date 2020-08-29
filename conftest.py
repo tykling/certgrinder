@@ -25,6 +25,7 @@ def pebble_server():
             "GOPATH": pathlib.Path.home() / "go",
             "PATH": "/bin:/usr/bin:/usr/local/bin:"
             + str(pathlib.Path(shutil.which("git")).parent),
+            "PEBBLE_WFE_NONCEREJECT": "0",
         },
     )
     assert proc.returncode == 0
