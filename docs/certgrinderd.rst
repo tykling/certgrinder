@@ -1,17 +1,18 @@
 Certgrinderd
 ============
-The Certgrinder server ``certgrinderd`` takes care of receiving the ``CSR``, running Certbot, serving challenges, and finally outputs a certificate. It never acts on its own, it only does something when a Certgrinder client calls it with a CSR on stdin, usually over SSH.
+The Certgrinder server ``certgrinderd`` takes care of getting certificates and OCSP responses on behalf of the calling clients. ``certgrinderd`` doesn't run always like a daemon, so it never acts on its own. It only does something when a Certgrinder client runs it, usually over SSH.
 
 The following sections explain the steps you need to setup a Certgrinder server.
 
 
 Install Certgrinder Server
 --------------------------
-Create a VM or Jail or Docker thing or whatever somewhere. This will be your Certgrinder server. Give it a hostname like ``certgrinder.example.com``.
+Create a VM or Jail or Docker thing or whatever somewhere. This will be your Certgrinder server. Give it a proper public hostname like ``certgrinder.example.com``. You can use real proper IP addresses or port forwarding, whichever you prefer. The relevant ports are ``TCP/22`` (so the Certgrinder clients can reach the Certgrinder server), ``TCP/53`` and ``UDP/53`` if you want to serve ``DNS-01`` challenges locally, and ``TCP/80`` if you use ``HTTP-01`` challenges locally.
 
-This will be the hostname your Certgrinder clients use to SSH into (if you use SSH), and the hostname you use to serve HTTP challenges (if you use HTTP challenges).
+Create DNS records for the new hostname (A+AAAA, and an SSHFP record wouldn't hurt) and you should be ready to begin the install.
 
-Create DNS records (A+AAAA, and if you use SSH then an SSHFP record wouldn't hurt) for the new hostname and you should be ready to begin the install.
+The hostname of your Certgrinder server will be the hostname your Certgrinder clients use to SSH into (if you use SSH), and also the hostname you use to serve HTTP challenges locally (if you use ``HTTP-01`` challenges).
+
 
 Create User
 -----------
@@ -189,7 +190,7 @@ Both scripts must be able to handle the challenge type(s) you use. The same scri
 
 Testing
 -------
-When the server has been configured with hooks you can test from a client using just SSH and a manually generated CSR, with something like: ``cat mail4.example.com.csr | ssh certgrinderd@certgrinder.example.org -T -- --staging`` where ``-T`` is to prevent SSH from allocating a TTY on the server, ``--`` is to mark the end of the SSH args, and ``--staging`` is to make ``certgrinderd`` use the LetsEncrypt staging servers. If all goes well it should output some logging and a certificate chain.
+When the server has been configured with hooks you can test from a client using just SSH and a manually generated CSR, with something like: ``cat mail4.example.com.csr | ssh certgrinderd@certgrinder.example.org -T -- --staging get certificate`` where ``-T`` is to prevent SSH from allocating a TTY on the server, ``--`` is to mark the end of the SSH args, and ``--staging`` is to make ``certgrinderd`` use the LetsEncrypt staging servers. If all goes well it should output some logging and a certificate chain.
 
 
 Command Line Usage

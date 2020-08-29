@@ -19,7 +19,7 @@ This concludes the server part of the ``DNS-01`` configuration.
 
 A client wanting a certificate must now create a ``CNAME`` record called ``_acme-challenge.${DOMAIN}`` pointing at ``${DOMAIN}.${ACMEZONE}`` for each domain in the ``CSR``.
 
-For example, to get a certificate for ``smtp.example.org`` you would create ``_acme-challenge.smtp.example.org CNAME smtp.example.org.acme.example.com`` if your acme challenge zone was ``acme.example.com``. certgrinderd will create the ``smtp.example.org.acme.example.com TXT`` record containing the validation string, and delete if afterwards.
+For example, to get a certificate for ``smtp.example.org`` you would create ``_acme-challenge.smtp.example.org CNAME smtp.example.org.acme.example.com`` if your acme challenge zone was ``acme.example.com``. certgrinderd will create the ``smtp.example.org.acme.example.com TXT`` record containing the validation string, and delete it afterwards.
 
 
 HTTP-01

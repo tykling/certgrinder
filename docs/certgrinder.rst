@@ -137,12 +137,15 @@ Client Commands
 All the functionality in Certgrinder can be accessed by using ``commands`` and ``subcommands``. The following ``commands`` are available:
 
 - `check certificate command`_
+- `check ocsp command`_
 - `check tlsa command`_
 - `get certificate command`_
+- `get ocsp command`_
 - `help command`_
 - `periodic command`_
 - `show certificate command`_
 - `show configuration command`_
+- `show ocsp command`_
 - `show spki command`_
 - `show tlsa command`_
 - `version command`_
@@ -156,6 +159,11 @@ All the subcommands for the ``check`` commands return exit code 1 if a problem i
 check certificate command
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 The ``check certificate`` subcommand loops over the configured domainsets and checks the validity of the certificate for each. If a problem is found ``certgrinder`` will exit with exit code 1, if all is well the exit code will be 0.
+
+
+check ocsp command
+^^^^^^^^^^^^^^^^^^
+The ``check ocsp`` subcommand loops over the configured domainsets and checks for the existance of an OCSP response for each. If a missing response is found ``certgrinder`` will exit with exit code 1, if all is well the exit code will be 0.
 
 
 check tlsa command
@@ -197,13 +205,19 @@ get certificate command
 ^^^^^^^^^^^^^^^^^^^^^^^
 The ``get certificate`` subcommand loops over the configured domainsets and gets a new certificate for each, regardless of the current status of existing certificates. Use with care, only for troubleshooting. `Do not use from cron. Use the periodic command instead.`
 
+get ocsp command
+^^^^^^^^^^^^^^^^
+The ``get ocsp`` subcommand loops over the configured domainsets and gets a new OCSP response for each, regardless of the current status of existing OCSP responses. `Do not use from cron. Use the periodic command instead.`
+
 help command
 ~~~~~~~~~~~~
 The ``help`` command is just a shortcut for ``-h`` which shows commandline usage and help.
 
 periodic command
 ~~~~~~~~~~~~~~~~
-The ``periodic`` command sleeps for a random number of minutes between 0 and the config setting ``periodic-sleep-minutes`` before doing anything. Set this setting to 0 to disable sleeping. After sleeping the certificates are checked and renewed as needed. This is meant to be run daily from cron or similar. 
+The ``periodic`` command sleeps for a random number of minutes between 0 and the config setting ``periodic-sleep-minutes`` before doing anything. Set this setting to 0 to disable sleeping.
+
+After sleeping the certificates and OCSP responses are checked and renewed as needed. This command is meant to be run daily from cron or similar.
 
 show commands
 ~~~~~~~~~~~~~
@@ -216,6 +230,10 @@ The ``show certificate`` subcommand loops over configured domainsets and outputs
 show configuration command
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 The ``show configuration`` subcommand just dumps the active configuration as a pretty printed JSON object and exits. Useful for testing or debugging configuration issues.
+
+show ocsp command
+^^^^^^^^^^^^^^^^^
+The ``show ocsp`` subcommand loops over the configured domainsets and shows info about each OCSP response.
 
 show spki command
 ^^^^^^^^^^^^^^^^^

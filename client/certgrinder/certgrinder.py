@@ -1669,7 +1669,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--certgrinderd",
         dest="certgrinderd",
-        help="The command to reach the certgrinderd server, will get the CSR on stdin. Usually something like 'ssh certgrinderd@server -T'",
+        help="The command to reach the certgrinderd server, will get the input (CSR or cert chain) on stdin. Usually something like 'ssh certgrinderd@server -T'",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
