@@ -218,6 +218,9 @@ def test_get_certificate(
                 # nextupdate in 7 days
                 "-ndays",
                 "7",
+                # only answer two requests before exiting
+                "-nrequest",
+                "2",
             ]
         )
         time.sleep(5)
