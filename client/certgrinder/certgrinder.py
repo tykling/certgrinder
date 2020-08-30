@@ -647,7 +647,7 @@ class Certgrinder:
         """
         if not certgrinderd_stdout and not certgrinderd_stderr:
             commandlist = self.get_certgrinderd_command(subcommand=command)
-            logger.debug("Running certgrinderd command: %s" % commandlist)
+            logger.debug(f"Running certgrinderd command: {commandlist}")
             p = subprocess.Popen(
                 commandlist,
                 stdin=subprocess.PIPE,
@@ -705,29 +705,30 @@ class Certgrinder:
         )
         return certificates
 
-    def parse_certgrinderd_certificate_output(
-        self, certgrinderd_stdout: bytes, csr: x509._CertificateSigningRequest
+    def parse_certificate_chain(
+        self, certificate_chain: bytes, csr: x509._CertificateSigningRequest
     ) -> typing.Optional[
         typing.Tuple[cryptography.x509.Certificate, cryptography.x509.Certificate]
     ]:
-        """Split output chain into cert and intermediate, parse both certs, and validate them.
+        """Split a PEM chain into certificate and intermediate, parse and return both.
 
         Args:
-            certgrinderd_stdout: The bytes of the stdout from the certgrinderd call
+            certificate_chain: The bytes representing the PEM formatted certificate chain
             csr: The CSR this certificate was issued from
 
         Returns:
             A tuple of certificate, intermediate if the certificate chain is valid, None otherwise
         """
-        certs = self.split_pem_chain(certgrinderd_stdout)
+        certs = self.split_pem_chain(certificate_chain)
         if len(certs) == 2:
             certificate_bytes, intermediate_bytes = certs
         else:
             logger.error(
-                "The Certgrinder server did not return a certificate chain with two PEM formatted certificates. This is stdout from the certgrinderd call:"
+                f"The input does not contain a valid certificate chain (it does not have 2 PEM-looking chunks, it has {len(certs)})."
             )
-            logger.debug(certgrinderd_stdout.strip().decode("ASCII"))
-            # we dont have a valid certificate
+            logger.debug("This is the certificate chain that failed to parse:")
+            logger.debug(certificate_chain)
+            # we do not have a valid certificate
             return None
 
         # parse certificate
@@ -739,8 +740,8 @@ class Certgrinder:
             logger.error(
                 "The Certgrinder server did not return a valid PEM formatted certificate."
             )
-            logger.debug("This is stdout from the certgrinderd call:")
-            logger.debug(certgrinderd_stdout.strip().decode("ASCII"))
+            logger.debug("This is the certificate that failed to parse:")
+            logger.debug(certificate_bytes)
             # we dont have a valid certificate
             return None
 
@@ -753,8 +754,8 @@ class Certgrinder:
             logger.error(
                 "The Certgrinder server did not return a valid PEM formatted intermediate."
             )
-            logger.debug("This is stdout from the certgrinderd call:")
-            logger.debug(certgrinderd_stdout.strip().decode("ASCII"))
+            logger.debug("This is the intermediate that failed to parse:")
+            logger.debug(intermediate_bytes)
             # we dont have a valid intermediate
             return None
 
@@ -796,12 +797,13 @@ class Certgrinder:
 
         Args:
             csr: The CSR to use instead of generating one
-            stdout: The stdout bytes to use instead of calling self.run_certgrinder(csr)
+            stdout: The stdout bytes to use instead of calling self.run_certgrinderd(csr)
 
         Returns:
             False something goes wrong, True if all is well
         """
         logger.info(f"Getting new certificate for domainset {self.domainset} ...")
+        # do we have a CSR or do we generate one?
         if not csr:
             # generate new CSR
             csr = self.generate_csr(self.keypair, self.domainset)
@@ -810,6 +812,8 @@ class Certgrinder:
             f"Wrote {len(csr.public_bytes(primitives.serialization.Encoding.PEM))} bytes CSR to path {self.csr_path}"
         )
 
+        # do we have stdout or do we run certgrinderd for real?
+
         if not stdout:
             # get certificate
             stdout = self.run_certgrinderd(
@@ -817,10 +821,17 @@ class Certgrinder:
                 command=["get", "certificate"],
             )
 
+        # did we get any output?
         if not stdout:
-            logger.error("Did not get any certificate in stdout from certgrinderd")
+            logger.error(
+                "Did not get any output, expected a certificate chain in stdout from certgrinderd"
+            )
             return False
-        result = self.parse_certgrinderd_certificate_output(stdout, csr)
+
+        # parse the output
+        result = self.parse_certificate_chain(stdout, csr)
+
+        # result should be a tuple of two certificates
         if result:
             certificate, intermediate = result
         else:

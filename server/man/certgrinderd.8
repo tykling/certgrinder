@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDERD" "8" "Aug 29, 2020" "0.15.0-dev" "Certgrinder"
+.TH "CERTGRINDERD" "8" "Aug 30, 2020" "0.15.0-dev" "Certgrinder"
 .SH NAME
 certgrinderd \- Manpage for certgrinderd
 .
@@ -126,6 +126,11 @@ The path to the configuration file. The file is in YAML format.
 .sp
 Default: \fBNone\fP
 .TP
+.B \fIdatabase\-url\fP
+The database URL to use. Leave empty to disable database use. Uses SQLAlchemy, see available options at \fI\%https://docs.sqlalchemy.org/en/13/core/engines.html#database\-urls\fP
+.sp
+Default: \fBsqlite:///certgrinderd.sqlite\fP
+.TP
 .B \fIdebug\fP
 Enables debug mode. This is the same as setting \-\-log\-level to DEBUG. Outputs lots info about the internal workings of certgrinderd.
 .sp
@@ -239,6 +244,31 @@ The path to the webroot used for challenges (only relevant for HTTP\-01)
 .UNINDENT
 .sp
 Both scripts must be able to handle the challenge type(s) you use. The same script will be called first for DNS\-01 (if enabled), then for HTTP\-01 (if enabled).
+.SH DATABASE
+.sp
+Certgrinderd uses a database to log sessions, public keys, issued certificates and OCSP responses. This is meant as an informational and troubleshooting tool, and also as the basis for future metrics support.
+.sp
+The database interface is SQLAlchemy, so supported databases are those of SQLAlchemy: \fI\%https://docs.sqlalchemy.org/en/13/core/engines.html#database\-urls\fP
+.sp
+A total of 4 database tables will be created on first run:
+.INDENT 0.0
+.TP
+.B sessions
+Contains one row per time certgrinderd is called, containing start and end time, and the environment (including SSH_CLIENT and CERTGRINDERD_DOMAINSETS) in a JSON field.
+.TP
+.B public_keys
+Contains one row per public key seen, either in issued certificates or in issuer certificates.
+.TP
+.B certificates
+Contains one row per issued certificate, with a foreign key to the public key for the certificate.
+.TP
+.B ocsp_responses
+Contains one row per OCSP response, with a foreign key to the certificate the OCSP response is about.
+.UNINDENT
+.sp
+All the tables contain a primary key column \fBid\fP which is an integer sequence (so also a counter), and a \fBcreated\fP column which marks when each row was created.
+.sp
+Database logging can be disabled by leaving the \fBdatabase\-url\fP setting empty in the config.
 .SH TESTING
 .sp
 When the server has been configured with hooks you can test from a client using just SSH and a manually generated CSR, with something like: \fBcat mail4.example.com.csr | ssh certgrinderd@certgrinder.example.org \-T \-\- \-\-staging get certificate\fP where \fB\-T\fP is to prevent SSH from allocating a TTY on the server, \fB\-\-\fP is to mark the end of the SSH args, and \fB\-\-staging\fP is to make \fBcertgrinderd\fP use the LetsEncrypt staging servers. If all goes well it should output some logging and a certificate chain.
@@ -258,7 +288,7 @@ usage: certgrinderd [\-h] [\-\-acme\-email ACME\-EMAIL]
                     [\-\-certbot\-logs\-dir CERTBOT\-LOGS\-DIR]
                     [\-\-certbot\-work\-dir CERTBOT\-WORK\-DIR] [\-C CLEANUP\-HOOK]
                     [\-c CONFIG\-FILE] [\-\-certificate\-file CERTIFICATE\-FILE]
-                    [\-\-csr\-file CSR\-FILE] [\-d]
+                    [\-\-csr\-file CSR\-FILE] [\-\-database\-url DATABASE\-URL] [\-d]
                     [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-p PID\-DIR]
                     [\-\-skip\-acme\-server\-cert\-verify] [\-s]
                     [\-\-syslog\-facility SYSLOG\-FACILITY]
@@ -315,6 +345,9 @@ The path to the PEM formatted certificate chain file to use instead of getting i
 .TP
 .B\-\-csr\-file
 The path to the PEM formatted CSR file to use instead of getting it from stdin.
+.TP
+.B\-\-database\-url
+The database URL to use, empty to disable database.
 .TP
 .B\-d, \-\-debug
 Debug mode. Equal to setting \-\-log\-level=DEBUG.
@@ -593,6 +626,93 @@ The OCSP request
 .UNINDENT
 .INDENT 7.0
 .TP
+.B db_find_or_register_certificate(certificate: cryptography.x509.base.Certificate, issuer: cryptography.x509.base.Certificate) -> int
+Find or register a certificate in the database.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The issued certificate
+.IP \(bu 2
+\fBissuer\fP \-\- The certificate issuer
+.UNINDENT
+.TP
+.B Returns
+Nothing
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B db_find_or_register_ocsp_response(certificate: cryptography.x509.base.Certificate, issuer: cryptography.x509.base.Certificate, ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse) -> int
+Find or register this OCSP response in the database.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate\fP \-\- The certificate this OCSP request is for
+.IP \(bu 2
+\fBissuer\fP \-\- The issuer certificate
+.IP \(bu 2
+\fBocsp_response\fP \-\- The OCSP response
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B db_find_or_register_public_key(pubkey: Union[cryptography.hazmat.primitives.asymmetric.dsa.DSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey, cryptography.hazmat.primitives.asymmetric.ed448.Ed448PublicKey, cryptography.hazmat.primitives.asymmetric.ec.EllipticCurvePublicKey, cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey]) -> int
+Find or register the public key in db and return the ID.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBpubkey\fP \-\- The public key
+.TP
+.B Returns
+The ID of the database row containing this pubkey
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B db_initialise() -> None
+Create tables if needed.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBNone\fP \-\- 
+.TP
+.B Returns
+Nothing
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B db_session_finish() -> None
+Record the end of this session in the database.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBNone\fP \-\- 
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B db_session_start() -> None
+Record the start of this session in the database.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBNone\fP \-\- 
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
 .B get_certbot_command(challengetype: str, csrpath: str, fullchainpath: str, certpath: str, chainpath: str) -> List[str]
 Put the certbot command together.
 .sp
@@ -670,7 +790,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod get_ocsp_response(certpath: Optional[str]) -> cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
+.B get_ocsp_response(certpath: Optional[str]) -> cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
 Parse certificate, get and return OCSP response.
 .INDENT 7.0
 .TP
@@ -683,7 +803,7 @@ The OCSPRequest object
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static parse_certificate_chain(certpath: Optional[str]) -> Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]
+.B classmethod parse_certificate_chain(certpath: Optional[str]) -> Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]
 Parse certificate chain from path or stdin.
 .INDENT 7.0
 .TP
@@ -766,6 +886,32 @@ Save the CSR object to the path in PEM format.
 .TP
 .B Returns
 None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static split_pem_chain(pem_chain_bytes: bytes) -> List[bytes]
+Split a PEM chain into a list of bytes of the individual PEM certificates.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBpem_chain_bytes\fP \-\- The bytes representing the PEM chain
+.TP
+.B Returns
+A list of 0 or more bytes chunks representing each certificate
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static subject_to_slash(subject: cryptography.x509.name.Name) -> str
+Convert an X.509 Name to "slash notation".
+.INDENT 7.0
+.TP
+.B Parameters
+\fBsubject\fP \-\- The certificate subject input
+.TP
+.B Returns
+A string like "/C=DK/CN=certgrinder.example"
 .UNINDENT
 .UNINDENT
 .INDENT 7.0

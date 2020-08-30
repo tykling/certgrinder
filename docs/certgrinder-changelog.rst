@@ -11,7 +11,11 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.15.0 (unreleased)
 --------------------
-- No changes
+
+Changed
+~~~~~~~
+- Rename parse_certgrinderd_certificate_output() to parse_certificate_chain() and clean it up a bit
+- Update some log messages and update tests to match
 
 
 v0.14.0 (29-aug-2020)

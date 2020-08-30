@@ -24,6 +24,14 @@
 
 
 ####################################################
+# DATABASE URL
+####################################################
+# SQLAlchemy database URL
+# https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls
+#database-url: "postgresql://username:password@localhost/dbname"
+#database-url: "sqlite:///certgrinderd.sqlite"
+
+####################################################
 # PATHS
 ####################################################
 # The certbot command to run

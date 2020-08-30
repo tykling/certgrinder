@@ -8,6 +8,7 @@ import argparse
 import logging
 import logging.handlers
 import os
+import pathlib
 import subprocess
 import sys
 import tempfile
@@ -16,6 +17,7 @@ from datetime import datetime, timedelta
 
 import cryptography.x509
 import requests
+import sqlalchemy  # type: ignore
 import yaml
 from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend
@@ -59,6 +61,8 @@ class Certgrinderd:
             "cleanup-hook": "manual-cleanup-hook.sh",
             "config-file": "",
             "csr-path": "",
+            "database-url": "sqlite:///"
+            + str(pathlib.Path.home() / "certgrinderd.sqlite"),
             "debug": False,
             "log-level": "INFO",
             "pid-dir": "/tmp",
@@ -109,10 +113,351 @@ class Certgrinderd:
         else:
             logger.debug("Not configuring syslog")
 
+        # connect to database
+        logger.debug(f"Connecting to database URL {self.conf['database-url']}")
+        if self.conf["database-url"]:
+            self.db_engine = sqlalchemy.create_engine(self.conf["database-url"])
+            self.db_conn = self.db_engine.connect()
+            self.db_initialise()
+            self.db_session_start()
+
         logger.info(
             f"certgrinderd {__version__} running, log-level is {self.conf['log-level']}"
         )
         logger.debug("Running with config: %s" % self.conf)
+
+    # database methods
+
+    def db_initialise(self) -> None:
+        """Create tables if needed.
+
+        Args:
+            None
+
+        Returns:
+            Nothing
+        """
+        metadata = sqlalchemy.MetaData()
+
+        # this table contains all sessions, one row per time certgrinderd was called
+        self.db_sessions = sqlalchemy.Table(
+            "sessions",
+            metadata,
+            sqlalchemy.Column(
+                "id",
+                sqlalchemy.Integer,
+                sqlalchemy.Sequence("session_id_seq"),
+                primary_key=True,
+            ),
+            sqlalchemy.Column(
+                "start", sqlalchemy.TIMESTAMP(timezone=True), nullable=False
+            ),
+            sqlalchemy.Column("env", sqlalchemy.JSON, nullable=False),
+            sqlalchemy.Column("end", sqlalchemy.DateTime),
+        )
+
+        # this table contains all public keys used in the certificates we've seen,
+        # including issuer certificates
+        self.db_public_keys = sqlalchemy.Table(
+            "public_keys",
+            metadata,
+            sqlalchemy.Column(
+                "id",
+                sqlalchemy.Integer,
+                sqlalchemy.Sequence("public_key_id_seq"),
+                primary_key=True,
+            ),
+            sqlalchemy.Column(
+                "created",
+                sqlalchemy.TIMESTAMP(timezone=True),
+                nullable=False,
+                server_default=sqlalchemy.sql.func.now(),
+            ),
+            sqlalchemy.Column(
+                "session_id", sqlalchemy.ForeignKey("sessions.id"), nullable=False
+            ),
+            sqlalchemy.Column("type", sqlalchemy.Text, nullable=False),
+            sqlalchemy.Column("ski", sqlalchemy.LargeBinary, nullable=False),
+            sqlalchemy.Column("public_key", sqlalchemy.LargeBinary, nullable=False),
+        )
+
+        # this table contains all the certificates issued to clients
+        self.db_certificates = sqlalchemy.Table(
+            "certificates",
+            metadata,
+            sqlalchemy.Column(
+                "id",
+                sqlalchemy.Integer,
+                sqlalchemy.Sequence("certificate_id_seq"),
+                primary_key=True,
+            ),
+            sqlalchemy.Column(
+                "created",
+                sqlalchemy.TIMESTAMP(timezone=True),
+                nullable=False,
+                server_default=sqlalchemy.sql.func.now(),
+            ),
+            sqlalchemy.Column(
+                "session_id", sqlalchemy.ForeignKey("sessions.id"), nullable=False
+            ),
+            sqlalchemy.Column(
+                "public_key_id", sqlalchemy.ForeignKey("public_keys.id"), nullable=False
+            ),
+            sqlalchemy.Column("subject", sqlalchemy.Text, nullable=False),
+            sqlalchemy.Column("serial", sqlalchemy.Text, nullable=False),
+            sqlalchemy.Column(
+                "valid_not_before", sqlalchemy.TIMESTAMP(timezone=True), nullable=False
+            ),
+            sqlalchemy.Column(
+                "valid_not_after", sqlalchemy.TIMESTAMP(timezone=True), nullable=False
+            ),
+            sqlalchemy.Column(
+                "issuer_public_key_id",
+                sqlalchemy.ForeignKey("public_keys.id"),
+                nullable=False,
+            ),
+            sqlalchemy.Column("issuer_subject", sqlalchemy.Text, nullable=False),
+        )
+
+        # this table contains all the ocsp responses issued to clients
+        self.db_ocsp_responses = sqlalchemy.Table(
+            "ocsp_responses",
+            metadata,
+            sqlalchemy.Column(
+                "id",
+                sqlalchemy.Integer,
+                sqlalchemy.Sequence("ocsp_response_id_seq"),
+                primary_key=True,
+            ),
+            sqlalchemy.Column(
+                "created",
+                sqlalchemy.TIMESTAMP(timezone=True),
+                nullable=False,
+                server_default=sqlalchemy.sql.func.now(),
+            ),
+            sqlalchemy.Column(
+                "session_id", sqlalchemy.ForeignKey("sessions.id"), nullable=False
+            ),
+            sqlalchemy.Column(
+                "certificate_id",
+                sqlalchemy.ForeignKey("public_keys.id"),
+                nullable=False,
+            ),
+            sqlalchemy.Column("status", sqlalchemy.Text, nullable=False),
+            sqlalchemy.Column(
+                "this_update", sqlalchemy.TIMESTAMP(timezone=True), nullable=False
+            ),
+            sqlalchemy.Column(
+                "produced_at", sqlalchemy.TIMESTAMP(timezone=True), nullable=False
+            ),
+            sqlalchemy.Column(
+                "next_update", sqlalchemy.TIMESTAMP(timezone=True), nullable=False
+            ),
+            sqlalchemy.Column("revocation_time", sqlalchemy.TIMESTAMP(timezone=True)),
+            sqlalchemy.Column("revocation_reason", sqlalchemy.Text),
+        )
+
+        # create tables (if needed)
+        metadata.create_all(self.db_engine)
+
+    def db_session_start(self) -> None:
+        """Record the start of this session in the database.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        ins = self.db_sessions.insert().values(
+            start=datetime.utcnow(), env=os.environ.copy()
+        )
+        result = self.db_conn.execute(ins)
+        self.db_session_id = result.inserted_primary_key[0]
+
+    def db_session_finish(self) -> None:
+        """Record the end of this session in the database.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        upd = (
+            self.db_sessions.update()
+            .where(self.db_sessions.c.id == self.db_session_id)
+            .values(end=datetime.utcnow())
+        )
+        self.db_conn.execute(upd)
+
+    def db_find_or_register_public_key(
+        self,
+        pubkey: typing.Union[
+            primitives.asymmetric.dsa.DSAPublicKey,
+            primitives.asymmetric.ed25519.Ed25519PublicKey,
+            primitives.asymmetric.ed448.Ed448PublicKey,
+            primitives.asymmetric.ec.EllipticCurvePublicKey,
+            primitives.asymmetric.rsa.RSAPublicKey,
+        ],
+    ) -> int:
+        """Find or register the public key in db and return the ID.
+
+        Args:
+            pubkey: The public key
+
+        Returns:
+            The ID of the database row containing this pubkey
+        """
+        certificate_ski = cryptography.x509.SubjectKeyIdentifier.from_public_key(
+            pubkey
+        ).digest
+        sel = sqlalchemy.select([self.db_public_keys.c.id]).where(
+            self.db_public_keys.c.ski == certificate_ski
+        )
+        result = self.db_conn.execute(sel)
+        rows = result.fetchall()
+        if rows:
+            # we've seen this public key before, get the id
+            pubkey_id = rows[0][0]
+        else:
+            # insert this public key in the database
+            ins = self.db_public_keys.insert().values(
+                session_id=self.db_session_id,
+                type=str(type(pubkey)),
+                ski=certificate_ski,
+                public_key=pubkey.public_bytes(
+                    encoding=primitives.serialization.Encoding.DER,
+                    format=primitives.serialization.PublicFormat.SubjectPublicKeyInfo,
+                ),
+            )
+            result = self.db_conn.execute(ins)
+            pubkey_id = result.inserted_primary_key[0]
+            logger.debug(f"Registered new public key in database with id {pubkey_id}")
+        assert isinstance(pubkey_id, int)
+        return pubkey_id
+
+    def db_find_or_register_certificate(
+        self,
+        certificate: cryptography.x509.Certificate,
+        issuer: cryptography.x509.Certificate,
+    ) -> int:
+        """Find or register a certificate in the database.
+
+        Args:
+            certificate: The issued certificate
+            issuer: The certificate issuer
+
+        Returns:
+            Nothing
+        """
+        # get database id for the public keys
+        public_key_id = self.db_find_or_register_public_key(certificate.public_key())
+        issuer_public_key_id = self.db_find_or_register_public_key(issuer.public_key())
+
+        # check if we already have this cert
+        sel = (
+            sqlalchemy.select([self.db_certificates.c.id])
+            .where(self.db_certificates.c.public_key_id == public_key_id)
+            .where(
+                self.db_certificates.c.subject
+                == self.subject_to_slash(certificate.subject)
+            )
+            .where(self.db_certificates.c.serial == str(certificate.serial_number))
+            .where(
+                self.db_certificates.c.valid_not_before == certificate.not_valid_before
+            )
+            .where(
+                self.db_certificates.c.valid_not_after == certificate.not_valid_after
+            )
+            .where(self.db_certificates.c.issuer_public_key_id == issuer_public_key_id)
+            .where(
+                self.db_certificates.c.issuer_subject
+                == self.subject_to_slash(issuer.subject)
+            )
+        )
+        result = self.db_conn.execute(sel)
+        rows = result.fetchall()
+        if rows:
+            # we've seen this certificate before, get the id
+            certificate_id = rows[0][0]
+        else:
+            ins = self.db_certificates.insert().values(
+                session_id=self.db_session_id,
+                public_key_id=public_key_id,
+                subject=self.subject_to_slash(certificate.subject),
+                serial=str(certificate.serial_number),
+                valid_not_before=certificate.not_valid_before,
+                valid_not_after=certificate.not_valid_after,
+                issuer_public_key_id=issuer_public_key_id,
+                issuer_subject=self.subject_to_slash(issuer.subject),
+            )
+            result = self.db_conn.execute(ins)
+            certificate_id = result.inserted_primary_key[0]
+            logger.debug(f"Registered new cert in database with id {certificate_id}")
+        assert isinstance(certificate_id, int)
+        return certificate_id
+
+    def db_find_or_register_ocsp_response(
+        self,
+        certificate: cryptography.x509.Certificate,
+        issuer: cryptography.x509.Certificate,
+        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
+    ) -> int:
+        """Find or register this OCSP response in the database.
+
+        Args:
+            certificate: The certificate this OCSP request is for
+            issuer: The issuer certificate
+            ocsp_response: The OCSP response
+        """
+        # get certificate id
+        certificate_id = self.db_find_or_register_certificate(certificate, issuer)
+
+        sel = (
+            sqlalchemy.select([self.db_ocsp_responses.c.id])
+            .where(self.db_ocsp_responses.c.certificate_id == certificate_id)
+            .where(
+                self.db_ocsp_responses.c.status == str(ocsp_response.certificate_status)
+            )
+            .where(self.db_ocsp_responses.c.this_update == ocsp_response.this_update)
+            .where(self.db_ocsp_responses.c.produced_at == ocsp_response.produced_at)
+            .where(self.db_ocsp_responses.c.next_update == ocsp_response.next_update)
+            .where(
+                self.db_ocsp_responses.c.revocation_time
+                == ocsp_response.revocation_time
+            )
+            .where(
+                self.db_ocsp_responses.c.revocation_reason
+                == ocsp_response.revocation_reason
+            )
+        )
+
+        result = self.db_conn.execute(sel)
+        ocsp_response_id = None
+        if result:
+            rows = result.fetchall()
+            if rows:
+                # we've seen this ocsp response before, get the id
+                ocsp_response_id = rows[0][0]
+        if not ocsp_response_id:
+            ins = self.db_ocsp_responses.insert().values(
+                session_id=self.db_session_id,
+                certificate_id=certificate_id,
+                status=str(ocsp_response.certificate_status),
+                this_update=ocsp_response.this_update,
+                produced_at=ocsp_response.produced_at,
+                next_update=ocsp_response.next_update,
+                revocation_time=ocsp_response.revocation_time,
+                revocation_reason=ocsp_response.revocation_reason,
+            )
+            result = self.db_conn.execute(ins)
+            ocsp_response_id = result.inserted_primary_key[0]
+            logger.debug(
+                f"Registered new OCSP response in database with id {ocsp_response_id}"
+            )
+        assert isinstance(ocsp_response_id, int)
+        return ocsp_response_id
 
     # CSR methods
 
@@ -443,9 +788,14 @@ class Certgrinderd:
         certbot_stdout, certbot_stderr = p.communicate()
 
         if p.returncode == 0:
-            # success, output chain to stdout
-            with open(str(fullchainpath)) as f:
-                print(f.read())
+            # success, read chain from disk
+            with open(fullchainpath) as f:
+                chainbytes = f.read()
+            certificate, intermediate = self.parse_certificate_chain(fullchainpath)
+            if hasattr(self, "db_conn"):
+                self.db_find_or_register_certificate(certificate, intermediate)
+            # output chain to stdout
+            print(chainbytes)
             return True
         else:
             logger.error("certbot command returned non-zero exit code")
@@ -455,8 +805,28 @@ class Certgrinderd:
             return False
 
     @staticmethod
+    def split_pem_chain(pem_chain_bytes: bytes) -> typing.List[bytes]:
+        """Split a PEM chain into a list of bytes of the individual PEM certificates.
+
+        Args:
+            pem_chain_bytes: The bytes representing the PEM chain
+
+        Returns:
+            A list of 0 or more bytes chunks representing each certificate
+        """
+        logger.debug(f"Parsing certificates from {len(pem_chain_bytes)} bytes input")
+        certificates = []
+        cert_list = pem_chain_bytes.decode("ASCII").split("-----BEGIN CERTIFICATE-----")
+        for cert in cert_list[1:]:
+            certificates.append(("-----BEGIN CERTIFICATE-----" + cert).encode("ASCII"))
+        logger.debug(
+            f"Returning a list of {len(certificates)} chunks of bytes resembling PEM certificates"
+        )
+        return certificates
+
+    @classmethod
     def parse_certificate_chain(
-        certpath: typing.Optional[str]
+        cls, certpath: typing.Optional[str]
     ) -> typing.Tuple[cryptography.x509.Certificate, cryptography.x509.Certificate]:
         """Parse certificate chain from path or stdin.
 
@@ -475,20 +845,11 @@ class Certgrinderd:
             logger.debug("Reading PEM cert chain from stdin ...")
             certbytes = sys.stdin.read().encode("ASCII")
 
-        # decode stdout as ASCII and split into lines
-        chain_list = certbytes.decode("ASCII").split("\n")
-
-        # do we have something resembling a PEM cert?
-        if "-----BEGIN CERTIFICATE-----" not in chain_list:
+        certs = cls.split_pem_chain(certbytes)
+        if len(certs) != 2:
             logger.error("The input is not a valid PEM formatted certificate chain.")
             sys.exit(1)
-
-        # split chain in cert and intermediate
-        cert_end_index = chain_list.index("-----END CERTIFICATE-----")
-        certificate_bytes = "\n".join(chain_list[0 : cert_end_index + 1]).encode(
-            "ASCII"
-        )
-        intermediate_bytes = "\n".join(chain_list[cert_end_index + 1 :]).encode("ASCII")
+        certificate_bytes, intermediate_bytes = certs
 
         # parse certificate
         try:
@@ -513,6 +874,18 @@ class Certgrinderd:
             sys.exit(1)
 
         return certificate, intermediate
+
+    @staticmethod
+    def subject_to_slash(subject: cryptography.x509.Name) -> str:
+        """Convert an X.509 Name to "slash notation".
+
+        Args:
+            subject: The certificate subject input
+
+        Returns:
+            A string like "/C=DK/CN=certgrinder.example"
+        """
+        return "".join([f"/{x.rfc4514_string()}" for x in subject])
 
     # OCSP methods
 
@@ -556,9 +929,8 @@ class Certgrinderd:
         ocsp_request_object = builder.build()
         return ocsp_request_object
 
-    @classmethod
     def get_ocsp_response(
-        cls, certpath: typing.Optional[str]
+        self, certpath: typing.Optional[str]
     ) -> cryptography.hazmat.backends.openssl.ocsp._OCSPResponse:
         """Parse certificate, get and return OCSP response.
 
@@ -569,10 +941,10 @@ class Certgrinderd:
             The OCSPRequest object
         """
         # parse certificates
-        certificate, issuer = cls.parse_certificate_chain(certpath)
+        certificate, issuer = self.parse_certificate_chain(certpath)
         logger.debug(f"Getting OCSP response for cert {certificate.subject}")
 
-        ocsp_request_object = cls.create_ocsp_request(certificate, issuer)
+        ocsp_request_object = self.create_ocsp_request(certificate, issuer)
         ocsp_request_bytes = ocsp_request_object.public_bytes(
             primitives.serialization.Encoding.DER
         )
@@ -630,7 +1002,7 @@ class Certgrinderd:
             logger.debug(
                 f"Received response with HTTP status code {r.status_code} and OCSP response status {ocsp_response_object.response_status}"
             )
-            if cls.check_ocsp_response(
+            if self.check_ocsp_response(
                 ocsp_request_object, ocsp_response_object, certificate, issuer
             ):
                 logger.debug(
@@ -643,6 +1015,13 @@ class Certgrinderd:
                 logger.debug(
                     f"Revocation reason: {ocsp_response_object.revocation_reason}"
                 )
+                if hasattr(self, "db_conn"):
+                    # register this OCSP response in the database
+                    self.db_find_or_register_ocsp_response(
+                        certificate=certificate,
+                        issuer=issuer,
+                        ocsp_response=ocsp_response_object,
+                    )
                 return ocsp_response_object
 
         # if we got this far we either didn't find any OCSP servers, or none of them worked
@@ -1090,6 +1469,12 @@ def get_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "--database-url",
+        dest="database-url",
+        help="The database URL to use, empty to disable database.",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
         "-d",
         "--debug",
         action="store_const",
@@ -1224,6 +1609,7 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
         method = getattr(certgrinderd, args.method)
         method()
     finally:
+        certgrinderd.db_session_finish()
         tempdir.cleanup()
 
     # we are done here

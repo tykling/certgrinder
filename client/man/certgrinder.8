@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDER" "8" "Aug 29, 2020" "0.15.0-dev" "Certgrinder"
+.TH "CERTGRINDER" "8" "Aug 30, 2020" "0.15.0-dev" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .
@@ -984,7 +984,7 @@ It can also be called by the \fBget certificate\fP subcommand.
 .IP \(bu 2
 \fBcsr\fP \-\- The CSR to use instead of generating one
 .IP \(bu 2
-\fBstdout\fP \-\- The stdout bytes to use instead of calling self.run_certgrinder(csr)
+\fBstdout\fP \-\- The stdout bytes to use instead of calling self.run_certgrinderd(csr)
 .UNINDENT
 .TP
 .B Returns
@@ -1154,24 +1154,6 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B parse_certgrinderd_certificate_output(certgrinderd_stdout: bytes, csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]]
-Split output chain into cert and intermediate, parse both certs, and validate them.
-.INDENT 7.0
-.TP
-.B Parameters
-.INDENT 7.0
-.IP \(bu 2
-\fBcertgrinderd_stdout\fP \-\- The bytes of the stdout from the certgrinderd call
-.IP \(bu 2
-\fBcsr\fP \-\- The CSR this certificate was issued from
-.UNINDENT
-.TP
-.B Returns
-A tuple of certificate, intermediate if the certificate chain is valid, None otherwise
-.UNINDENT
-.UNINDENT
-.INDENT 7.0
-.TP
 .B static parse_certgrinderd_ocsp_output(certgrinderd_stdout: bytes) -> Optional[cryptography.hazmat.backends.openssl.ocsp._OCSPResponse]
 Parse a DER encoded binary OCSP response as returned by Certgrinderd.
 .INDENT 7.0
@@ -1181,6 +1163,24 @@ Parse a DER encoded binary OCSP response as returned by Certgrinderd.
 .TP
 .B Returns
 cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B parse_certificate_chain(certificate_chain: bytes, csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]]
+Split a PEM chain into certificate and intermediate, parse and return both.
+.INDENT 7.0
+.TP
+.B Parameters
+.INDENT 7.0
+.IP \(bu 2
+\fBcertificate_chain\fP \-\- The bytes representing the PEM formatted certificate chain
+.IP \(bu 2
+\fBcsr\fP \-\- The CSR this certificate was issued from
+.UNINDENT
+.TP
+.B Returns
+A tuple of certificate, intermediate if the certificate chain is valid, None otherwise
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
