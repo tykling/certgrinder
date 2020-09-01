@@ -45,6 +45,9 @@ def test_certgrinderd_broken_configfile(
         main(mockargs)
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
     assert "Unable to parse YAML config file" in caplog.text
+    # make sure we dont leak any of the file in the backtrace
+    assert "foo:" not in caplog.text
+    assert "bar" not in caplog.text
 
 
 def test_certgrinderd_fail(tmpdir_factory, certgrinderd_env, caplog):
