@@ -11,7 +11,14 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.15.0 (unreleased)
 --------------------
-- No changes
+
+Added
+~~~~~
+- Make `show certificate` output certificate `not_valid_before` and `not_valid_after`
+
+Changed
+~~~~~~~
+- Rename test `test_show_certificate()` to `test_show_certificate_file_not_found()`
 
 
 v0.14.1 (13-sep-2020)

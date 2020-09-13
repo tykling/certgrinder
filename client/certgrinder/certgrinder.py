@@ -925,6 +925,8 @@ class Certgrinder:
         logger.info(
             f"Certificate SAN: {san.value.get_values_for_type(cryptography.x509.DNSName)}"
         )
+        logger.info(f"Certificate not valid before: {certificate.not_valid_before}")
+        logger.info(f"Certificate not valid after: {certificate.not_valid_after}")
 
     # OCSP METHODS
 

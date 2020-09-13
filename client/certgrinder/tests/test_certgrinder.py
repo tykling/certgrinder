@@ -736,7 +736,7 @@ def test_check_certificate_selfsigned(caplog, tmpdir_factory, selfsigned_certifi
     ), "certgrinder.error is not True as expected after an error happened"
 
 
-def test_show_certificate(caplog, tmpdir_factory):
+def test_show_certificate_file_not_found(caplog, tmpdir_factory):
     """Make sure the show_certificate() method logs the right error when file not found."""
     certgrinder = Certgrinder()
     certgrinder.configure(
