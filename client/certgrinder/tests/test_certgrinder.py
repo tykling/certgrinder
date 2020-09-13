@@ -102,7 +102,7 @@ def test_certgrinderd_broken_csr(
 
 def test_get_certificate(
     pebble_server,
-    pebble_intermediate,
+    pebble_issuer,
     certgrinderd_configfile,
     tmp_path_factory,
     certgrinderd_env,
@@ -143,11 +143,11 @@ def test_get_certificate(
         )
     )
 
-    # download intermediate cert
+    # download issuer cert
     with urllib.request.urlopen(
         "https://127.0.0.1:15000/intermediates/0", context=tls_context
     ) as u:
-        intermediate = x509.load_pem_x509_certificate(u.read(), default_backend())
+        issuer = x509.load_pem_x509_certificate(u.read(), default_backend())
 
     # only check certs if we expect to get any
     if certgrinderd_configfile[0] == "":
@@ -163,8 +163,8 @@ def test_get_certificate(
                 certificate = x509.load_pem_x509_certificate(
                     f.read(), default_backend()
                 )
-            # check that it was issued by our intermediate
-            assert intermediate.subject == certificate.issuer
+            # check that it was issued by our issuer
+            assert issuer.subject == certificate.issuer
             # check that the cert has the right CN in subject
             name = x509.NameAttribute(
                 NameOID.COMMON_NAME, domains[0].encode("idna").decode("utf-8")
@@ -192,11 +192,11 @@ def test_get_certificate(
                 )
             print(f"wrote cert info to CA index file {ocsp_ca_index_file}")
 
-            # delete the intermediates to test the intermediate splitter
-            intermediate_path = os.path.join(
-                mockargs[1], domains[0] + "-intermediate.crt"
-            )
-            os.unlink(intermediate_path)
+            # delete the certonly and issuer to test the cert/issuer splitter
+            certificate_path = os.path.join(mockargs[1], domains[0] + "-certonly.crt")
+            os.unlink(certificate_path)
+            issuer_path = os.path.join(mockargs[1], domains[0] + "-issuer.crt")
+            os.unlink(issuer_path)
 
         # try to get OCSP responses before starting the responder to provoke failure
         with pytest.raises(SystemExit) as E:
@@ -218,11 +218,11 @@ def test_get_certificate(
                 "-port",
                 "8080",
                 "-rsigner",
-                pebble_intermediate[1],
+                pebble_issuer[1],
                 "-rkey",
-                pebble_intermediate[0],
+                pebble_issuer[0],
                 "-CA",
-                pebble_intermediate[1],
+                pebble_issuer[1],
                 "-text",
                 # nextupdate in 7 days
                 "-ndays",
@@ -649,10 +649,10 @@ ALSO_NOT_A_PEM
         certgrinder.parse_certificate_chain(certificate_chain=stdout, csr=csr) is None
     ), "The parse_certificate_chain() method did not return None with a non-PEM certificate input"
     assert (
-        "The Certgrinder server did not return a valid PEM formatted intermediate."
+        "The Certgrinder server did not return a valid PEM formatted issuer."
         in caplog.text
     )
-    assert "This is the intermediate that failed to parse" in caplog.text
+    assert "This is the issuer that failed to parse" in caplog.text
     assert "ALSO_NOT_A_PEM" in caplog.text
 
 

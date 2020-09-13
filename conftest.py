@@ -70,9 +70,9 @@ def pebble_server():
 
 
 @pytest.fixture(scope="session")
-def pebble_intermediate(tmp_path_factory):
-    """Download intermediate cert and key from pebble and write it to a temp file."""
-    certpath = tmp_path_factory.mktemp("pebble") / "pebble-intermediate.crt"
+def pebble_issuer(tmp_path_factory):
+    """Download issuer cert and key from pebble and write it to a temp file."""
+    certpath = tmp_path_factory.mktemp("pebble") / "pebble-issuer.crt"
     r = requests.get(
         "https://127.0.0.1:15000/intermediates/0",
         verify=pathlib.Path.home()
@@ -81,7 +81,7 @@ def pebble_intermediate(tmp_path_factory):
     with open(certpath, "wb") as f:
         f.write(r.content)
 
-    keypath = tmp_path_factory.mktemp("pebble") / "pebble-intermediate.key"
+    keypath = tmp_path_factory.mktemp("pebble") / "pebble-issuer.key"
     r = requests.get(
         "https://localhost:15000/intermediate-keys/0",
         verify=pathlib.Path.home()
@@ -906,11 +906,9 @@ M6lczEk5TdIIKWGEOnqAxLwxXYa6xe+z6mr1bJMQZHuJS9sQ
 
 
 @pytest.fixture
-def certificate_chain_file_broken_intermediate(tmp_path_factory):
-    """Return a PEM formatted certificate chain where the intermediate is invalid."""
-    certpath = (
-        tmp_path_factory.mktemp("certificates") / "example.com-intermediatebroken.crt"
-    )
+def certificate_chain_file_broken_issuer(tmp_path_factory):
+    """Return a PEM formatted certificate chain where the issuer is invalid."""
+    certpath = tmp_path_factory.mktemp("certificates") / "example.com-issuerbroken.crt"
     chain = """-----BEGIN CERTIFICATE-----
 MIIEnTCCA4WgAwIBAgIIJfMqOpI92mgwDQYJKoZIhvcNAQELBQAwKDEmMCQGA1UE
 AxMdUGViYmxlIEludGVybWVkaWF0ZSBDQSAwN2E2OWQwHhcNMjAwODI3MjEwOTI1

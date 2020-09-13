@@ -1168,7 +1168,7 @@ cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
 .INDENT 7.0
 .TP
 .B parse_certificate_chain(certificate_chain: bytes, csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]]
-Split a PEM chain into certificate and intermediate, parse and return both.
+Split a PEM chain into certificate and issuer, parse and return both.
 .INDENT 7.0
 .TP
 .B Parameters
@@ -1180,7 +1180,7 @@ Split a PEM chain into certificate and intermediate, parse and return both.
 .UNINDENT
 .TP
 .B Returns
-A tuple of certificate, intermediate if the certificate chain is valid, None otherwise
+A tuple of certificate, issuer if the certificate chain is valid, None otherwise
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
@@ -1231,8 +1231,8 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_certificate(certificate: cryptography.x509.base.Certificate, path: str, intermediate: Optional[cryptography.x509.base.Certificate] = None) -> None
-Save the PEM certificate to the path, optionally with an intermediate.
+.B static save_certificate(certificate: cryptography.x509.base.Certificate, path: str, issuer: Optional[cryptography.x509.base.Certificate] = None) -> None
+Save the PEM certificate to the path, optionally with an issuer.
 .INDENT 7.0
 .TP
 .B Parameters
@@ -1242,7 +1242,7 @@ Save the PEM certificate to the path, optionally with an intermediate.
 .IP \(bu 2
 \fBpath\fP \-\- The path to save the certificate in
 .IP \(bu 2
-\fBintermediate\fP \-\- The intermediate to write after the certificate (if any)
+\fBissuer\fP \-\- The issuer to write after the certificate (if any)
 .UNINDENT
 .TP
 .B Returns
@@ -1251,8 +1251,8 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod save_concat_certkey(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey], certificate: cryptography.x509.base.Certificate, intermediate: cryptography.x509.base.Certificate, path: str) -> None
-Create a single file with the private key, the cert and the intermediate, in that order.
+.B classmethod save_concat_certkey(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey], certificate: cryptography.x509.base.Certificate, issuer: cryptography.x509.base.Certificate, path: str) -> None
+Create a single file with the private key, the cert and the issuer, in that order.
 .INDENT 7.0
 .TP
 .B Parameters
@@ -1262,7 +1262,7 @@ Create a single file with the private key, the cert and the intermediate, in tha
 .IP \(bu 2
 \fBcertificate\fP \-\- The certificate to save in the concat file
 .IP \(bu 2
-\fBintermediate\fP \-\- The intermediate to save in the concat file
+\fBissuer\fP \-\- The issuer to save in the concat file
 .IP \(bu 2
 \fBpath\fP \-\- The path to save the concat file in
 .UNINDENT

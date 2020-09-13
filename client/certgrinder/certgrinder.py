@@ -69,7 +69,7 @@ class Certgrinder:
         self.csr_path: str = ""
         self.certificate_path: str = ""
         self.certificate_chain_path: str = ""
-        self.intermediate_path: str = ""
+        self.issuer_path: str = ""
         self.concat_path: str = ""
         self.ocsp_response_path: str = ""
 
@@ -543,24 +543,22 @@ class Certgrinder:
     def save_certificate(
         certificate: cryptography.x509.Certificate,
         path: str,
-        intermediate: typing.Optional[cryptography.x509.Certificate] = None,
+        issuer: typing.Optional[cryptography.x509.Certificate] = None,
     ) -> None:
-        """Save the PEM certificate to the path, optionally with an intermediate.
+        """Save the PEM certificate to the path, optionally with an issuer.
 
         Args:
             certificate: The certificate to save
             path: The path to save the certificate in
-            intermediate: The intermediate to write after the certificate (if any)
+            issuer: The issuer to write after the certificate (if any)
 
         Returns:
             None
         """
         with open(path, "wb") as f:
             f.write(certificate.public_bytes(primitives.serialization.Encoding.PEM))
-            if intermediate:
-                f.write(
-                    intermediate.public_bytes(primitives.serialization.Encoding.PEM)
-                )
+            if issuer:
+                f.write(issuer.public_bytes(primitives.serialization.Encoding.PEM))
         os.chmod(path, 0o644)
 
     @classmethod
@@ -570,15 +568,15 @@ class Certgrinder:
             openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey
         ],
         certificate: cryptography.x509.Certificate,
-        intermediate: cryptography.x509.Certificate,
+        issuer: cryptography.x509.Certificate,
         path: str,
     ) -> None:
-        """Create a single file with the private key, the cert and the intermediate, in that order.
+        """Create a single file with the private key, the cert and the issuer, in that order.
 
         Args:
             keypair: The keypair to save in the concat file
             certificate: The certificate to save in the concat file
-            intermediate: The intermediate to save in the concat file
+            issuer: The issuer to save in the concat file
             path: The path to save the concat file in
 
         Returns:
@@ -587,7 +585,7 @@ class Certgrinder:
         cls.save_keypair(keypair, path)
         with open(path, "ab") as f:
             f.write(certificate.public_bytes(primitives.serialization.Encoding.PEM))
-            f.write(intermediate.public_bytes(primitives.serialization.Encoding.PEM))
+            f.write(issuer.public_bytes(primitives.serialization.Encoding.PEM))
         os.chmod(path, 0o640)
 
     def get_certgrinderd_command(
@@ -710,18 +708,18 @@ class Certgrinder:
     ) -> typing.Optional[
         typing.Tuple[cryptography.x509.Certificate, cryptography.x509.Certificate]
     ]:
-        """Split a PEM chain into certificate and intermediate, parse and return both.
+        """Split a PEM chain into certificate and issuer, parse and return both.
 
         Args:
             certificate_chain: The bytes representing the PEM formatted certificate chain
             csr: The CSR this certificate was issued from
 
         Returns:
-            A tuple of certificate, intermediate if the certificate chain is valid, None otherwise
+            A tuple of certificate, issuer if the certificate chain is valid, None otherwise
         """
         certs = self.split_pem_chain(certificate_chain)
         if len(certs) == 2:
-            certificate_bytes, intermediate_bytes = certs
+            certificate_bytes, issuer_bytes = certs
         else:
             logger.error(
                 f"The input does not contain a valid certificate chain (it does not have 2 PEM-looking chunks, it has {len(certs)})."
@@ -745,18 +743,18 @@ class Certgrinder:
             # we dont have a valid certificate
             return None
 
-        # parse intermediate
+        # parse issuer
         try:
-            intermediate = cryptography.x509.load_pem_x509_certificate(
-                intermediate_bytes, default_backend()
+            issuer = cryptography.x509.load_pem_x509_certificate(
+                issuer_bytes, default_backend()
             )
         except Exception:
             logger.error(
-                "The Certgrinder server did not return a valid PEM formatted intermediate."
+                "The Certgrinder server did not return a valid PEM formatted issuer."
             )
-            logger.debug("This is the intermediate that failed to parse:")
-            logger.debug(intermediate_bytes)
-            # we dont have a valid intermediate
+            logger.debug("This is the issuer that failed to parse:")
+            logger.debug(issuer_bytes)
+            # we dont have a valid issuer
             return None
 
         # keep mypy happy inspite of the mixed type self.conf dict
@@ -782,7 +780,7 @@ class Certgrinder:
         self.hook_needed = True
 
         # done, return the certificate chain bytes
-        return certificate, intermediate
+        return certificate, issuer
 
     def get_certificate(
         self,
@@ -833,22 +831,20 @@ class Certgrinder:
 
         # result should be a tuple of two certificates
         if result:
-            certificate, intermediate = result
+            certificate, issuer = result
         else:
             logger.error("Did not get a certificate :(")
             return False
 
         logger.info(
-            f"Success! Got {len(certificate.public_bytes(primitives.serialization.Encoding.PEM))} bytes certificate and {len(intermediate.public_bytes(primitives.serialization.Encoding.PEM))} bytes intermediate from certgrinderd"
+            f"Success! Got {len(certificate.public_bytes(primitives.serialization.Encoding.PEM))} bytes certificate and {len(issuer.public_bytes(primitives.serialization.Encoding.PEM))} bytes issuer from certgrinderd"
         )
 
         # save cert, chain and concat
         self.save_certificate(certificate, self.certificate_path)
-        self.save_certificate(certificate, self.certificate_chain_path, intermediate)
-        self.save_certificate(intermediate, self.intermediate_path)
-        self.save_concat_certkey(
-            self.keypair, certificate, intermediate, self.concat_path
-        )
+        self.save_certificate(certificate, self.certificate_chain_path, issuer)
+        self.save_certificate(issuer, self.issuer_path)
+        self.save_concat_certkey(self.keypair, certificate, issuer, self.concat_path)
 
         # all done
         self.hook_needed = True
@@ -965,22 +961,31 @@ class Certgrinder:
             None
         """
         if not certificate or not issuer:
-            certificate = self.load_certificate(path=self.certificate_path)
             try:
-                issuer = self.load_certificate(path=self.intermediate_path)
+                certificate = self.load_certificate(path=self.certificate_path)
             except FileNotFoundError:
                 logger.warning(
-                    f"Intermediate cert {self.intermediate_path} not found, parsing intermediate from chain (this is a workaround for upgrades from older versions where foo-intermediate.crt was not written seperately)."
+                    f"Certificate {self.certificate_path} not found, parsing certificate from chain (this is a workaround for upgrades from older versions where foo-certonly.crt was not written seperately)."
                 )
                 with open(self.certificate_chain_path, "rb") as f:
-                    certificate_bytes, intermediate_bytes = self.split_pem_chain(
-                        f.read()
-                    )
-                intermediate = cryptography.x509.load_pem_x509_certificate(
-                    intermediate_bytes, default_backend()
+                    certificate_bytes, issuer_bytes = self.split_pem_chain(f.read())
+                certificate = cryptography.x509.load_pem_x509_certificate(
+                    certificate_bytes, default_backend()
                 )
-                self.save_certificate(intermediate, self.intermediate_path)
-                issuer = self.load_certificate(path=self.intermediate_path)
+                self.save_certificate(certificate, self.certificate_path)
+
+            try:
+                issuer = self.load_certificate(path=self.issuer_path)
+            except FileNotFoundError:
+                logger.warning(
+                    f"Issuer cert {self.issuer_path} not found, parsing issuer from chain (this is a workaround for upgrades from older versions where foo-issuer.crt was not written seperately)."
+                )
+                with open(self.certificate_chain_path, "rb") as f:
+                    certificate_bytes, issuer_bytes = self.split_pem_chain(f.read())
+                issuer = cryptography.x509.load_pem_x509_certificate(
+                    issuer_bytes, default_backend()
+                )
+                self.save_certificate(issuer, self.issuer_path)
 
         stdin = certificate.public_bytes(primitives.serialization.Encoding.PEM)
         stdin += issuer.public_bytes(primitives.serialization.Encoding.PEM)
@@ -1506,11 +1511,9 @@ class Certgrinder:
         )
         logger.debug(f"certificate path: {self.certificate_path}")
 
-        # intermediate
-        self.intermediate_path = os.path.join(
-            self.conf["path"], f"{filename}-intermediate.crt"
-        )
-        logger.debug(f"intermediate path: {self.intermediate_path}")
+        # issuer
+        self.issuer_path = os.path.join(self.conf["path"], f"{filename}-issuer.crt")
+        logger.debug(f"issuer path: {self.issuer_path}")
 
         # concat of privkey + chain
         self.concat_path = os.path.join(self.conf["path"], f"{filename}-concat.pem")

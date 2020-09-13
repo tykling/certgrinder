@@ -9,10 +9,17 @@ All notable changes to ``certgrinderd`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-v0.15.0 (unreleased)
+v0.14.1 (unreleased)
 --------------------
 
-- No changes
+Changed
+~~~~~~~
+- Change "intermediate" to "issuer" in the code and tests.
+
+Fixed
+~~~~~
+- Fix a wrong error message in an assert in test_parse_certificate_chain_path()
+
 
 v0.14.0 (29-aug-2020)
 ---------------------

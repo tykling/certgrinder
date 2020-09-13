@@ -9,13 +9,19 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-v0.15.0 (unreleased)
+v0.14.1 (unreleased)
 --------------------
+
+Added
+~~~~~
+- Workaround to get certificate from chain in installations from before foo-certonly.crt was written seperately. This makes the "get ocsp" subcommand work even if the current certificate was issued with an older version of certgrinder.
 
 Changed
 ~~~~~~~
 - Rename parse_certgrinderd_certificate_output() to parse_certificate_chain() and clean it up a bit
 - Update some log messages and update tests to match
+- Change "intermediate" to "issuer" in the code and tests.
+- Rename intermediate cert path to example.com-issuer.crt instead of example.com-intermediate.crt. Existing intermediate/issuer certs will be renamed next time "get ocsp" is run, which is done automatically by the "periodic" command.
 
 
 v0.14.0 (29-aug-2020)

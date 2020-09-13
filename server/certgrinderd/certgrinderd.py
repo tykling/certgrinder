@@ -304,9 +304,9 @@ class Certgrinderd:
         Args:
             challengetype: The type of challenge, ``dns`` or ``http``
             csrpath: The path to the CSR
-            fullchainpath: The path to save the certificate+intermediate
-            certpath: The path to save the certificate (without intermediate)
-            chainpath: The path to save the intermediate (without certificate)
+            fullchainpath: The path to save the certificate+issuer
+            certpath: The path to save the certificate (without issuer)
+            chainpath: The path to save the issuer (without certificate)
 
         Returns:
             The certbot command as a list
@@ -446,7 +446,7 @@ class Certgrinderd:
             # success, read chain from disk
             with open(fullchainpath) as f:
                 chainbytes = f.read()
-            certificate, intermediate = self.parse_certificate_chain(fullchainpath)
+            certificate, issuer = self.parse_certificate_chain(fullchainpath)
             # output chain to stdout
             print(chainbytes)
             return True
@@ -502,7 +502,7 @@ class Certgrinderd:
         if len(certs) != 2:
             logger.error("The input is not a valid PEM formatted certificate chain.")
             sys.exit(1)
-        certificate_bytes, intermediate_bytes = certs
+        certificate_bytes, issuer_bytes = certs
 
         # parse certificate
         try:
@@ -515,18 +515,18 @@ class Certgrinderd:
             )
             sys.exit(1)
 
-        # parse intermediate
+        # parse issuer
         try:
-            intermediate = cryptography.x509.load_pem_x509_certificate(
-                intermediate_bytes, default_backend()
+            issuer = cryptography.x509.load_pem_x509_certificate(
+                issuer_bytes, default_backend()
             )
         except Exception:
             logger.error(
-                "The input resembles a valid PEM formatted certificate chain, but parsing intermediate failed."
+                "The input resembles a valid PEM formatted certificate chain, but parsing issuer failed."
             )
             sys.exit(1)
 
-        return certificate, intermediate
+        return certificate, issuer
 
     # OCSP methods
 

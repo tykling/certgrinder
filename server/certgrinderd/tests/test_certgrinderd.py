@@ -120,15 +120,15 @@ def test_syslog_wrong_socket():
 def test_parse_certificate_chain_path(certificate_chain_file):
     """Test the parse_certificate_chain() method with a valid chain."""
     certgrinderd = Certgrinderd({"log-level": "DEBUG"})
-    certificate, intermediate = certgrinderd.parse_certificate_chain(
+    certificate, issuer = certgrinderd.parse_certificate_chain(
         certpath=certificate_chain_file
     )
     assert isinstance(
         certificate, cryptography.x509.Certificate
     ), f"certificate should be an instance of cryptography.x509.Certificate but it is {type(certificate)}"
     assert isinstance(
-        intermediate, cryptography.x509.Certificate
-    ), f"intermediate should be an instance of cryptography.x509.Certificate but it is {type(certificate)}"
+        issuer, cryptography.x509.Certificate
+    ), f"issuer should be an instance of cryptography.x509.Certificate but it is {type(issuer)}"
 
 
 def test_parse_certificate_chain_path_broken_cert(
@@ -137,7 +137,7 @@ def test_parse_certificate_chain_path_broken_cert(
     """Test the parse_certificate_chain() method with a chain where the cert is invalid."""
     certgrinderd = Certgrinderd({"log-level": "DEBUG"})
     with pytest.raises(SystemExit) as E:
-        certificate, intermediate = certgrinderd.parse_certificate_chain(
+        certificate, issuer = certgrinderd.parse_certificate_chain(
             certpath=certificate_chain_file_broken_cert
         )
     assert E.value.code == 1, "Exit code not 1 as expected"
@@ -147,20 +147,20 @@ def test_parse_certificate_chain_path_broken_cert(
     ), "Expected error message not found with a broken cert"
 
 
-def test_parse_certificate_chain_path_broken_intermediate(
-    certificate_chain_file_broken_intermediate, caplog
+def test_parse_certificate_chain_path_broken_issuer(
+    certificate_chain_file_broken_issuer, caplog
 ):
-    """Test the parse_certificate_chain() method with a chain where the intermediate is invalid."""
+    """Test the parse_certificate_chain() method with a chain where the issuer is invalid."""
     certgrinderd = Certgrinderd({"log-level": "DEBUG"})
     with pytest.raises(SystemExit) as E:
-        certificate, intermediate = certgrinderd.parse_certificate_chain(
-            certpath=certificate_chain_file_broken_intermediate
+        certificate, issuer = certgrinderd.parse_certificate_chain(
+            certpath=certificate_chain_file_broken_issuer
         )
     assert E.value.code == 1, "Exit code not 1 as expected"
     assert (
-        "The input resembles a valid PEM formatted certificate chain, but parsing intermediate failed"
+        "The input resembles a valid PEM formatted certificate chain, but parsing issuer failed"
         in caplog.text
-    ), "Expected error message not found with a broken intermediate"
+    ), "Expected error message not found with a broken issuer"
 
 
 def test_parse_certificate_chain_path_broken_input(
@@ -169,7 +169,7 @@ def test_parse_certificate_chain_path_broken_input(
     """Test the parse_certificate_chain() method with a chain where the input is not a cert."""
     certgrinderd = Certgrinderd({"log-level": "DEBUG"})
     with pytest.raises(SystemExit) as E:
-        certificate, intermediate = certgrinderd.parse_certificate_chain(
+        certificate, issuer = certgrinderd.parse_certificate_chain(
             certpath=certificate_chain_file_not_a_pem
         )
     assert E.value.code == 1, "Exit code not 1 as expected"
