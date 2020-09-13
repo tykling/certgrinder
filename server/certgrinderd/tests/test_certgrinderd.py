@@ -911,35 +911,3 @@ def test_process_csr_from_file(known_csr, caplog, tmp_path_factory):
     assert (
         "Environment var CERTGRINDERD_DOMAINSETS not found, bailing out" in caplog.text
     )
-
-
-def test_db_find_or_register_ocsp_response_with_known_ocsp_response(
-    signed_certificate, selfsigned_certificate, known_private_key_2, caplog
-):
-    """Test the db_find_or_register_ocsp_response() method with an OCSP response we've seen before."""
-    certgrinderd = Certgrinderd({"log-level": "DEBUG"})
-    caplog.set_level(logging.DEBUG)
-    builder = cryptography.x509.ocsp.OCSPResponseBuilder()
-    builder = builder.add_response(
-        cert=signed_certificate,
-        issuer=selfsigned_certificate,
-        algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
-        cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-        this_update=datetime.datetime.utcnow(),
-        next_update=datetime.datetime.utcnow() + datetime.timedelta(days=1),
-        revocation_time=None,
-        revocation_reason=None,
-    ).responder_id(
-        cryptography.x509.ocsp.OCSPResponderEncoding.HASH, selfsigned_certificate
-    )
-    ocsp_response = builder.sign(
-        known_private_key_2, cryptography.hazmat.primitives.hashes.SHA256()
-    )
-
-    certgrinderd.db_find_or_register_ocsp_response(
-        signed_certificate, selfsigned_certificate, ocsp_response
-    )
-    certgrinderd.db_find_or_register_ocsp_response(
-        signed_certificate, selfsigned_certificate, ocsp_response
-    )
-    assert "Registered new OCSP response in database with id" in caplog.text

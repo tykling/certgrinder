@@ -90,11 +90,6 @@ This is an alphabetical list of the configurable options:
 
      Default: ``None``
 
-   `database-url`
-     The database URL to use. Leave empty to disable database use. Uses SQLAlchemy, see available options at https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls 
-
-     Default: ``sqlite:///certgrinderd.sqlite``
-
    `debug`
      Enables debug mode. This is the same as setting --log-level to DEBUG. Outputs lots info about the internal workings of certgrinderd.
 
@@ -192,29 +187,6 @@ Both scripts get the same environment variables to work with:
       The path to the webroot used for challenges (only relevant for HTTP-01)
 
 Both scripts must be able to handle the challenge type(s) you use. The same script will be called first for DNS-01 (if enabled), then for HTTP-01 (if enabled).
-
-Database
---------
-Certgrinderd uses a database to log sessions, public keys, issued certificates and OCSP responses. This is meant as an informational and troubleshooting tool, and also as the basis for future metrics support.
-
-The database interface is SQLAlchemy, so supported databases are those of SQLAlchemy: https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls
-
-A total of 4 database tables will be created on first run:
-
-sessions
-    Contains one row per time certgrinderd is called, containing start and end time, and the environment (including SSH_CLIENT and CERTGRINDERD_DOMAINSETS) in a JSON field.
-
-public_keys
-   Contains one row per public key seen, either in issued certificates or in issuer certificates.
-
-certificates
-   Contains one row per issued certificate, with a foreign key to the public key for the certificate.
-ocsp_responses
-   Contains one row per OCSP response, with a foreign key to the certificate the OCSP response is about.
-
-All the tables contain a primary key column ``id`` which is an integer sequence (so also a counter), and a ``created`` column which marks when each row was created.
-
-Database logging can be disabled by leaving the ``database-url`` setting empty in the config.
 
 
 Testing

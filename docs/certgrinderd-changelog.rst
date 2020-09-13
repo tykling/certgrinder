@@ -12,14 +12,7 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 v0.15.0 (unreleased)
 --------------------
 
-Added
-~~~~~
-- Introduce SQLAlchemy and a database to record what happens
-- Log all sessions, public keys, certificates and OCSP responses to the database
-- Default database URL is an sqlite file named "certgrinderd.sqlite" in the certgrinderd homedir,
-  see https://docs.sqlalchemy.org/en/13/core/engines.html#database-urls for other options
-- Leave conf["database-url"] empty to disable logging to the database
-
+- No changes
 
 v0.14.0 (29-aug-2020)
 ---------------------
