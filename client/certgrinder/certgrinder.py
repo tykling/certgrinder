@@ -208,12 +208,16 @@ class Certgrinder:
 
     @staticmethod
     def generate_private_key(
-        keytype: str = "rsa"
-    ) -> typing.Union[openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey]:
+        keytype: str
+    ) -> typing.Union[
+        openssl.rsa._RSAPrivateKey,
+        openssl.ec._EllipticCurvePrivateKey,
+        openssl.ed25519.Ed25519PrivateKey,
+    ]:
         """Generate and returns a private key.
 
         Args:
-            keytype: "rsa" for RSA key, "ed25519" for EC
+            keytype: "rsa" for RSA key, "ecdsa" for ECDSA and "ed25519" for ed25519
 
         Returns:
             The keypair object
@@ -225,10 +229,14 @@ class Certgrinder:
             return primitives.asymmetric.rsa.generate_private_key(
                 public_exponent=65537, key_size=4096, backend=default_backend()
             )
+        elif keytype == "ecdsa":
+            return primitives.asymmetric.ec.generate_private_key(
+                primitives.asymmetric.ec.SECP521R1(), backend=default_backend()
+            )
         elif keytype == "ed25519":
             return primitives.asymmetric.ed25519.Ed25519PrivateKey.generate()
         else:
-            raise ValueError("Unsupported keytype")
+            raise ValueError(f"Unsupported keytype: {keytype}")
 
     @staticmethod
     def save_keypair(
@@ -253,8 +261,10 @@ class Certgrinder:
             keyformat = primitives.serialization.PrivateFormat.TraditionalOpenSSL
         elif isinstance(keypair, openssl.ed25519.Ed25519PrivateKey):
             keyformat = primitives.serialization.PrivateFormat.PKCS8
+        elif isinstance(keypair, openssl.ec._EllipticCurvePrivateKey):
+            keyformat = primitives.serialization.PrivateFormat.PKCS8
         else:
-            raise ValueError("Unsupported keytype")
+            raise ValueError(f"Unsupported keytype: {type(keypair)}")
 
         with open(path, "wb") as f:
             f.write(
@@ -1544,7 +1554,7 @@ class Certgrinder:
             logger.debug(f"Loaded keypair from {self.keypair_path}")
         else:
             # create new private key
-            self.keypair = self.generate_private_key()
+            self.keypair = self.generate_private_key(keytype=keytype)
             self.save_keypair(self.keypair, self.keypair_path)
             logger.debug(f"Created new keypair, saved to {self.keypair_path}")
 

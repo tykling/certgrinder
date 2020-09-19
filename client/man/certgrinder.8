@@ -908,12 +908,12 @@ The CSR object
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static generate_private_key(keytype: str = \(aqrsa\(aq) -> Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey]
+.B static generate_private_key(keytype: str) -> Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.backends.openssl.ec._EllipticCurvePrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey]
 Generate and returns a private key.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBkeytype\fP \-\- "rsa" for RSA key, "ed25519" for EC
+\fBkeytype\fP \-\- "rsa" for RSA key, "ecdsa" for ECDSA and "ed25519" for ed25519
 .TP
 .B Returns
 The keypair object
