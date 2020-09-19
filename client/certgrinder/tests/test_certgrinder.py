@@ -156,47 +156,55 @@ def test_get_certificate(
         ), "Did not find expected errormessage with no challenge types enabled"
     else:
         # check that the certificates were issued correctly
-        for domainset in ["example.com,www.example.com", "example.net"]:
-            domains = domainset.split(",")
-            certpath = os.path.join(mockargs[1], domains[0] + ".crt")
-            with open(certpath, "rb") as f:
-                certificate = x509.load_pem_x509_certificate(
-                    f.read(), default_backend()
+        for keytype in ["rsa", "ecdsa"]:
+            for domainset in ["example.com,www.example.com", "example.net"]:
+                domains = domainset.split(",")
+                certpath = os.path.join(mockargs[1], domains[0] + f".{keytype}.crt")
+                with open(certpath, "rb") as f:
+                    certificate = x509.load_pem_x509_certificate(
+                        f.read(), default_backend()
+                    )
+                # check that it was issued by our issuer
+                assert issuer.subject == certificate.issuer
+                # check that the cert has the right CN in subject
+                name = x509.NameAttribute(
+                    NameOID.COMMON_NAME, domains[0].encode("idna").decode("utf-8")
                 )
-            # check that it was issued by our issuer
-            assert issuer.subject == certificate.issuer
-            # check that the cert has the right CN in subject
-            name = x509.NameAttribute(
-                NameOID.COMMON_NAME, domains[0].encode("idna").decode("utf-8")
-            )
-            cns = certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
-            assert len(cns) == 1, "Certificate must have exactly one CN attribute"
-            assert cns[0] == name, "Certificate CN does not match expected name"
-            # make sure we have the full domainlist in SubjectAltName
-            assert domains == certificate.extensions.get_extension_for_oid(
-                ExtensionOID.SUBJECT_ALTERNATIVE_NAME
-            ).value.get_values_for_type(
-                x509.DNSName
-            ), "SubjectAltName extension does not contain the right list of domains"
+                cns = certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+                assert len(cns) == 1, "Certificate must have exactly one CN attribute"
+                assert cns[0] == name, "Certificate CN does not match expected name"
+                # make sure we have the full domainlist in SubjectAltName
+                assert domains == certificate.extensions.get_extension_for_oid(
+                    ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+                ).value.get_values_for_type(
+                    x509.DNSName
+                ), "SubjectAltName extension does not contain the right list of domains"
 
-            with pytest.raises(SystemExit) as E:
-                main(mockargs + ["show", "certificate"])
-            assert str(certificate.serial_number) in caplog.text
-            assert str(certificate.subject) in caplog.text
+                with pytest.raises(SystemExit) as E:
+                    main(mockargs + ["show", "certificate"])
+                assert str(certificate.serial_number) in caplog.text
+                assert str(certificate.subject) in caplog.text
 
-            # write certificate info to pebble ocsp index file
-            subject = [f"/{x.rfc4514_string()}" for x in certificate.subject]
-            with open(ocsp_ca_index_file, "a+") as f:
-                f.write(
-                    f"V	{certificate.not_valid_after.strftime('%y%m%d%H%M%SZ')}		{hex(certificate.serial_number).upper()[2:]}	unknown	{''.join(subject)}\n"
+                # write certificate info to pebble ocsp index file for rsa certs only,
+                # because the openssl ocsp responder doesn't want identical subjects in
+                # the index file, regardless of the unique_subject setting in openssl.cnf
+                if keytype == "rsa":
+                    subject = [f"/{x.rfc4514_string()}" for x in certificate.subject]
+                    with open(ocsp_ca_index_file, "a+") as f:
+                        f.write(
+                            f"V	{certificate.not_valid_after.strftime('%y%m%d%H%M%SZ')}		{hex(certificate.serial_number).upper()[2:]}	unknown	{''.join(subject)}\n"
+                        )
+                    print(f"wrote cert info to CA index file {ocsp_ca_index_file}")
+
+                # delete the certonly and issuer to test the cert/issuer splitter
+                certificate_path = os.path.join(
+                    mockargs[1], domains[0] + f"-certonly.{keytype}.crt"
                 )
-            print(f"wrote cert info to CA index file {ocsp_ca_index_file}")
-
-            # delete the certonly and issuer to test the cert/issuer splitter
-            certificate_path = os.path.join(mockargs[1], domains[0] + "-certonly.crt")
-            os.unlink(certificate_path)
-            issuer_path = os.path.join(mockargs[1], domains[0] + "-issuer.crt")
-            os.unlink(issuer_path)
+                os.unlink(certificate_path)
+                issuer_path = os.path.join(
+                    mockargs[1], domains[0] + f"-issuer.{keytype}.crt"
+                )
+                os.unlink(issuer_path)
 
         # try to get OCSP responses before starting the responder to provoke failure
         with pytest.raises(SystemExit) as E:
@@ -238,7 +246,7 @@ def test_get_certificate(
 
         # get OCSP responses for both certificates
         with pytest.raises(SystemExit) as E:
-            main(mockargs + ["get", "ocsp"])
+            main(mockargs + ["--key-type-list", "rsa", "get", "ocsp"])
 
         print(f"Killing openssl ocsp responder with pid {proc.pid}...")
         os.kill(proc.pid, 9)
@@ -249,12 +257,12 @@ def test_get_certificate(
         assert "Did not get an OCSP response" not in caplog.text
 
         with pytest.raises(SystemExit) as E:
-            main(mockargs + ["show", "ocsp"])
+            main(mockargs + ["--key-type-list", "rsa", "show", "ocsp"])
         assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
         assert "OCSP response not found" not in caplog.text
 
         with pytest.raises(SystemExit) as E:
-            main(mockargs + ["check", "ocsp"])
+            main(mockargs + ["--key-type-list", "rsa", "check", "ocsp"])
         assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
         assert "OCSP response not found" not in caplog.text
 
@@ -282,7 +290,7 @@ def test_show_spki(tmp_path_factory, caplog, tmpdir_factory):
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
     # load public key
     keypair = serialization.load_pem_private_key(
-        open(os.path.join(args.path, "example.com.key"), "rb").read(),
+        open(os.path.join(args.path, "example.com.ecdsa.key"), "rb").read(),
         password=None,
         backend=default_backend(),
     )
@@ -668,7 +676,9 @@ def test_get_certificate_method(caplog, tmpdir_factory, known_csr, signed_certif
             "log-level": "DEBUG",
         }
     )
-    certgrinder.load_domainset(certgrinder.conf["domain-list"][0].split(","))
+    certgrinder.load_domainset(
+        certgrinder.conf["domain-list"][0].split(","), keytype="ecdsa"
+    )
     csr = x509.load_pem_x509_csr(known_csr.encode("ascii"), default_backend())
     stdout = signed_certificate.public_bytes(primitives.serialization.Encoding.PEM) * 2
     assert (
@@ -727,7 +737,9 @@ def test_check_certificate_selfsigned(caplog, tmpdir_factory, selfsigned_certifi
             "log-level": "DEBUG",
         }
     )
-    certgrinder.load_domainset(certgrinder.conf["domain-list"][0].split(","))
+    certgrinder.load_domainset(
+        certgrinder.conf["domain-list"][0].split(","), keytype="rsa"
+    )
     assert (
         certgrinder.check_certificate(certificate=selfsigned_certificate) is False
     ), "check_certificate() method did not return False as expected when called with a selfsigned certificate"
@@ -1045,7 +1057,9 @@ def test_show_tlsa(caplog, tmpdir_factory):
             "tlsa-protocol": "tcp",
         }
     )
-    certgrinder.load_domainset(certgrinder.conf["domain-list"][0].split(","))
+    certgrinder.load_domainset(
+        certgrinder.conf["domain-list"][0].split(","), keytype="ecdsa"
+    )
     derkey = certgrinder.keypair.public_key().public_bytes(
         encoding=serialization.Encoding.DER,
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
@@ -1073,7 +1087,9 @@ def test_check_tlsa(caplog, tmpdir_factory, monkeypatch):
             "tlsa-protocol": "tcp",
         }
     )
-    certgrinder.load_domainset(certgrinder.conf["domain-list"][0].split(","))
+    certgrinder.load_domainset(
+        certgrinder.conf["domain-list"][0].split(","), keytype="rsa"
+    )
     derkey = certgrinder.keypair.public_key().public_bytes(
         encoding=serialization.Encoding.DER,
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
@@ -1226,7 +1242,9 @@ def test_periodic(caplog, tmpdir_factory, monkeypatch):
             "periodic-sleep-minutes": 30,
         }
     )
-    certgrinder.load_domainset(certgrinder.conf["domain-list"][0].split(","))
+    certgrinder.load_domainset(
+        certgrinder.conf["domain-list"][0].split(","), keytype="rsa"
+    )
     monkeypatch.setattr(time, "sleep", mock_time_sleep)
 
     monkeypatch.setattr(certgrinder, "get_certificate", mock_get_certificate_ok)

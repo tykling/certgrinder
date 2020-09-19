@@ -11,7 +11,10 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.15.0 (unreleased)
 --------------------
-- No changes
+
+Fixed
+~~~~~
+- Removed unused --rsa-key-size arg from certbot command
 
 
 v0.14.2 (13-sep-2020)

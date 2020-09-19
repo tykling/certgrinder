@@ -315,8 +315,6 @@ class Certgrinderd:
             "certonly",
             "--non-interactive",
             "--quiet",
-            "--rsa-key-size",
-            "4096",
             "--authenticator",
             "manual",
             "--preferred-challenges",

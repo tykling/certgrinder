@@ -11,7 +11,10 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.15.0 (unreleased)
 --------------------
-- No changes
+
+Added
+~~~~~
+- Enabled ECDSA keys and certificates. Default to getting both RSA and ECDSA certificates. Control which keytypes are enabled with the new `key-type-list` configuration option.
 
 
 v0.14.2 (13-sep-2020)

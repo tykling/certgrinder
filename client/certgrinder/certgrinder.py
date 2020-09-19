@@ -47,6 +47,7 @@ class Certgrinder:
                 "Fake LE Intermediate X1",
                 "Fake LE Intermediate X2",
             ],
+            "key-type-list": ["rsa", "ecdsa"],
             "log-level": "INFO",
             "name-server": "",
             "path": "",
@@ -1479,50 +1480,61 @@ class Certgrinder:
         # all good
         return True
 
-    def load_domainset(self, domainset: typing.List[str]) -> None:
+    def load_domainset(self, domainset: typing.List[str], keytype: str) -> None:
         """Prepare paths and create/load private key.
 
         Args:
             domainset: The list of domains to load
+            keytype: The keytype to use, "rsa" or "ecdsa".
 
         Returns:
             None
         """
-        logger.debug(f"Loading domainset {domainset}")
+        logger.debug(f"Loading domainset {domainset} for keytype {keytype}")
         self.domainset = domainset
         assert isinstance(self.conf["path"], str)
         # we name the files after the ascii idna representation of the first domain in the list
         filename = self.domainset[0].encode("idna").decode("ascii")
-        logger.debug(f"Filenames for this domainset will be prefixed with: {filename}")
+        logger.debug(
+            f"Filenames for this domainset will be prefixed with: '{filename}' and suffixed with: '.{keytype}.ext'"
+        )
 
         # keypair
-        self.keypair_path = os.path.join(self.conf["path"], f"{filename}.key")
+        self.keypair_path = os.path.join(self.conf["path"], f"{filename}.{keytype}.key")
         logger.debug(f"keypair path: {self.keypair_path}")
 
         # CSR
-        self.csr_path = os.path.join(self.conf["path"], f"{filename}.csr")
+        self.csr_path = os.path.join(self.conf["path"], f"{filename}.{keytype}.csr")
         logger.debug(f"CSR path: {self.csr_path}")
 
         # certificate chain
-        self.certificate_chain_path = os.path.join(self.conf["path"], f"{filename}.crt")
+        self.certificate_chain_path = os.path.join(
+            self.conf["path"], f"{filename}.{keytype}.crt"
+        )
         logger.debug(f"Certificate chain path: {self.certificate_chain_path}")
 
         # certificate
         self.certificate_path = os.path.join(
-            self.conf["path"], f"{filename}-certonly.crt"
+            self.conf["path"], f"{filename}-certonly.{keytype}.crt"
         )
         logger.debug(f"certificate path: {self.certificate_path}")
 
         # issuer
-        self.issuer_path = os.path.join(self.conf["path"], f"{filename}-issuer.crt")
+        self.issuer_path = os.path.join(
+            self.conf["path"], f"{filename}-issuer.{keytype}.crt"
+        )
         logger.debug(f"issuer path: {self.issuer_path}")
 
         # concat of privkey + chain
-        self.concat_path = os.path.join(self.conf["path"], f"{filename}-concat.pem")
+        self.concat_path = os.path.join(
+            self.conf["path"], f"{filename}-concat.{keytype}.pem"
+        )
         logger.debug("concat path: %s" % self.concat_path)
 
         # OCSP response
-        self.ocsp_response_path = os.path.join(self.conf["path"], f"{filename}.ocsp")
+        self.ocsp_response_path = os.path.join(
+            self.conf["path"], f"{filename}.{keytype}.ocsp"
+        )
         logger.debug("OCSP response path: %s" % self.ocsp_response_path)
 
         # finally load or create the keypair
@@ -1537,21 +1549,26 @@ class Certgrinder:
             logger.debug(f"Created new keypair, saved to {self.keypair_path}")
 
     def grind(self, args: argparse.Namespace) -> None:
-        """Loop over domainsets in ``self.conf["domain-list"]`` and call args.method for each."""
+        """Loop over enabled keytypes and domainsets in ``self.conf["domain-list"]`` and call args.method for each."""
         logger.info(f"Certgrinder {__version__} running")
 
-        # loop over domains
-        counter = 0
-        assert isinstance(self.conf["domain-list"], list)
-        for domainset in self.conf["domain-list"]:
-            counter += 1
-            logger.debug(
-                f"-- Processing domainset {counter} of {len(self.conf['domain-list'])}: {domainset.split(',')}"
-            )
-            # prepare paths and create/load private key
-            self.load_domainset(domainset.split(","))
-            # run the requested method
-            getattr(self, args.method)()
+        # loop over keytypes
+        kcounter = 0
+        assert isinstance(self.conf["key-type-list"], list)
+        for keytype in self.conf["key-type-list"]:
+            kcounter += 1
+            # loop over domains
+            dcounter = 0
+            assert isinstance(self.conf["domain-list"], list)
+            for domainset in self.conf["domain-list"]:
+                dcounter += 1
+                logger.debug(
+                    f"-- Processing keytype {keytype} ({kcounter} of {len(self.conf['key-type-list'])} keytypes) for domainset {dcounter} of {len(self.conf['domain-list'])}: {domainset.split(',')}"
+                )
+                # prepare paths and create/load private key
+                self.load_domainset(domainset=domainset.split(","), keytype=keytype)
+                # run the requested method
+                getattr(self, args.method)()
 
         # do we need to run post-renew hooks?
         if self.hook_needed:
@@ -1720,6 +1737,13 @@ def get_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "-c",
+        "--config-file",
+        dest="config-file",
+        help="The path to the certgrinder.yml config file to use",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
         "-d",
         "--debug",
         action="store_const",
@@ -1752,10 +1776,12 @@ def get_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
-        "-c",
-        "--config-file",
-        dest="config-file",
-        help="The path to the certgrinder.yml config file to use",
+        "-k",
+        "--key-type-list",
+        action="append",
+        dest="key-type-list",
+        choices=["rsa", "ecdsa"],
+        help="The keytypes to enable. Valid values are 'rsa' and 'ecdsa'. Can be specified multiple times. Defaults to both rsa and ecdsa.",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(

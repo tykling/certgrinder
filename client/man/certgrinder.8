@@ -84,6 +84,11 @@ Sets the verbosity level for console and syslog logging. One of DEBUG, INFO, WAR
 .sp
 Default: \fBINFO\fP
 .TP
+.B \fIkey\-type\-list\fP
+List of key types to enable. Supported choices are \fIrsa\fP and \fIecdsa\fP\&. Files for each keytype will be suffixed with \fI\&.rsa.ext\fP and \fIecdsa.ext\fP, respectively.
+.sp
+Default: \fB["rsa", "ecdsa"]\fP
+.TP
 .B \fIname\-server\fP
 Set this to a DNS server IP (v4 or v6, no hostnames) to use that DNS server instead of the system resolver.
 .sp
@@ -331,9 +336,9 @@ Certgrinder version 0.15.0\-dev. See the manpage or ReadTheDocs for more info.
 .ft C
 usage: certgrinder [\-h] [\-\-certgrinderd CERTGRINDERD]
                    [\-\-cert\-renew\-threshold\-days CERT\-RENEW\-THRESHOLD\-DAYS]
-                   [\-d] [\-D DOMAIN\-LIST]
+                   [\-c CONFIG\-FILE] [\-d] [\-D DOMAIN\-LIST]
                    [\-\-invalid\-ca\-cn\-list INVALID\-CA\-CN\-LIST]
-                   [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-c CONFIG\-FILE]
+                   [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-k {rsa,ecdsa}]
                    [\-n NAME\-SERVER] [\-\-now] [\-\-path PATH]
                    [\-\-periodic\-sleep\-minutes PERIODIC\-SLEEP\-MINUTES]
                    [\-p PID\-DIR] [\-\-post\-renew\-hooks POST\-RENEW\-HOOKS] [\-q]
@@ -363,6 +368,9 @@ The command to reach the certgrinderd server, will get the input (CSR or cert ch
 .B\-\-cert\-renew\-threshold\-days
 A certificate is renewed when it has less than this many days of lifetime left. Default: \fI30\fP
 .TP
+.B\-c, \-\-config\-file
+The path to the certgrinder.yml config file to use
+.TP
 .B\-d, \-\-debug
 Debug mode. Equal to setting \-\-log\-level=DEBUG.
 .TP
@@ -377,8 +385,10 @@ Possible choices: DEBUG, INFO, WARNING, ERROR, CRITICAL
 .sp
 Logging level. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Defaults to INFO.
 .TP
-.B\-c, \-\-config\-file
-The path to the certgrinder.yml config file to use
+.B\-k, \-\-key\-type\-list
+Possible choices: rsa, ecdsa
+.sp
+The keytypes to enable. Valid values are \(aqrsa\(aq and \(aqecdsa\(aq. Can be specified multiple times. Defaults to both rsa and ecdsa.
 .TP
 .B\-n, \-\-name\-server
 Tell certgrinder to use this DNS server IP to lookup TLSA records. Only relevant with \-c / \-\-checktlsa. Only v4/v6 IPs, no hostnames.
@@ -1027,7 +1037,7 @@ None
 .INDENT 7.0
 .TP
 .B grind(args: argparse.Namespace) -> None
-Loop over domainsets in \fBself.conf["domain\-list"]\fP and call args.method for each.
+Loop over enabled keytypes and domainsets in \fBself.conf["domain\-list"]\fP and call args.method for each.
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -1044,12 +1054,17 @@ The certificate object
 .UNINDENT
 .INDENT 7.0
 .TP
-.B load_domainset(domainset: List[str]) -> None
+.B load_domainset(domainset: List[str], keytype: str) -> None
 Prepare paths and create/load private key.
 .INDENT 7.0
 .TP
 .B Parameters
+.INDENT 7.0
+.IP \(bu 2
 \fBdomainset\fP \-\- The list of domains to load
+.IP \(bu 2
+\fBkeytype\fP \-\- The keytype to use, "rsa" or "ecdsa".
+.UNINDENT
 .TP
 .B Returns
 None

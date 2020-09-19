@@ -58,6 +58,11 @@ This is an alphabetical list of the configurable options:
 
      Default: ``INFO``
 
+   `key-type-list`
+     List of key types to enable. Supported choices are `rsa` and `ecdsa`. Files for each keytype will be suffixed with `.rsa.ext` and `ecdsa.ext`, respectively.
+
+     Default: ``["rsa", "ecdsa"]``
+
    `name-server`
      Set this to a DNS server IP (v4 or v6, no hostnames) to use that DNS server instead of the system resolver.
 
