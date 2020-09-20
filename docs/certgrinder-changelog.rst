@@ -15,6 +15,7 @@ v0.15.0 (unreleased)
 Added
 ~~~~~
 - Enabled ECDSA keys and certificates. Default to getting both RSA and ECDSA certificates. Control which keytypes are enabled with the new ``key-type-list`` configuration option.
+- Added ``show paths`` subcommand to output the various filepaths used.
 
 Changed
 ~~~~~~~
@@ -28,7 +29,7 @@ Changed
   - The issuer certificate: ``mv example.com-issuer.crt example.com-issuer.rsa.crt``
   - The OCSP response: ``mv example.com.ocsp example.com-response.rsa.ocsp``
 
-  This must be done for each domainset. If a keypair with the old filename is found Certgrinder will quit with exit code 1 and refuse to run.
+  This must be done for each domainset. If a keypair with the old filename is found Certgrinder will quit with exit code 1 and refuse to run. Use the new ``show paths`` subcommand to figure out what the new filenames should be.
 
 
 v0.14.2 (13-sep-2020)

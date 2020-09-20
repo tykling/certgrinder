@@ -1377,3 +1377,33 @@ def test_run_certgrinderd_unparseable_output(
     ), "did not get expected output from run_certgrinderd()"
     assert "hello" in caplog.text
     assert "world" in caplog.text
+
+
+def test_show_paths(tmp_path_factory, caplog, tmpdir_factory):
+    """Test the 'show paths' subcommand."""
+    # paths are output at level INFO
+    caplog.set_level(logging.INFO)
+    parser, args = parse_args(
+        [
+            "--certgrinderd",
+            "true",
+            "--path",
+            str(tmpdir_factory.mktemp("certificates")),
+            "--domain-list",
+            "example.com,www.example.com",
+            "show",
+            "paths",
+        ]
+    )
+    certgrinder = Certgrinder()
+    certgrinder.configure(userconfig=vars(args))
+    with pytest.raises(SystemExit) as E:
+        certgrinder.grind(args)
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    assert certgrinder.keypair_path in caplog.text
+    assert certgrinder.csr_path in caplog.text
+    assert certgrinder.certificate_path in caplog.text
+    assert certgrinder.certificate_chain_path in caplog.text
+    assert certgrinder.issuer_path in caplog.text
+    assert certgrinder.concat_path in caplog.text
+    assert certgrinder.ocsp_response_path in caplog.text

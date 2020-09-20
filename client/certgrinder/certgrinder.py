@@ -1490,6 +1490,23 @@ class Certgrinder:
         # all good
         return True
 
+    def show_paths(self) -> None:
+        """The ``show paths`` subcommand method, called for each domainset by ``self.grind()``.
+
+        Returns:
+            None
+        """
+        logger.info(
+            f"- Showing paths for keytype {self.keytype} for domain set: {self.domainset}"
+        )
+        logger.info(f"Keypair path: {self.keypair_path}")
+        logger.info(f"CSR path: {self.csr_path}")
+        logger.info(f"Certificate path: {self.certificate_path}")
+        logger.info(f"Chain path: {self.certificate_chain_path}")
+        logger.info(f"Issuer certificate path: {self.issuer_path}")
+        logger.info(f"Key+chain concat path: {self.concat_path}")
+        logger.info(f"OCSP response path: {self.ocsp_response_path}")
+
     def get_filename(self, hostname: str) -> str:
         """Calculate the hostname string to be used for filenames.
 
@@ -1521,6 +1538,7 @@ class Certgrinder:
         """
         logger.debug(f"Loading domainset {domainset} for keytype {keytype}")
         self.domainset = domainset
+        self.keytype = keytype
         assert isinstance(self.conf["path"], str)
 
         # get the hostname to use for filenames
@@ -1593,7 +1611,7 @@ class Certgrinder:
 
     def grind(self, args: argparse.Namespace) -> None:
         """Loop over enabled keytypes and domainsets in ``self.conf["domain-list"]`` and call args.method for each."""
-        logger.info(f"Certgrinder {__version__} running")
+        logger.debug(f"Certgrinder {__version__} running")
 
         # loop over keytypes
         kcounter = 0
@@ -1627,7 +1645,7 @@ class Certgrinder:
             )
             sys.exit(1)
 
-        logger.info("All done, exiting cleanly")
+        logger.debug("All done, exiting cleanly")
         sys.exit(0)
 
 
@@ -1734,6 +1752,12 @@ def get_parser() -> argparse.ArgumentParser:
     show_subparsers.add_parser(
         "configuration", help="Tell certgrinder to output the current configuration"
     )
+
+    # "show paths" subcommand
+    show_paths_parser = show_subparsers.add_parser(
+        "paths", help="Tell certgrinder to output the paths used"
+    )
+    show_paths_parser.set_defaults(method="show_paths")
 
     # "show ocsp" subcommand
     show_ocsp_parser = show_subparsers.add_parser(
@@ -1982,6 +2006,7 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
     certgrinder = Certgrinder()
     certgrinder.configure(userconfig=config)
 
+    # if the command is "show configuration" just output certgrinder.conf and exit now
     if args.command == "show" and args.subcommand == "configuration":
         logger.info("Current certgrinder configuration:")
         pprint(certgrinder.conf)

@@ -192,6 +192,8 @@ All the functionality in Certgrinder can be accessed by using \fBcommands\fP and
 .IP \(bu 2
 \fI\%show ocsp command\fP
 .IP \(bu 2
+\fI\%show paths command\fP
+.IP \(bu 2
 \fI\%show spki command\fP
 .IP \(bu 2
 \fI\%show tlsa command\fP
@@ -282,6 +284,9 @@ The \fBshow configuration\fP subcommand just dumps the active configuration as a
 .SS show ocsp command
 .sp
 The \fBshow ocsp\fP subcommand loops over the configured domainsets and shows info about each OCSP response.
+.SS show paths command
+.sp
+The \fBshow paths\fP subcommand loops over the configured domainsets and outputs the paths used for keys, certificates and OCSP responses.
 .SS show spki command
 .sp
 The \fBshow spki\fP subcommand outputs pin\-sha256 spki pins for the public keys. The \fBHPKP\fP standard \fI\%https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning\fP defined the \fBpin\-sha256\fP format for public key pins. While the \fBHPKP\fP standard didn\(aqt get much traction the pinning format is used in various places now, so \fBcertgrinder\fP can generate them.
@@ -587,7 +592,7 @@ Use the "show" command to show certificates, TLSA records, SPKI pins or configur
 .sp
 .nf
 .ft C
-certgrinder show [\-h] {certificate,configuration,ocsp,spki,tlsa} ...
+certgrinder show [\-h] {certificate,configuration,paths,ocsp,spki,tlsa} ...
 .ft P
 .fi
 .UNINDENT
@@ -596,7 +601,7 @@ certgrinder show [\-h] {certificate,configuration,ocsp,spki,tlsa} ...
 .INDENT 0.0
 .TP
 .Bsubcommand
-Possible choices: certificate, configuration, ocsp, spki, tlsa
+Possible choices: certificate, configuration, paths, ocsp, spki, tlsa
 .sp
 Specify what to show using one of the available show sub\-commands
 .UNINDENT
@@ -623,6 +628,19 @@ Tell certgrinder to output the current configuration
 .nf
 .ft C
 certgrinder show configuration [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS paths
+.sp
+Tell certgrinder to output the paths used
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder show paths [\-h]
 .ft P
 .fi
 .UNINDENT
@@ -1380,6 +1398,16 @@ None
 .TP
 .B show_ocsp() -> None
 The \fBshow ocsp\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
+.INDENT 7.0
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B show_paths() -> None
+The \fBshow paths\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
 .INDENT 7.0
 .TP
 .B Returns

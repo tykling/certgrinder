@@ -151,6 +151,7 @@ All the functionality in Certgrinder can be accessed by using ``commands`` and `
 - `show certificate command`_
 - `show configuration command`_
 - `show ocsp command`_
+- `show paths command`_
 - `show spki command`_
 - `show tlsa command`_
 - `version command`_
@@ -239,6 +240,10 @@ The ``show configuration`` subcommand just dumps the active configuration as a p
 show ocsp command
 ^^^^^^^^^^^^^^^^^
 The ``show ocsp`` subcommand loops over the configured domainsets and shows info about each OCSP response.
+
+show paths command
+^^^^^^^^^^^^^^^^^^
+The ``show paths`` subcommand loops over the configured domainsets and outputs the paths used for keys, certificates and OCSP responses.
 
 show spki command
 ^^^^^^^^^^^^^^^^^
