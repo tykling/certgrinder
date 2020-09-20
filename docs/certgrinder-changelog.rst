@@ -14,19 +14,19 @@ v0.15.0 (unreleased)
 
 Added
 ~~~~~
-- Enabled ECDSA keys and certificates. Default to getting both RSA and ECDSA certificates. Control which keytypes are enabled with the new `key-type-list` configuration option.
+- Enabled ECDSA keys and certificates. Default to getting both RSA and ECDSA certificates. Control which keytypes are enabled with the new ``key-type-list`` configuration option.
 
 Changed
 ~~~~~~~
 - Changed filenames of keys and certificates, run the following commands to rename existing RSA files from pre 0.15 installs:
 
-  - The keypair: `mv example.com.key example.com-keypair.rsa.key`
-  - The CSR: `mv example.com.csr example.com-request.rsa.csr`
-  - The certificate chain: `mv example.com.crt example.com-chain.rsa.crt`
-  - The certificate: `mv example.com-certonly.crt example.com-certificate.rsa.crt`
-  - The concat key and chain: `mv example.com-concat.pem example.com-concat.rsa.pem`
-  - The issuer certificate: `mv example.com-issuer.crt example.com-issuer.rsa.crt`
-  - The OCSP response: `mv example.com.ocsp example.com-response.rsa.ocsp`
+  - The keypair: ``mv example.com.key example.com-keypair.rsa.key``
+  - The CSR: ``mv example.com.csr example.com-request.rsa.csr``
+  - The certificate chain: ``mv example.com.crt example.com-chain.rsa.crt``
+  - The certificate: ``mv example.com-certonly.crt example.com-certificate.rsa.crt``
+  - The concat key and chain: ``mv example.com-concat.pem example.com-concat.rsa.pem``
+  - The issuer certificate: ``mv example.com-issuer.crt example.com-issuer.rsa.crt``
+  - The OCSP response: ``mv example.com.ocsp example.com-response.rsa.ocsp``
 
   This must be done for each domainset. If a keypair with the old filename is found Certgrinder will quit with exit code 1 and refuse to run.
 
@@ -36,11 +36,11 @@ v0.14.2 (13-sep-2020)
 
 Added
 ~~~~~
-- Make `show certificate` output certificate `not_valid_before` and `not_valid_after`
+- Make ``show certificate`` output certificate ``not_valid_before`` and ``not_valid_after``
 
 Changed
 ~~~~~~~
-- Rename test `test_show_certificate()` to `test_show_certificate_file_not_found()`
+- Rename test ``test_show_certificate()`` to ``test_show_certificate_file_not_found()``
 
 
 v0.14.1 (13-sep-2020)

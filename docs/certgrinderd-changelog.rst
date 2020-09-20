@@ -14,7 +14,7 @@ v0.15.0 (unreleased)
 
 Fixed
 ~~~~~
-- Removed unused --rsa-key-size arg from certbot command
+- Removed unused ``--rsa-key-size`` arg from certbot command
 
 
 v0.14.2 (13-sep-2020)
@@ -27,11 +27,11 @@ v0.14.1 (13-sep-2020)
 
 Changed
 ~~~~~~~
-- Change "intermediate" to "issuer" in the code and tests.
+- Change ``intermediate`` to ``issuer`` in the code and tests.
 
 Fixed
 ~~~~~
-- Fix a wrong error message in an assert in test_parse_certificate_chain_path()
+- Fix a wrong error message in an assert in ``test_parse_certificate_chain_path()``
 
 
 v0.14.0 (29-aug-2020)
@@ -39,7 +39,7 @@ v0.14.0 (29-aug-2020)
 
 Changed
 ~~~~~~~
-- Change log message to INFO when getting a new OCSP response
+- Change log message to ``INFO`` when getting a new OCSP response
 
 
 v0.14.0-beta2 (29-aug-2020)
