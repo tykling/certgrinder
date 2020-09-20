@@ -159,7 +159,9 @@ def test_get_certificate(
         for keytype in ["rsa", "ecdsa"]:
             for domainset in ["example.com,www.example.com", "example.net"]:
                 domains = domainset.split(",")
-                certpath = os.path.join(mockargs[1], domains[0] + f".{keytype}.crt")
+                certpath = os.path.join(
+                    mockargs[1], domains[0] + f"-certificate.{keytype}.crt"
+                )
                 with open(certpath, "rb") as f:
                     certificate = x509.load_pem_x509_certificate(
                         f.read(), default_backend()
@@ -168,7 +170,7 @@ def test_get_certificate(
                 assert issuer.subject == certificate.issuer
                 # check that the cert has the right CN in subject
                 name = x509.NameAttribute(
-                    NameOID.COMMON_NAME, domains[0].encode("idna").decode("utf-8")
+                    NameOID.COMMON_NAME, domains[0].encode("idna").decode("ascii")
                 )
                 cns = certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
                 assert len(cns) == 1, "Certificate must have exactly one CN attribute"
@@ -196,9 +198,9 @@ def test_get_certificate(
                         )
                     print(f"wrote cert info to CA index file {ocsp_ca_index_file}")
 
-                # delete the certonly and issuer to test the cert/issuer splitter
+                # delete the certificate and issuer to test the cert/issuer splitter
                 certificate_path = os.path.join(
-                    mockargs[1], domains[0] + f"-certonly.{keytype}.crt"
+                    mockargs[1], domains[0] + f"-certificate.{keytype}.crt"
                 )
                 os.unlink(certificate_path)
                 issuer_path = os.path.join(
@@ -290,7 +292,7 @@ def test_show_spki(tmp_path_factory, caplog, tmpdir_factory):
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
     # load public key
     keypair = serialization.load_pem_private_key(
-        open(os.path.join(args.path, "example.com.ecdsa.key"), "rb").read(),
+        open(certgrinder.keypair_path, "rb").read(),
         password=None,
         backend=default_backend(),
     )
@@ -687,7 +689,29 @@ def test_get_certificate_method(caplog, tmpdir_factory, known_csr, signed_certif
     assert "Certificate public key is different from the expected" in caplog.text
     assert "Certificate is not valid." in caplog.text
     assert "Did not get a certificate :(" in caplog.text
-    caplog.clear()
+
+
+def test_load_domainset_method(caplog, tmpdir_factory, known_csr, signed_certificate):
+    """Test the error message for pre-0.15 filenames."""
+    caplog.set_level(logging.DEBUG)
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com,www.example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+        }
+    )
+    certgrinder.load_domainset(
+        certgrinder.conf["domain-list"][0].split(","), keytype="ecdsa"
+    )
+    os.rename(certgrinder.keypair_path, certgrinder.keypair_path_old)
+    with pytest.raises(SystemExit):
+        certgrinder.load_domainset(
+            certgrinder.conf["domain-list"][0].split(","), keytype="ecdsa"
+        )
+    assert "Please rename files" in caplog.text
 
 
 def test_check_certificate_no_file(caplog, tmpdir_factory):

@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDER" "8" "Sep 19, 2020" "0.15.0-dev" "Certgrinder"
+.TH "CERTGRINDER" "8" "Sep 20, 2020" "0.15.0-dev" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .
@@ -1016,6 +1016,27 @@ The bytes representing the DER formatted public key
 .UNINDENT
 .INDENT 7.0
 .TP
+.B get_filename(hostname: str) -> str
+Calculate the hostname string to be used for filenames.
+.sp
+Files are named after the ascii idna representation of the first hostname
+in the list (which is also the CN in the subject of the CSR and certificate).
+.sp
+Max filename length on some platforms is 255 bytes, but a hostname could be
+up to 253 bytes (RFC 1035 section 2.3.4), and we need some room for the usage
+and keytype and extension, so we only use the last 230 bytes of the ascii idna
+representation of the hostname for the filename, leaving 25 bytes for metadata.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBdomainset\fP \-\- The list of hostnames
+.TP
+.B Returns
+The string to use in filenames
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
 .B get_ocsp(certificate: Optional[cryptography.x509.base.Certificate] = None, issuer: Optional[cryptography.x509.base.Certificate] = None, stdout: Optional[bytes] = None) -> bool
 The \fBget ocsp\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
 .INDENT 7.0
@@ -1061,7 +1082,7 @@ Prepare paths and create/load private key.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBdomainset\fP \-\- The list of domains to load
+\fBdomainset\fP \-\- The list of hostnames to load
 .IP \(bu 2
 \fBkeytype\fP \-\- The keytype to use, "rsa" or "ecdsa".
 .UNINDENT

@@ -978,7 +978,7 @@ class Certgrinder:
                 certificate = self.load_certificate(path=self.certificate_path)
             except FileNotFoundError:
                 logger.warning(
-                    f"Certificate {self.certificate_path} not found, parsing certificate from chain (this is a workaround for upgrades from older versions where foo-certonly.crt was not written seperately)."
+                    f"Certificate {self.certificate_path} not found, parsing certificate from chain (this is a workaround for upgrades from older versions where foo-certificate.crt was not written seperately)."
                 )
                 with open(self.certificate_chain_path, "rb") as f:
                     certificate_bytes, issuer_bytes = self.split_pem_chain(f.read())
@@ -1490,11 +1490,30 @@ class Certgrinder:
         # all good
         return True
 
+    def get_filename(self, hostname: str) -> str:
+        """Calculate the hostname string to be used for filenames.
+
+        Files are named after the ascii idna representation of the first hostname
+        in the list (which is also the CN in the subject of the CSR and certificate).
+
+        Max filename length on some platforms is 255 bytes, but a hostname could be
+        up to 253 bytes (RFC 1035 section 2.3.4), and we need some room for the usage
+        and keytype and extension, so we only use the last 230 bytes of the ascii idna
+        representation of the hostname for the filename, leaving 25 bytes for metadata.
+
+        Args:
+            domainset: The list of hostnames
+
+        Returns:
+            The string to use in filenames
+        """
+        return hostname.encode("idna").decode("ascii")[-230:]
+
     def load_domainset(self, domainset: typing.List[str], keytype: str) -> None:
         """Prepare paths and create/load private key.
 
         Args:
-            domainset: The list of domains to load
+            domainset: The list of hostnames to load
             keytype: The keytype to use, "rsa" or "ecdsa".
 
         Returns:
@@ -1503,33 +1522,35 @@ class Certgrinder:
         logger.debug(f"Loading domainset {domainset} for keytype {keytype}")
         self.domainset = domainset
         assert isinstance(self.conf["path"], str)
-        # we name the files after the ascii idna representation of the first domain in the list
-        filename = self.domainset[0].encode("idna").decode("ascii")
-        logger.debug(
-            f"Filenames for this domainset will be prefixed with: '{filename}' and suffixed with: '.{keytype}.ext'"
-        )
+
+        # get the hostname to use for filenames
+        filename = self.get_filename(domainset[0])
 
         # keypair
-        self.keypair_path = os.path.join(self.conf["path"], f"{filename}.{keytype}.key")
+        self.keypair_path = os.path.join(
+            self.conf["path"], f"{filename}-keypair.{keytype}.key"
+        )
         logger.debug(f"keypair path: {self.keypair_path}")
 
         # CSR
-        self.csr_path = os.path.join(self.conf["path"], f"{filename}.{keytype}.csr")
+        self.csr_path = os.path.join(
+            self.conf["path"], f"{filename}-request.{keytype}.csr"
+        )
         logger.debug(f"CSR path: {self.csr_path}")
 
         # certificate chain
         self.certificate_chain_path = os.path.join(
-            self.conf["path"], f"{filename}.{keytype}.crt"
+            self.conf["path"], f"{filename}-chain.{keytype}.crt"
         )
         logger.debug(f"Certificate chain path: {self.certificate_chain_path}")
 
-        # certificate
+        # certificate only
         self.certificate_path = os.path.join(
-            self.conf["path"], f"{filename}-certonly.{keytype}.crt"
+            self.conf["path"], f"{filename}-certificate.{keytype}.crt"
         )
         logger.debug(f"certificate path: {self.certificate_path}")
 
-        # issuer
+        # issuer certificate
         self.issuer_path = os.path.join(
             self.conf["path"], f"{filename}-issuer.{keytype}.crt"
         )
@@ -1543,20 +1564,32 @@ class Certgrinder:
 
         # OCSP response
         self.ocsp_response_path = os.path.join(
-            self.conf["path"], f"{filename}.{keytype}.ocsp"
+            self.conf["path"], f"{filename}-response.{keytype}.ocsp"
         )
         logger.debug("OCSP response path: %s" % self.ocsp_response_path)
+
+        # warn about legacy paths, remove this check at some point in future
+        self.keypair_path_old = os.path.join(
+            self.conf["path"], self.domainset[0].encode("idna").decode("ascii")
+        )
+        if os.path.exists(self.keypair_path_old) and not os.path.exists(
+            self.keypair_path
+        ):
+            logger.error(
+                f"Keypair {self.keypair_path} not found, but the old filename {self.keypair_path_old} was found. Please rename files as described in the CHANGELOG."
+            )
+            sys.exit(1)
 
         # finally load or create the keypair
         if os.path.exists(self.keypair_path):
             # load private key
             self.keypair = self.load_keypair(self.keypair_path)
-            logger.debug(f"Loaded keypair from {self.keypair_path}")
+            logger.debug(f"Loaded {keytype} keypair from {self.keypair_path}")
         else:
             # create new private key
             self.keypair = self.generate_private_key(keytype=keytype)
             self.save_keypair(self.keypair, self.keypair_path)
-            logger.debug(f"Created new keypair, saved to {self.keypair_path}")
+            logger.debug(f"Created new {keytype} keypair, saved to {self.keypair_path}")
 
     def grind(self, args: argparse.Namespace) -> None:
         """Loop over enabled keytypes and domainsets in ``self.conf["domain-list"]`` and call args.method for each."""
