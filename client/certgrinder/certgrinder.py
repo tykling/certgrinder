@@ -231,7 +231,7 @@ class Certgrinder:
             )
         elif keytype == "ecdsa":
             return primitives.asymmetric.ec.generate_private_key(
-                primitives.asymmetric.ec.SECP521R1(), backend=default_backend()
+                primitives.asymmetric.ec.SECP384R1(), backend=default_backend()
             )
         elif keytype == "ed25519":
             return primitives.asymmetric.ed25519.Ed25519PrivateKey.generate()
