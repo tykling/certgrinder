@@ -1,1 +1,6 @@
 \.svg$
+^client/man/
+^server/man/
+^conftest.py$
+^client/certgrinder/tests/
+^server/certgrinderd/tests/
