@@ -5,7 +5,7 @@ flake8==3.8.3
 isort==5.5.3
 pre-commit==2.7.1
 mypy==0.770
-Sphinx==2.3.1
+Sphinx==3.2.1
 sphinx-rtd-theme==0.4.3
 sphinx-argparse==0.2.5
 pytest==6.0.2
