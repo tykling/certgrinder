@@ -244,7 +244,7 @@ class Certgrinderd:
             )
             return False
 
-        # domainsets is a semicolon-separated list of comma-seperated domainsets.
+        # domainsets is a semicolon-separated list of comma-separated domainsets.
         # loop over domainsets until we find a match and break out, or hit the else
         # if we never find a domainset covering all names in the CSR
         for domainset in allowed_names.split(";"):
