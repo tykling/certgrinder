@@ -18,7 +18,7 @@ You can also checkout the Github repo and install the deps from requirements.txt
 
 Create Certgrinder User
 ~~~~~~~~~~~~~~~~~~~~~~~
-Since ``certgrinder`` is designed to be run under a seperate system user one should be created. The user needs sudo access if (and only if) it is to be able to reload/restart services after renewing certificates. Sometimes it is also neccesary to add some system users to the certgrinder group so they can read certificates. More on that later.
+Since ``certgrinder`` is designed to be run under a separate system user one should be created. The user needs sudo access if (and only if) it is to be able to reload/restart services after renewing certificates. Sometimes it is also necessary to add some system users to the certgrinder group so they can read certificates. More on that later.
 
 The user also needs to run ``ssh-keygen`` and the SSH key needs to be added to the ``authorized_keys`` file on the Certgrinder server. Make sure to test the SSH access works (hint: check firewalls, v4 vs v6 etc).
 
@@ -44,7 +44,7 @@ This is an alphabetical list of the configurable options:
      Default: ``30``
 
    `domain-list`
-     Comma-seperated lists of domains for the certificates. Can be specified multiple times on the command-line, ``--domain-list example.com,www.example.com --domain-list example.net`` means two certificates, the first with two names, the second with one name.
+     Comma-separated lists of domains for the certificates. Can be specified multiple times on the command-line, ``--domain-list example.com,www.example.com --domain-list example.net`` means two certificates, the first with two names, the second with one name.
 
      Default: ``None``
 
@@ -201,7 +201,7 @@ The second run is after adding the suggested records to ``DNS``::
 
 All ``TLSA`` records for this public key can now be found in the ``DNS``.
 
-`NOTE`: As there might be additional records for the same name which do not belong to this server/key (for example in a loadbalanced or anycast setup), no attempts are made to warn about wrong/old/superflous ``TLSA`` records. This might be added in a future version as a switch to tell Certgrinder that the local public key is the only one in existence for this service.
+`NOTE`: As there might be additional records for the same name which do not belong to this server/key (for example in a loadbalanced or anycast setup), no attempts are made to warn about wrong/old/superfluous ``TLSA`` records. This might be added in a future version as a switch to tell Certgrinder that the local public key is the only one in existence for this service.
 
 get commands
 ~~~~~~~~~~~~

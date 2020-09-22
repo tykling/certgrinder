@@ -649,7 +649,7 @@ class Certgrinder:
             stdin: bytes representing CSR or cert chain to pass to the certgrinderd command
             command: The certgrinderd command and subcommand to call
             certgrinderd_stdout: Mocked certgrinderd stdout to use instead of calling the command
-            eertgrinderd_stderr: Mocked certgrinderd stderr to use instead of calling the command
+            certgrinderd_stderr: Mocked certgrinderd stderr to use instead of calling the command
 
         Returns:
             The bytes representing the stdout from the subprocess call
@@ -768,7 +768,7 @@ class Certgrinder:
             # we dont have a valid issuer
             return None
 
-        # keep mypy happy inspite of the mixed type self.conf dict
+        # keep mypy happy in spite of the mixed type self.conf dict
         assert isinstance(self.conf["invalid-ca-cn-list"], list)
         assert isinstance(self.conf["cert-renew-threshold-days"], int)
         # a few sanity checks of the certificate seems like a good idea
@@ -894,7 +894,7 @@ class Certgrinder:
                 self.error = True
                 return False
 
-        # keep mypy happy inspite of the mixed type self.conf dict
+        # keep mypy happy in spite of the mixed type self.conf dict
         assert isinstance(self.conf["invalid-ca-cn-list"], list)
         assert isinstance(self.conf["cert-renew-threshold-days"], int)
         # check cert
@@ -978,7 +978,7 @@ class Certgrinder:
                 certificate = self.load_certificate(path=self.certificate_path)
             except FileNotFoundError:
                 logger.warning(
-                    f"Certificate {self.certificate_path} not found, parsing certificate from chain (this is a workaround for upgrades from older versions where foo-certificate.crt was not written seperately)."
+                    f"Certificate {self.certificate_path} not found, parsing certificate from chain (this is a workaround for upgrades from older versions where foo-certificate.crt was not written separately)."
                 )
                 with open(self.certificate_chain_path, "rb") as f:
                     certificate_bytes, issuer_bytes = self.split_pem_chain(f.read())
@@ -991,7 +991,7 @@ class Certgrinder:
                 issuer = self.load_certificate(path=self.issuer_path)
             except FileNotFoundError:
                 logger.warning(
-                    f"Issuer cert {self.issuer_path} not found, parsing issuer from chain (this is a workaround for upgrades from older versions where foo-issuer.crt was not written seperately)."
+                    f"Issuer cert {self.issuer_path} not found, parsing issuer from chain (this is a workaround for upgrades from older versions where foo-issuer.crt was not written separately)."
                 )
                 with open(self.certificate_chain_path, "rb") as f:
                     certificate_bytes, issuer_bytes = self.split_pem_chain(f.read())
@@ -1824,7 +1824,7 @@ def get_parser() -> argparse.ArgumentParser:
         "--domain-list",
         action="append",
         dest="domain-list",
-        help="Comma seperated list of domains for a certificate. Can be specified multiple times.",
+        help="Comma separated list of domains for a certificate. Can be specified multiple times.",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(

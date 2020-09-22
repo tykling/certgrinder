@@ -10,7 +10,7 @@ Advantages
 ==========
 - The approach with a central host serving all challenges simplifies getting certificates for stuff like loadbalanced or anycast services, where it can be impossible to predict which cluster node the LetsEncrypt challenge checker will hit when using ``HTTP-01``.
 
-- Using ``DNS-01`` with a seperate delegated zone dedicated to serve the challenges is safer than opening up dynamic updates of your primary zone(s) with your provider.
+- Using ``DNS-01`` with a separate delegated zone dedicated to serve the challenges is safer than opening up dynamic updates of your primary zone(s) with your provider.
 
 - Migrating services to new infrastructure becomes simpler because the new infrastructure can get real certificates before changing DNS to point to the new infrastructure.
 

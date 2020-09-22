@@ -177,7 +177,7 @@ Default: \fBNone\fP
 Finally the permitted domains for the current client must be specified as an environment variable (see next section).
 .SH RESTRICTING CLIENT HOSTNAMES
 .sp
-To determine whether a Certgrinder client is authorised to get a certificate for a given list of hostnames \fBcertgrinderd\fP checks the environment variable named \fBCERTGRINDERD_DOMAINSETS\fP which must contain a semicolon\-seperated list of comma\-seperated lists of hostnames permitted for the current client.
+To determine whether a Certgrinder client is authorised to get a certificate for a given list of hostnames \fBcertgrinderd\fP checks the environment variable named \fBCERTGRINDERD_DOMAINSETS\fP which must contain a semicolon\-separated list of comma\-separated lists of hostnames permitted for the current client.
 .sp
 For example, if the Certgrinder client was a webserver with two vhosts, one with the name \fBexample.net\fP and another vhost with the two names \fBexample.com\fP and \fBwww.example.com\fP\&. In this case the environment variable \fBCERTGRINDERD_DOMAINSETS="example.net;example.com,www.example.com"\fP would permit the client to get the two certificates it needs, and nothing else.
 .sp

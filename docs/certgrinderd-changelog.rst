@@ -113,7 +113,7 @@ Changed
 ~~~~~~~
 - Move CHANGELOG.md to rst format and into ``docs/``
 - Split certbot-command related stuff into new methods get_certbot_command() and run_certbot()
-- Split creating the argparse object into a seperate function to assist sphinx-argparse
+- Split creating the argparse object into a separate function to assist sphinx-argparse
 - Test suite now covers 100% of certgrinderd.py
 
 Fixed

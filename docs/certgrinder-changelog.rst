@@ -49,7 +49,7 @@ v0.14.1 (13-Sep-2020)
 
 Added
 ~~~~~
-- Workaround to get certificate from chain in installations from before foo-certonly.crt was written seperately. This makes the "get ocsp" subcommand work even if the current certificate was issued with an older version of certgrinder.
+- Workaround to get certificate from chain in installations from before foo-certonly.crt was written separately. This makes the "get ocsp" subcommand work even if the current certificate was issued with an older version of certgrinder.
 
 Changed
 ~~~~~~~
@@ -72,7 +72,7 @@ v0.14.0-beta2 (29-Aug-2020)
 
 Added
 ~~~~~
-- Workaround to get intermediate from chain in installations from before foo-intermediate.crt was written seperately. This makes the "get ocsp" subcommand work even if the current certificate was issued with an older version of certgrinder.
+- Workaround to get intermediate from chain in installations from before foo-intermediate.crt was written separately. This makes the "get ocsp" subcommand work even if the current certificate was issued with an older version of certgrinder.
 
 Changed
 ~~~~~~~
@@ -147,7 +147,7 @@ Added
 - Very preliminary support for EC keys in addition to RSA keys.
 - More tests
 - Better validation of returned certificate and intermediate
-- Save intermediate in seperate file, save certificate only in seperate file.
+- Save intermediate in separate file, save certificate only in separate file.
 - Documentation for all config settings
 - Manpage certgrinder.8
 - periodic command to run from cron
@@ -159,13 +159,13 @@ Changed
 - Configuration is now a combination of command-line options (if any), config file (if any) and default config; in decreasing precedence order. A default setting will be overridden by a config file setting which will be overridden by a command-line setting.
 - Update ``certgrinder.conf.dist`` with new options and better comments
 - Mark most methods as ``@staticmethod`` or ``@classmethod``, refactor code as needed. This makes the code more reusable and easier to test.
-- Split certificate validity tests into seperate methods
-- Split parsing of ``certgrinderd`` output into seperate method ``parse_certgrinderd_output()``
-- Split argparse stuff (which grew considerably with this change) into seperate ``get_parser()`` func
+- Split certificate validity tests into separate methods
+- Split parsing of ``certgrinderd`` output into separate method ``parse_certgrinderd_output()``
+- Split argparse stuff (which grew considerably with this change) into separate ``get_parser()`` func
 - Support calling ``certgrinder.main()`` function and ``certgrinder.Certgrinder.grind()`` method with a list of mocked command-line args
 - Update existing tests to deal with all the new stuff
 - Make pytest logformat look like regular logging
-- Split creating the argparse object into a seperate function to assist sphinx-argparse
+- Split creating the argparse object into a separate function to assist sphinx-argparse
 - Reorder argparse commands and subcommands in alphabetical order
 - Re-add -v / --version to show version and exit
 - Test suite now covers 100% of certgrinder.py

@@ -140,7 +140,7 @@ Finally the permitted domains for the current client must be specified as an env
 
 Restricting Client Hostnames
 ----------------------------
-To determine whether a Certgrinder client is authorised to get a certificate for a given list of hostnames ``certgrinderd`` checks the environment variable named ``CERTGRINDERD_DOMAINSETS`` which must contain a semicolon-seperated list of comma-seperated lists of hostnames permitted for the current client.
+To determine whether a Certgrinder client is authorised to get a certificate for a given list of hostnames ``certgrinderd`` checks the environment variable named ``CERTGRINDERD_DOMAINSETS`` which must contain a semicolon-separated list of comma-separated lists of hostnames permitted for the current client.
 
 For example, if the Certgrinder client was a webserver with two vhosts, one with the name ``example.net`` and another vhost with the two names ``example.com`` and ``www.example.com``. In this case the environment variable ``CERTGRINDERD_DOMAINSETS="example.net;example.com,www.example.com"`` would permit the client to get the two certificates it needs, and nothing else.
 

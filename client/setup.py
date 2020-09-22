@@ -14,7 +14,7 @@ setuptools.setup(
     version="0.15.0-dev",
     author="Thomas Steen Rasmussen",
     author_email="thomas@gibfest.dk",
-    description="The client part of the Certgrinder project. Use with 'certgrinderd' package on the serverside.",
+    description="The client part of the Certgrinder project. Use with 'certgrinderd' package on the server-side.",
     license="BSD License",
     long_description=long_description,
     long_description_content_type="text/markdown",

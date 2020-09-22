@@ -43,7 +43,7 @@ You can also checkout the Github repo and install the deps from requirements.txt
 \fBpip install "git+https://github.com/tykling/certgrinder/#egg=certgrinder&subdirectory=client"\fP
 .SS Create Certgrinder User
 .sp
-Since \fBcertgrinder\fP is designed to be run under a seperate system user one should be created. The user needs sudo access if (and only if) it is to be able to reload/restart services after renewing certificates. Sometimes it is also neccesary to add some system users to the certgrinder group so they can read certificates. More on that later.
+Since \fBcertgrinder\fP is designed to be run under a separate system user one should be created. The user needs sudo access if (and only if) it is to be able to reload/restart services after renewing certificates. Sometimes it is also necessary to add some system users to the certgrinder group so they can read certificates. More on that later.
 .sp
 The user also needs to run \fBssh\-keygen\fP and the SSH key needs to be added to the \fBauthorized_keys\fP file on the Certgrinder server. Make sure to test the SSH access works (hint: check firewalls, v4 vs v6 etc).
 .SS Configuration
@@ -70,7 +70,7 @@ A certificate will be renewed when it has less than this many days of lifetime l
 Default: \fB30\fP
 .TP
 .B \fIdomain\-list\fP
-Comma\-seperated lists of domains for the certificates. Can be specified multiple times on the command\-line, \fB\-\-domain\-list example.com,www.example.com \-\-domain\-list example.net\fP means two certificates, the first with two names, the second with one name.
+Comma\-separated lists of domains for the certificates. Can be specified multiple times on the command\-line, \fB\-\-domain\-list example.com,www.example.com \-\-domain\-list example.net\fP means two certificates, the first with two names, the second with one name.
 .sp
 Default: \fBNone\fP
 .TP
@@ -254,7 +254,7 @@ The second run is after adding the suggested records to \fBDNS\fP:
 .sp
 All \fBTLSA\fP records for this public key can now be found in the \fBDNS\fP\&.
 .sp
-\fINOTE\fP: As there might be additional records for the same name which do not belong to this server/key (for example in a loadbalanced or anycast setup), no attempts are made to warn about wrong/old/superflous \fBTLSA\fP records. This might be added in a future version as a switch to tell Certgrinder that the local public key is the only one in existence for this service.
+\fINOTE\fP: As there might be additional records for the same name which do not belong to this server/key (for example in a loadbalanced or anycast setup), no attempts are made to warn about wrong/old/superfluous \fBTLSA\fP records. This might be added in a future version as a switch to tell Certgrinder that the local public key is the only one in existence for this service.
 .SS get commands
 .sp
 The \fBget\fP subcommands do all the real work.
@@ -380,7 +380,7 @@ The path to the certgrinder.yml config file to use
 Debug mode. Equal to setting \-\-log\-level=DEBUG.
 .TP
 .B\-D, \-\-domain\-list
-Comma seperated list of domains for a certificate. Can be specified multiple times.
+Comma separated list of domains for a certificate. Can be specified multiple times.
 .TP
 .B\-\-invalid\-ca\-cn\-list
 The CommonName of an issuer (CA intermediate) to consider invalid. Can be specified multiple times.
@@ -1264,7 +1264,7 @@ the "get ocsp" command.
 .IP \(bu 2
 \fBcertgrinderd_stdout\fP \-\- Mocked certgrinderd stdout to use instead of calling the command
 .IP \(bu 2
-\fBeertgrinderd_stderr\fP \-\- Mocked certgrinderd stderr to use instead of calling the command
+\fBcertgrinderd_stderr\fP \-\- Mocked certgrinderd stderr to use instead of calling the command
 .UNINDENT
 .TP
 .B Returns

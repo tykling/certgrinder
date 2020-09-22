@@ -11,7 +11,7 @@
 # where to put keys, certificates and pidfile
 #path: "~/certificates"
 
-# A list of comma-seperated sets of domains to get certificates for
+# A list of comma-separated sets of domains to get certificates for
 #domain-list:
 #  - 'example.com,www.example.com'
 #  - 'example.org'
