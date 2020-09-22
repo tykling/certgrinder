@@ -17,12 +17,12 @@ Fixed
 - Removed unused ``--rsa-key-size`` arg from certbot command
 
 
-v0.14.2 (13-sep-2020)
+v0.14.2 (13-Sep-2020)
 ---------------------
 - No changes
 
 
-v0.14.1 (13-sep-2020)
+v0.14.1 (13-Sep-2020)
 ---------------------
 
 Changed
@@ -34,7 +34,7 @@ Fixed
 - Fix a wrong error message in an assert in ``test_parse_certificate_chain_path()``
 
 
-v0.14.0 (29-aug-2020)
+v0.14.0 (29-Aug-2020)
 ---------------------
 
 Changed
@@ -42,12 +42,12 @@ Changed
 - Change log message to ``INFO`` when getting a new OCSP response
 
 
-v0.14.0-beta2 (29-aug-2020)
+v0.14.0-beta2 (29-Aug-2020)
 ---------------------------
 - No changes
 
 
-v0.14.0-beta1 (29-aug-2020)
+v0.14.0-beta1 (29-Aug-2020)
 ---------------------------
 
 Added
@@ -64,7 +64,7 @@ Changed
 - Change some default config from None to "" to keep it as str
 
 
-v0.13.2 (11-jul-2020)
+v0.13.2 (11-Jul-2020)
 --------------------
 
 Added
@@ -72,7 +72,7 @@ Added
 - Manpage to MANIFEST.in to include it in the distribution
 
 
-v0.13.1 (7-jul-2020)
+v0.13.1 (7-Jul-2020)
 --------------------
 
 Changed
@@ -80,12 +80,12 @@ Changed
 - Specify python3.7 and 3.8 as classifiers in setup.py
 
 
-v0.13.0 (7-jul-2020)
+v0.13.0 (7-Jul-2020)
 --------------------
 - No changes
 
 
-v0.13.0-rc1 (1-jul-2020)
+v0.13.0-rc1 (1-Jul-2020)
 ------------------------
 
 Added
@@ -97,7 +97,7 @@ Changed
 - Show current log-level setting in first log message
 
 
-v0.13.0-beta2 (29-jun-2020)
+v0.13.0-beta2 (29-Jun-2020)
 ---------------------------
 
 Added
@@ -121,12 +121,12 @@ Fixed
 - Only try challenge types if we have the needed info (acme-zone for DNS-01, www-root for HTTP-01)
 
 
-v0.13.0-beta1 (7-may-2020)
+v0.13.0-beta1 (7-May-2020)
 ---------------------------
 
 -  No changes
 
-v0.13.0-alpha8 (6-may-2020)
+v0.13.0-alpha8 (6-May-2020)
 ----------------------------
 
 Changed
@@ -136,12 +136,12 @@ Changed
    Certgrinderd. instead of nothing and %(name)s, making it more clear
    which messages are from certgrinder and which are from certgrinderd.
 
-v0.13.0-alpha7 (6-may-2020)
+v0.13.0-alpha7 (6-May-2020)
 ----------------------------
 
 -  No changes
 
-v0.13.0-alpha6 (6-may-2020)
+v0.13.0-alpha6 (6-May-2020)
 ----------------------------
 
 Changed
@@ -152,7 +152,7 @@ Changed
    each run. If --temp-dir is configured the temporary directory is
    created inside the path specified.
 
-v0.13.0-alpha5 (6-may-2020)
+v0.13.0-alpha5 (6-May-2020)
 ----------------------------
 
 Added
@@ -161,7 +161,7 @@ Added
 -  -f and -S short options for --config-file and --staging
 -  MANIFEST.in file to include sample config and hook scripts
 
-v0.13.0-alpha4 (5-may-2020)
+v0.13.0-alpha4 (5-May-2020)
 ----------------------------
 
 Added
@@ -179,7 +179,7 @@ Changed
 -  Configuration file and command-line options aligned so everything is
    configurable both places.
 
-v0.13.0-alpha3 (5-may-2020)
+v0.13.0-alpha3 (5-May-2020)
 ----------------------------
 
 Added
@@ -193,7 +193,7 @@ Changed
 -  Fix so certgrinderd.conf certbot\_commands with spaces in them work
    as expected
 
-v0.13.0-alpha2 (4-may-2020)
+v0.13.0-alpha2 (4-May-2020)
 ----------------------------
 
 Added
@@ -209,7 +209,7 @@ Changed
 -  Wrap remaining script initialisation in a main() function to support
    entry\_points in setup.py better
 
-v0.13.0-alpha (4-may-2020)
+v0.13.0-alpha (4-May-2020)
 ---------------------------
 
 Added
