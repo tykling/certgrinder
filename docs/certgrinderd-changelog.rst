@@ -12,9 +12,14 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 v0.15.0 (unreleased)
 --------------------
 
+Added
+~~~~~
+- Enabled ``check-spelling`` Github action and fixed a bunch of misspelled words all over.
+
 Fixed
 ~~~~~
 - Removed unused ``--rsa-key-size`` arg from certbot command
+- Fix wrong requirements line for pre-commit (remove extra equal sign)
 
 
 v0.14.2 (13-Sep-2020)

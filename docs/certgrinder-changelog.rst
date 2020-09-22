@@ -16,6 +16,7 @@ Added
 ~~~~~
 - Enabled ECDSA keys and certificates. Default to getting both RSA and ECDSA certificates. Control which keytypes are enabled with the new ``key-type-list`` configuration option.
 - Added ``show paths`` subcommand to output the various filepaths used.
+- Enabled ``check-spelling`` Github action and fixed a bunch of misspelled words all over.
 
 Changed
 ~~~~~~~
@@ -30,6 +31,10 @@ Changed
   - The OCSP response: ``mv example.com.ocsp example.com-response.rsa.ocsp``
 
   This must be done for each domainset. If a keypair with the old filename is found Certgrinder will quit with exit code 1 and refuse to run. Use the new ``show paths`` subcommand to figure out what the new filenames should be.
+
+Fixed
+~~~~~
+- Fix wrong requirements line for pre-commit (remove extra equal sign)
 
 
 v0.14.2 (13-Sep-2020)
