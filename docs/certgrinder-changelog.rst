@@ -76,7 +76,7 @@ Added
 
 Changed
 ~~~~~~~
-- Seperated the PEM chain splitting logic into a new split_pem_chain method
+- Separated the PEM chain splitting logic into a new split_pem_chain method
 
 
 v0.14.0-beta1 (29-Aug-2020)
