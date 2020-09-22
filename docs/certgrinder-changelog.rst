@@ -32,7 +32,7 @@ Changed
   This must be done for each domainset. If a keypair with the old filename is found Certgrinder will quit with exit code 1 and refuse to run. Use the new ``show paths`` subcommand to figure out what the new filenames should be.
 
 
-v0.14.2 (13-sep-2020)
+v0.14.2 (13-Sep-2020)
 ---------------------
 
 Added
@@ -44,7 +44,7 @@ Changed
 - Rename test ``test_show_certificate()`` to ``test_show_certificate_file_not_found()``
 
 
-v0.14.1 (13-sep-2020)
+v0.14.1 (13-Sep-2020)
 ---------------------
 
 Added
@@ -59,7 +59,7 @@ Changed
 - Rename intermediate cert path to example.com-issuer.crt instead of example.com-intermediate.crt. Existing intermediate/issuer certs will be renamed next time "get ocsp" is run, which is done automatically by the "periodic" command.
 
 
-v0.14.0 (29-aug-2020)
+v0.14.0 (29-Aug-2020)
 ---------------------
 
 Changed
@@ -67,7 +67,7 @@ Changed
 - Update log message when running post-renew hooks
 
 
-v0.14.0-beta2 (29-aug-2020)
+v0.14.0-beta2 (29-Aug-2020)
 ---------------------------
 
 Added
@@ -79,7 +79,7 @@ Changed
 - Seperated the PEM chain splitting logic into a new split_pem_chain method
 
 
-v0.14.0-beta1 (29-aug-2020)
+v0.14.0-beta1 (29-Aug-2020)
 ---------------------------
 
 Added
@@ -99,7 +99,7 @@ Fixed
 ~~~~~
 - Changed certgrinder syslog ident from "certgrinderd" to "certgrinder"
 
-v0.13.2 (11-jul-2020)
+v0.13.2 (11-Jul-2020)
 ---------------------
 
 Added
@@ -107,7 +107,7 @@ Added
 - Manpage to MANIFEST.in to include it in the distribution
 
 
-v0.13.1 (7-jul-2020)
+v0.13.1 (7-Jul-2020)
 --------------------
 
 Changed
@@ -115,7 +115,7 @@ Changed
 - Specify python3.7 and 3.8 as classifiers in setup.py
 
 
-v0.13.0 (7-jul-2020)
+v0.13.0 (7-Jul-2020)
 --------------------
 
 Changed
@@ -128,7 +128,7 @@ Fixed
 - Fix broken show_certificate() method, and make it output more useful info
 
 
-v0.13.0-rc1 (1-jul-2020)
+v0.13.0-rc1 (1-Jul-2020)
 -------------------------
 
 Changed
@@ -136,7 +136,7 @@ Changed
 - Writing the certificate only (without the intermediate) to ``example.com-certonly.crt`` is new in 0.13, so make the ``check_certificate()`` method checks the chain certificate to make sure upgrading 0.12 to 0.13 doesn't trigger needlessly renewing all existing certs.
 
 
-v0.13.0-beta2 (29-jun-2020)
+v0.13.0-beta2 (29-Jun-2020)
 ---------------------------
 
 Added
@@ -171,7 +171,7 @@ Changed
 - Test suite now covers 100% of certgrinder.py
 
 
-v0.13.0-beta1 (7-may-2020)
+v0.13.0-beta1 (7-May-2020)
 ---------------------------
 
 Fixed
@@ -182,7 +182,7 @@ Fixed
    so the effects of both ``--quiet`` and ``--debug`` are passed to the
    certgrinderd call.
 
-v0.13.0-alpha8 (6-may-2020)
+v0.13.0-alpha8 (6-May-2020)
 ----------------------------
 
 Changed
@@ -193,7 +193,7 @@ Changed
    which messages are from certgrinder and which are from certgrinderd
 -  Output logging from certgrinderd call
 
-v0.13.0-alpha7 (6-may-2020)
+v0.13.0-alpha7 (6-May-2020)
 ----------------------------
 
 Fixed
@@ -203,12 +203,12 @@ Fixed
    if it was already 640
 -  --log-level didn't work without --debug
 
-v0.13.0-alpha6 (6-may-2020)
+v0.13.0-alpha6 (6-May-2020)
 ----------------------------
 
 -  No changes
 
-v0.13.0-alpha5 (6-may-2020)
+v0.13.0-alpha5 (6-May-2020)
 ----------------------------
 
 Added
@@ -222,7 +222,7 @@ Changed
 -  Default config file is now ~/certgrinder.conf instead of
    ~/certgrinder.yml
 
-v0.13.0-alpha4 (5-may-2020)
+v0.13.0-alpha4 (5-May-2020)
 ----------------------------
 
 Added
@@ -241,12 +241,12 @@ Changed
 -  Prefix syslog messages with "certgrinder" instead of "Certgrinder" to
    match the package name
 
-v0.13.0-alpha3 (5-may-2020)
+v0.13.0-alpha3 (5-May-2020)
 ----------------------------
 
 -  No changes
 
-v0.13.0-alpha2 (4-may-2020)
+v0.13.0-alpha2 (4-May-2020)
 ----------------------------
 
 Added
@@ -260,7 +260,7 @@ Changed
 -  Wrap script initialisation in a main() function to support
    entry\_points in setup.py better
 
-v0.13.0-alpha (4-may-2020)
+v0.13.0-alpha (4-May-2020)
 ---------------------------
 
 Added
@@ -284,7 +284,7 @@ Changed
 -  Reorder commandline arguments alphabetically.
 -  Change a few imports to make mypy and isort happy
 
-v0.12.1 (4-jan-2020)
+v0.12.1 (4-Jan-2020)
 ---------------------
 
 Added
@@ -304,7 +304,7 @@ Changed
 
 -  Update mypy to 0.761 and add to requirements-dev.txt
 
-v0.12.0 (4-jan-2020)
+v0.12.0 (4-Jan-2020)
 ---------------------
 
 Changed
@@ -323,7 +323,7 @@ Fixed
    deprecated, as the default Loader is unsafe. Please read
    https://msg.pyyaml.org/load for full details.
 
-v0.11.0 (25-dec-2018)
+v0.11.0 (25-Dec-2018)
 ----------------------
 
 Added:
@@ -344,7 +344,7 @@ Removed:
 
 -  Support for selfsigned certificates.
 
-v0.10.2 (5-apr-2018)
+v0.10.2 (5-Apr-2018)
 ---------------------
 
 Added:
@@ -364,7 +364,7 @@ Fixed:
 -  Only log SSH output and exception info when in debug mode
 -  Various improvements to logging
 
-v0.10.1 (2-mar-2018)
+v0.10.1 (2-Mar-2018)
 ---------------------
 
 Fixed:
@@ -372,7 +372,7 @@ Fixed:
 
 -  Version number was wrong in certgrinder.py
 
-v0.10.0 (2-mar-2018)
+v0.10.0 (2-Mar-2018)
 ---------------------
 
 Added:
@@ -391,7 +391,7 @@ Fixed:
 
 -  Language and typos and layout in README
 
-v0.9.5 (16-feb-2018)
+v0.9.5 (16-Feb-2018)
 ---------------------
 
 Fixed:
@@ -405,7 +405,7 @@ Added:
 -  -p / --showspki switch to output pin-sha256 pins for the public keys.
    Useful for HPKP or other pinning that uses the same format.
 
-v0.9.4 (17-jan-2018)
+v0.9.4 (17-Jan-2018)
 ---------------------
 
 Fixed:
@@ -414,7 +414,7 @@ Fixed:
 -  The showtlsa (-s) and checktlsa (-c) features did not work for
    multiple domain sets
 
-v0.9.3 (17-jan-2018)
+v0.9.3 (17-Jan-2018)
 ---------------------
 
 Fixed:
@@ -424,7 +424,7 @@ Fixed:
 -  Catch more types of exceptions when looking up DNS results, and exit
    if a serious error occurs.
 
-v0.9.2 (17-jan-2018)
+v0.9.2 (17-Jan-2018)
 ---------------------
 
 Fixed:
@@ -432,7 +432,7 @@ Fixed:
 
 -  Typo in CHANGELOG.md
 
-v0.9.1 (17-jan-2018)
+v0.9.1 (17-Jan-2018)
 ---------------------
 
 Fixed:
@@ -449,7 +449,7 @@ Added:
    it.
 -  Add shebang line to certgrinder.py and make the script executable.
 
-v0.9.0 (16-jan-2018)
+v0.9.0 (16-Jan-2018)
 ---------------------
 
 Added:
