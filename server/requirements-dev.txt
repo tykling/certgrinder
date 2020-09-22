@@ -1,6 +1,6 @@
 -r requirements.txt
 black==19.3b0
-codecov==2.0.22
+codecov==2.1.9
 flake8==3.8.3
 isort==4.3.21
 pre-commit==2.7.1
