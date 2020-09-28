@@ -14,7 +14,7 @@ v0.15.0 (unreleased)
 
 Added
 ~~~~~
-- Enabled ECDSA keys and certificates. Default to getting both RSA and ECDSA certificates. Control which keytypes are enabled with the new ``key-type-list`` configuration option.
+- Enabled ECDSA keys and certificates. Default to getting both RSA and ECDSA certificates. Control which keytypes are enabled with the new ``key-type-list`` configuration option. Curve for ECDSA is SECP384R1, this might be made configurable later.
 - Added ``show paths`` subcommand to output the various filepaths used.
 - Enabled ``check-spelling`` Github action and fixed a bunch of misspelled words all over.
 

@@ -57,6 +57,7 @@ datacenter
 datefmt
 datetime
 dcounter
+dependabot
 deps
 derbytes
 derkey
