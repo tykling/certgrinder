@@ -39,6 +39,7 @@ Changed
   This rename must be done for each domainset. If a keypair with the old filename is found Certgrinder will quit with exit code 1 and refuse to run. Use the new ``show paths`` subcommand to figure out what the new filenames should be.
 
 - Prefix certgrinderd output with ``certgrinderd:`` when not in debug mode.
+- Updated all dependencies in requirements.txt, and switch to pinning deps with == rather than >= so dependabot on github can do its thing
 
 Fixed
 ~~~~~

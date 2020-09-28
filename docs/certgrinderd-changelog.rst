@@ -20,6 +20,7 @@ Fixed
 ~~~~~
 - Removed unused ``--rsa-key-size`` arg from certbot command
 - Fix wrong requirements line for pre-commit (remove extra equal sign)
+- Updated all dependencies in requirements.txt, and switch to pinning deps with == rather than >= so dependabot on github can do its thing
 
 
 v0.14.2 (13-Sep-2020)
