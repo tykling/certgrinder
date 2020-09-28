@@ -1404,10 +1404,10 @@ class Certgrinder:
         Returns:
             None
         """
+        logger.info(
+            f"- Showing TLSA records for keytype '{self.keytype}' for domain set: {self.domainset} port '{self.conf['tlsa-port']}' protocol '{self.conf['tlsa-protocol']}':"
+        )
         for domain in self.domainset:
-            logger.debug(
-                f"Generated TLSA records for {domain} port {self.conf['tlsa-port']} protocol {self.conf['tlsa-protocol']}:"
-            )
             # keep mypy happy
             assert isinstance(self.conf["tlsa-type-list"], list)
             assert isinstance(self.conf["tlsa-port"], int)

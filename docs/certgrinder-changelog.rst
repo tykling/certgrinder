@@ -12,6 +12,10 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 v0.15.0-beta3 (unreleased)
 --------------------------
 
+Changed
+~~~~~~~
+- Change output a bit for the ``show tlsa`` subcommand
+
 Fixed
 ~~~~~
 - The ``show tlsa`` command did not work due to type mismatch triggering an assert
