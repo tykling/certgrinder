@@ -58,7 +58,7 @@ def test_certgrinderd_fail(tmpdir_factory, certgrinderd_env, caplog):
         "--domain-list",
         "example.com,www.example.com",
         "--certgrinderd",
-        f"server/certgrinderd/certgrinderd.py --certbot-command /bin/false --acme-zone acme.example.com",
+        "server/certgrinderd/certgrinderd.py --certbot-command /bin/false --acme-zone acme.example.com",
         "--debug",
         "get",
         "certificate",
@@ -218,7 +218,7 @@ def test_get_certificate(
         # make clean before doing the next OCSP stuff
         caplog.clear()
 
-        print(f"Running openssl ocsp responder...")
+        print("Running openssl ocsp responder...")
         proc = subprocess.Popen(
             args=[
                 "openssl",

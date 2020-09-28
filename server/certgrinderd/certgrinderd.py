@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Certgrinderd v0.15.0-dev module.
+"""Certgrinderd v0.15.0-beta1 module.
 
 See https://certgrinder.readthedocs.io/en/latest/certgrinderd.html
 and https://github.com/tykling/certgrinder for more.
@@ -22,7 +22,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.backends.openssl import x509  # type: ignore
 
 logger = logging.getLogger("certgrinderd.%s" % __name__)
-__version__ = "0.15.0-dev"
+__version__ = "0.15.0-beta1"
 
 
 class Certgrinderd:
@@ -681,7 +681,7 @@ class Certgrinderd:
         Returns:
             True if the OCSP response is valid, False if not
         """
-        logger.debug(f"Checking validity of OCSP response")
+        logger.debug("Checking validity of OCSP response")
 
         # Check OCSP response status
         if (
@@ -713,7 +713,7 @@ class Certgrinderd:
             return False
 
         # all good
-        logger.debug(f"OCSP response is valid!")
+        logger.debug("OCSP response is valid!")
         return True
 
     @staticmethod
@@ -892,7 +892,7 @@ class Certgrinderd:
             payload=ocsp_response.tbs_response_bytes,
             hashalgo=ocsp_response.signature_hash_algorithm,
         ):
-            logger.error(f"The OCSP response signature is invalid")
+            logger.error("The OCSP response signature is invalid")
             return False
 
         # all good
@@ -950,7 +950,7 @@ class Certgrinderd:
             return False
 
         # all good
-        logger.debug(f"Signature is valid")
+        logger.debug("Signature is valid")
         return True
 
 
