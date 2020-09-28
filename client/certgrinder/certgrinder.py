@@ -121,7 +121,7 @@ class Certgrinder:
         # check if we have a path
         if not self.conf["path"]:
             logger.error(
-                f"No configured path. Specify --path or define path: in the config file."
+                "No configured path. Specify --path or define path: in the config file."
             )
             sys.exit(1)
 
@@ -686,7 +686,10 @@ class Certgrinder:
                 level = words[4]
                 message = " ".join(words[5:])
                 if hasattr(logger, level.lower()):
-                    getattr(logger, level.lower())(message)
+                    if level.lower() == "debug":
+                        getattr(logger, level.lower())(message)
+                    else:
+                        getattr(logger, level.lower())(f"certgrinderd: {message}")
                 else:
                     # cannot grok, log the whole line
                     logger.warning(line)
@@ -1016,7 +1019,7 @@ class Certgrinder:
             logger.error("Did not get an OCSP response :(")
             return False
 
-        logger.info(f"Success! Got OCSP response from certgrinderd.")
+        logger.info("Success! Got OCSP response from certgrinderd.")
 
         # save OCSP response
         self.save_ocsp_response(

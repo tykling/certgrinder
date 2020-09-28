@@ -38,6 +38,8 @@ Changed
 
   This rename must be done for each domainset. If a keypair with the old filename is found Certgrinder will quit with exit code 1 and refuse to run. Use the new ``show paths`` subcommand to figure out what the new filenames should be.
 
+- Prefix certgrinderd output with ``certgrinderd:`` when not in debug mode.
+
 Fixed
 ~~~~~
 - Fix wrong requirements line for pre-commit (remove extra equal sign)
