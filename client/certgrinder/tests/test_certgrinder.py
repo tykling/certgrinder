@@ -367,7 +367,7 @@ def test_argparse():
     assert getattr(args, "domain-list") == ["example.com"]
     assert getattr(args, "command") == "show"
     assert getattr(args, "subcommand") == "tlsa"
-    assert getattr(args, "tlsa-port") == "443"
+    assert getattr(args, "tlsa-port") == 443
     assert getattr(args, "tlsa-protocol") == "tcp"
 
 

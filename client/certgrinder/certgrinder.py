@@ -925,7 +925,9 @@ class Certgrinder:
             logger.error(f"Certificate {self.certificate_path} not found")
             return
         certificate = self.load_certificate(self.certificate_path)
-        logger.info(f"- Showing certificate for domain set: {self.domainset}")
+        logger.info(
+            f"- Showing certificate for keytype '{self.keytype}' for domain set: {self.domainset}"
+        )
         logger.info(f"Certificate keypair path: {self.keypair_path}")
         logger.info(f"Certificate chain path: {self.certificate_chain_path}")
         logger.info(f"Certificate path: {self.certificate_path}")
@@ -1707,7 +1709,7 @@ def get_parser() -> argparse.ArgumentParser:
     )
     check_tlsa_parser.set_defaults(method="check_tlsa")
     check_tlsa_parser.add_argument(
-        "tlsa-port", help="The port of the service, for example 443"
+        "tlsa-port", type=int, help="The port of the service, for example 443"
     )
     check_tlsa_parser.add_argument(
         "tlsa-protocol", help="The protocol of the service, for example tcp"
@@ -1795,7 +1797,7 @@ def get_parser() -> argparse.ArgumentParser:
     )
     show_tlsa_parser.set_defaults(method="show_tlsa")
     show_tlsa_parser.add_argument(
-        "tlsa-port", help="The port of the service, for example 443"
+        "tlsa-port", type=int, help="The port of the service, for example 443"
     )
     show_tlsa_parser.add_argument(
         "tlsa-protocol", help="The protocol of the service, for example tcp"

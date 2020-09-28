@@ -11,7 +11,11 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.15.0-beta3 (unreleased)
 --------------------------
-- No changes
+
+Fixed
+~~~~~
+- The ``show tlsa`` command did not work due to type mismatch triggering an assert
+- Show keytype in the ``show certificate`` output
 
 
 v0.15.0-beta2 (28-Sep-2020)
