@@ -20,7 +20,7 @@ Added
 
 Changed
 ~~~~~~~
-- Changed filenames of keys and certificates, run the following commands to rename existing RSA files from pre 0.15 installs:
+- Changed filenames of keys and certificates. Run the following commands to rename existing RSA files from pre 0.15 installs:
 
   - The keypair: ``mv example.com.key example.com-keypair.rsa.key``
   - The CSR: ``mv example.com.csr example.com-request.rsa.csr``
@@ -30,7 +30,13 @@ Changed
   - The issuer certificate: ``mv example.com-issuer.crt example.com-issuer.rsa.crt``
   - The OCSP response: ``mv example.com.ocsp example.com-response.rsa.ocsp``
 
-  This must be done for each domainset. If a keypair with the old filename is found Certgrinder will quit with exit code 1 and refuse to run. Use the new ``show paths`` subcommand to figure out what the new filenames should be.
+  In other words:
+  - All files got the keytype (always ``rsa`` for pre-0.15 files) inserted just before the extension, so ``.crt`` becomes ``.rsa.crt`` and ``.key`` becomes ``.rsa.key``.
+  - Additionally the keypair files got ``-keypair`` inserted just after the hostname, so ``example.com.rsa.key`` becomes ``example.com-keypair.rsa.key``.
+  - Additionally the CSR files got ``-request`` inserted just after the hostname, so ``example.com.rsa.csr`` becomes ``example.com-request.rsa.csr``.
+  - Finally the OCSP response got ``-response`` inserted just after the hostname, so ``example.com.rsa.ocsp`` becomes ``example.com-response.rsa.ocsp``.
+
+  This rename must be done for each domainset. If a keypair with the old filename is found Certgrinder will quit with exit code 1 and refuse to run. Use the new ``show paths`` subcommand to figure out what the new filenames should be.
 
 Fixed
 ~~~~~

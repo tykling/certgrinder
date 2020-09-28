@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDERD" "8" "Sep 22, 2020" "0.15.0-dev" "Certgrinder"
+.TH "CERTGRINDERD" "8" "Sep 28, 2020" "0.15.0-dev" "Certgrinder"
 .SH NAME
 certgrinderd \- Manpage for certgrinderd
 .
@@ -471,11 +471,11 @@ certgrinderd help [\-h]
 .SH CLASS METHODS
 .INDENT 0.0
 .TP
-.B class certgrinderd.Certgrinderd(userconfig: Optional[Dict[str, Union[str, bool, None]]] = None)
+.B class certgrinderd.Certgrinderd(userconfig: Optional[Dict[str, Optional[Union[str, bool]]]] = None)
 The Certgrinderd server class.
 .INDENT 7.0
 .TP
-.B __init__(userconfig: Optional[Dict[str, Union[str, bool, None]]] = None) -> None
+.B __init__(userconfig: Optional[Dict[str, Optional[Union[str, bool]]]] = None) -> None
 Merge userconfig with defaults and configure logging.
 .INDENT 7.0
 .TP

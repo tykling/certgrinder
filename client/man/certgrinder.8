@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDER" "8" "Sep 22, 2020" "0.15.0-dev" "Certgrinder"
+.TH "CERTGRINDER" "8" "Sep 28, 2020" "0.15.0-dev" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .
@@ -718,7 +718,7 @@ Define the default config.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B check_certificate(certificate: Optional[cryptography.x509.base.Certificate] = None, public_key: Union[cryptography.hazmat.backends.openssl.rsa._RSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey, None] = None) -> bool
+.B check_certificate(certificate: Optional[cryptography.x509.base.Certificate] = None, public_key: Optional[Union[cryptography.hazmat.backends.openssl.rsa._RSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey]] = None) -> bool
 Check certificate validity and returns True or False.
 .sp
 This method is called by self.grind() once per domainset when the "check certificate"
@@ -830,7 +830,7 @@ True if the subject matches the cert, False if not
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod check_certificate_validity(certificate: cryptography.x509.base.Certificate, invalid_ca_cn_list: List[str], threshold_days: int, san_names: List[str], public_key: Union[cryptography.hazmat.backends.openssl.rsa._RSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey, None] = None, subject: str = \(aq\(aq) -> bool
+.B classmethod check_certificate_validity(certificate: cryptography.x509.base.Certificate, invalid_ca_cn_list: List[str], threshold_days: int, san_names: List[str], public_key: Optional[Union[cryptography.hazmat.backends.openssl.rsa._RSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey]] = None, subject: str = \(aq\(aq) -> bool
 Perform a few sanity checks of the certificate.
 .INDENT 7.0
 .IP \(bu 2
