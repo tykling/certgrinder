@@ -11,7 +11,10 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.15.0-beta2 (unreleased)
 --------------------------
-- No changes
+
+Changed
+~~~~~~~
+- Check if files exist in the ``show paths`` subcommand.
 
 
 v0.15.0-beta1 (28-Sep-2020)

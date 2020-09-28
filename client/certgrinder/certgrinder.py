@@ -1499,16 +1499,29 @@ class Certgrinder:
         Returns:
             None
         """
+        msg = {True: "file found", False: "file not found"}
         logger.info(
-            f"- Showing paths for keytype {self.keytype} for domain set: {self.domainset}"
+            f"- Showing paths for keytype '{self.keytype}' for domain set: {self.domainset}"
         )
-        logger.info(f"Keypair path: {self.keypair_path}")
-        logger.info(f"CSR path: {self.csr_path}")
-        logger.info(f"Certificate path: {self.certificate_path}")
-        logger.info(f"Chain path: {self.certificate_chain_path}")
-        logger.info(f"Issuer certificate path: {self.issuer_path}")
-        logger.info(f"Key+chain concat path: {self.concat_path}")
-        logger.info(f"OCSP response path: {self.ocsp_response_path}")
+        logger.info(
+            f"Keypair path: {self.keypair_path} [{msg[os.path.exists(self.keypair_path)]}]"
+        )
+        logger.info(f"CSR path: {self.csr_path} [{msg[os.path.exists(self.csr_path)]}]")
+        logger.info(
+            f"Certificate path: {self.certificate_path} [{msg[os.path.exists(self.certificate_path)]}]"
+        )
+        logger.info(
+            f"Chain path: {self.certificate_chain_path} [{msg[os.path.exists(self.certificate_chain_path)]}]"
+        )
+        logger.info(
+            f"Issuer certificate path: {self.issuer_path} [{msg[os.path.exists(self.issuer_path)]}]"
+        )
+        logger.info(
+            f"Key+chain concat path: {self.concat_path} [{msg[os.path.exists(self.concat_path)]}]"
+        )
+        logger.info(
+            f"OCSP response path: {self.ocsp_response_path} [{msg[os.path.exists(self.ocsp_response_path)]}]"
+        )
 
     def get_filename(self, hostname: str) -> str:
         """Calculate the hostname string to be used for filenames.
