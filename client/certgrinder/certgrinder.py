@@ -7,6 +7,7 @@ and https://github.com/tykling/certgrinder for more.
 import argparse
 import base64
 import binascii
+import datetime
 import hashlib
 import logging
 import logging.handlers
@@ -17,7 +18,6 @@ import sys
 import tempfile
 import time
 import typing
-from datetime import datetime
 from pprint import pprint
 
 import cryptography.x509
@@ -50,6 +50,7 @@ class Certgrinder:
             "key-type-list": ["rsa", "ecdsa"],
             "log-level": "INFO",
             "name-server": "",
+            "ocsp-renew-threshold-seconds": 86400,
             "path": "",
             "periodic-sleep-minutes": 60,
             "pid-dir": "/tmp",
@@ -429,7 +430,7 @@ class Certgrinder:
         Returns:
             True if remaining certificate lifetime is >= threshold_days, False if not
         """
-        expiredelta = certificate.not_valid_after - datetime.now()
+        expiredelta = certificate.not_valid_after - datetime.datetime.now()
         if expiredelta.days < threshold_days:
             return False
         else:
@@ -1037,13 +1038,32 @@ class Certgrinder:
         """The ``check ocsp`` subcommand method, called for each domainset by ``self.grind()``.
 
         Returns:
-            True if the OCSP response was found, False otherwise
+            True if the OCSP response was found and is not too old, False otherwise
         """
         if not os.path.exists(self.ocsp_response_path):
-            logger.error(f"OCSP response not found for domainset: {self.domainset}")
+            logger.error(
+                f"OCSP response not found for keytype {self.keytype} for domainset: {self.domainset}"
+            )
             self.error = True
             return False
-        self.load_ocsp_response(self.ocsp_response_path)
+
+        # parse the OCSP response
+        ocsp_response = self.load_ocsp_response(self.ocsp_response_path)
+
+        # consider the response produced_at (rather than next_update)
+        assert isinstance(self.conf["ocsp-renew-threshold-seconds"], int)
+        if (
+            ocsp_response.produced_at
+            + datetime.timedelta(seconds=self.conf["ocsp-renew-threshold-seconds"])
+            < datetime.datetime.utcnow()
+        ):
+            logger.debug(
+                f"OCSP response for keytype {self.keytype} for domainset: {self.domainset} was produced_at more than {self.conf['ocsp-renew-threshold-seconds']} seconds ago, returning False"
+            )
+            self.error = True
+            return False
+
+        # all good
         return True
 
     def show_ocsp(self) -> None:
@@ -1818,6 +1838,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--cert-renew-threshold-days",
         dest="cert-renew-threshold-days",
+        type=int,
         help="A certificate is renewed when it has less than this many days of lifetime left. Default: `30`",
         default=argparse.SUPPRESS,
     )
@@ -1885,6 +1906,14 @@ def get_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "-o",
+        "--ocsp-renew-threshold-seconds",
+        dest="ocsp-renew-threshold-seconds",
+        type=int,
+        help="The maximum time in seconds after the produced_at time before an OCSP response is renewed.",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
         "--path",
         dest="path",
         help="Tell certgrinder to use the specified directory for keys, CSRs and certificates. The directory must exist and be writeable by the user running certgrinder.",
@@ -1893,6 +1922,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--periodic-sleep-minutes",
         dest="periodic-sleep-minutes",
+        type=int,
         help="Tell certgrinder to sleep for a random number of minutes between 0 and this number before doing anything when the periodic command is used. Set to 0 to disable sleeping.",
         default=argparse.SUPPRESS,
     )
@@ -1942,6 +1972,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--tlsa-port",
         dest="tlsa-port",
+        type=int,
         help="The service port number (like 443) for TLSA operations.",
         default=argparse.SUPPRESS,
     )

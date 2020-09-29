@@ -94,6 +94,11 @@ Set this to a DNS server IP (v4 or v6, no hostnames) to use that DNS server inst
 .sp
 Default: \fBNone\fP
 .TP
+.B \fIocsp\-renew\-threshold\-seconds\fP
+The number of seconds after the \fBproduced_by\fP time of an OCSP response it will be considered too old and attempted renewed.
+.sp
+Default: \fB86400\fP (1 day)
+.TP
 .B \fIpath\fP
 The directory used for keys, CSRs and certificates. Must exist and be writable by the user running Certgrinder.
 .sp
@@ -344,7 +349,8 @@ usage: certgrinder [\-h] [\-\-certgrinderd CERTGRINDERD]
                    [\-c CONFIG\-FILE] [\-d] [\-D DOMAIN\-LIST]
                    [\-\-invalid\-ca\-cn\-list INVALID\-CA\-CN\-LIST]
                    [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-k {rsa,ecdsa}]
-                   [\-n NAME\-SERVER] [\-\-now] [\-\-path PATH]
+                   [\-n NAME\-SERVER] [\-\-now] [\-o OCSP\-RENEW\-THRESHOLD\-SECONDS]
+                   [\-\-path PATH]
                    [\-\-periodic\-sleep\-minutes PERIODIC\-SLEEP\-MINUTES]
                    [\-p PID\-DIR] [\-\-post\-renew\-hooks POST\-RENEW\-HOOKS] [\-q]
                    [\-s] [\-\-syslog\-facility SYSLOG\-FACILITY]
@@ -400,6 +406,9 @@ Tell certgrinder to use this DNS server IP to lookup TLSA records. Only relevant
 .TP
 .B\-\-now
 Run periodic command without delay. Equal to setting \-\-periodic\-sleep\-minutes 0.
+.TP
+.B\-o, \-\-ocsp\-renew\-threshold\-seconds
+The maximum time in seconds after the produced_at time before an OCSP response is renewed.
 .TP
 .B\-\-path
 Tell certgrinder to use the specified directory for keys, CSRs and certificates. The directory must exist and be writeable by the user running certgrinder.
@@ -871,7 +880,7 @@ The \fBcheck ocsp\fP subcommand method, called for each domainset by \fBself.gri
 .INDENT 7.0
 .TP
 .B Returns
-True if the OCSP response was found, False otherwise
+True if the OCSP response was found and is not too old, False otherwise
 .UNINDENT
 .UNINDENT
 .INDENT 7.0

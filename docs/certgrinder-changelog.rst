@@ -9,9 +9,16 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-v0.16.0 (unreleased)
---------------------
-- No changes
+v0.15.1 (29-Sep-2020)
+---------------------
+
+Fixed
+~~~~~
+- Check OCSP response age and get a new one when needed
+
+Added
+~~~~~
+- Configuration option ``ocsp-renew-threshold-seconds`` - defaults to 86400.
 
 
 v0.15.0 (29-Sep-2020)

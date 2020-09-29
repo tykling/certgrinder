@@ -257,16 +257,43 @@ def test_get_certificate(
 
         assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
         assert "Did not get an OCSP response" not in caplog.text
+        caplog.clear()
 
+        # make sure we have an OCSP response
         with pytest.raises(SystemExit) as E:
             main(mockargs + ["--key-type-list", "rsa", "show", "ocsp"])
         assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
         assert "OCSP response not found" not in caplog.text
+        caplog.clear()
 
+        # and that the renew threshold works
+        with pytest.raises(SystemExit) as E:
+            main(
+                mockargs
+                + [
+                    "--key-type-list",
+                    "rsa",
+                    "--ocsp-renew-threshold-seconds",
+                    "5",
+                    "check",
+                    "ocsp",
+                ]
+            )
+        assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+        assert (
+            E.value.code == 1
+        ), "Exit code not 1 as expected with expired ocsp response"
+        assert "OCSP response not found" not in caplog.text
+        assert "was produced_at more than 5 seconds ago" in caplog.text
+        caplog.clear()
+
+        # and that exit code is 0 when all is well
         with pytest.raises(SystemExit) as E:
             main(mockargs + ["--key-type-list", "rsa", "check", "ocsp"])
         assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+        assert E.value.code == 0, "Exit code not 0 as expected with OK ocsp response"
         assert "OCSP response not found" not in caplog.text
+        assert "was produced_at more than" not in caplog.text
 
 
 def test_show_spki(tmp_path_factory, caplog, tmpdir_factory):
@@ -1309,7 +1336,7 @@ def test_check_ocsp_response_not_found(caplog, tmpdir_factory):
     with pytest.raises(SystemExit) as E:
         main(mockargs + ["check", "ocsp"])
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
-    assert "OCSP response not found for domainset" in caplog.text
+    assert "OCSP response not found for keytype rsa for domainset" in caplog.text
 
 
 def test_show_ocsp_response_not_found(caplog, tmpdir_factory):

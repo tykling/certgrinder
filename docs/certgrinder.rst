@@ -68,6 +68,11 @@ This is an alphabetical list of the configurable options:
 
      Default: ``None``
 
+   `ocsp-renew-threshold-seconds`
+     The number of seconds after the ``produced_by`` time of an OCSP response it will be considered too old and attempted renewed.
+
+     Default: ``86400`` (1 day)
+
    `path`
      The directory used for keys, CSRs and certificates. Must exist and be writable by the user running Certgrinder.
 
