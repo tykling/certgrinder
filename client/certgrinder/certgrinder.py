@@ -1077,7 +1077,9 @@ class Certgrinder:
             return
 
         ocsp_response = self.load_ocsp_response(self.ocsp_response_path)
-        logger.info(f"- Showing OCSP response for domain set: {self.domainset}")
+        logger.info(
+            f"- Showing OCSP response for keytype {self.keytype} domain set: {self.domainset}"
+        )
         logger.info(f"Certificate status: {ocsp_response.certificate_status}")
         logger.info(f"This update: {ocsp_response.this_update}")
         logger.info(f"Produced at: {ocsp_response.produced_at}")
