@@ -15,6 +15,7 @@ autodoc
 backend
 binascii
 BUILDDIR
+CAs
 certbot
 certbytes
 certgrinder
@@ -22,6 +23,7 @@ certgrinderd
 certkey
 certonly
 certpath
+certs
 chainbytes
 chainpath
 challengetype
