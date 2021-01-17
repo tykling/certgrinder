@@ -179,7 +179,7 @@ class Certgrinder:
 
     @staticmethod
     def load_keypair(
-        path: str
+        path: str,
     ) -> typing.Union[openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey]:
         """Load keypair bytes from disk, load key and return the object.
 
@@ -209,7 +209,7 @@ class Certgrinder:
 
     @staticmethod
     def generate_private_key(
-        keytype: str
+        keytype: str,
     ) -> typing.Union[
         openssl.rsa._RSAPrivateKey,
         openssl.ec._EllipticCurvePrivateKey,
@@ -949,7 +949,7 @@ class Certgrinder:
 
     @staticmethod
     def load_ocsp_response(
-        path: str
+        path: str,
     ) -> cryptography.hazmat.backends.openssl.ocsp._OCSPResponse:
         """Reads OCSP response in DER format from the path and returns the object.
 
@@ -1089,7 +1089,7 @@ class Certgrinder:
 
     @staticmethod
     def parse_certgrinderd_ocsp_output(
-        certgrinderd_stdout: bytes
+        certgrinderd_stdout: bytes,
     ) -> typing.Optional[cryptography.hazmat.backends.openssl.ocsp._OCSPResponse]:
         """Parse a DER encoded binary OCSP response as returned by Certgrinderd.
 
@@ -2004,7 +2004,7 @@ def get_parser() -> argparse.ArgumentParser:
 
 
 def parse_args(
-    mockargs: typing.Optional[typing.List[str]] = None
+    mockargs: typing.Optional[typing.List[str]] = None,
 ) -> typing.Tuple[argparse.ArgumentParser, argparse.Namespace]:
     """Create an argparse monster and parse mockargs or sys.argv[1:]."""
     parser = get_parser()
