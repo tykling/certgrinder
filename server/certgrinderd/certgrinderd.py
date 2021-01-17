@@ -758,7 +758,7 @@ class Certgrinderd:
 
     @staticmethod
     def check_ocsp_response_timing(
-        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
+        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
     ) -> bool:
         """Check the timestamps of the OCSP response.
 
@@ -1170,7 +1170,7 @@ def get_parser() -> argparse.ArgumentParser:
 
 
 def parse_args(
-    mockargs: typing.Optional[typing.List[str]] = None
+    mockargs: typing.Optional[typing.List[str]] = None,
 ) -> typing.Tuple[argparse.ArgumentParser, argparse.Namespace]:
     """Parse and return command-line args."""
     parser = get_parser()
