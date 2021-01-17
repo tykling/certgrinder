@@ -20,6 +20,7 @@ import yaml
 from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.backends.openssl import x509  # type: ignore
+from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinderd.%s" % __name__)
 __version__ = "0.16.0-dev"
@@ -1242,4 +1243,5 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    with PidFile("certgrinder"):
+        main()

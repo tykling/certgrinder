@@ -11,7 +11,10 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.16.0 (unreleased)
 --------------------
-- No changes
+
+Added
+~~~~~
+- Certgrinderd now keeps a pidfile while running to prevent running multiple times simultaneously.
 
 
 v0.15.1 (29-Sep-2020)

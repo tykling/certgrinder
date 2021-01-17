@@ -15,6 +15,7 @@ v0.16.0 (unreleased)
 Added
 ~~~~~
 - New config option ``ocsp-renew-threshold-percent`` to specify the amount of time in percent which must have passed before an OCSP response is considered too old. The new option defaults to 50% which matches when LetsEncrypt currently issues new OCSP responses, which is after half the time between produced_at and next_update has passed.
+- Certgrinder now keeps a pidfile while running to prevent running multiple times simultaneously.
 
 Removed
 ~~~~~~~
