@@ -18,6 +18,9 @@ from cryptography.hazmat.backends import default_backend
 @pytest.fixture(scope="session")
 def pebble_server():
     """Get the pebble sources, and build the binary, and run it."""
+    print("Making sure we have Go and Git...")
+    assert shutil.which("go") is not None, "Go is required to run the testsuite (for building Pebble)"
+    assert shutil.which("git") is not None, "Git is required to run the testsuite (for getting Pebble sources)"
     print("Begginning setup")
     print("Getting pebble sources ...")
     proc = subprocess.run(
