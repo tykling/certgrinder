@@ -1199,8 +1199,8 @@ def test_exit_1_in_check_mode(caplog, tmpdir_factory, monkeypatch):
     caplog.set_level(logging.DEBUG)
     certgrinder = Certgrinder()
     certgrinder.error = True
-    FakeArgs = namedtuple("FakeArgs", ["command"])
-    args = FakeArgs("check")
+    FakeArgs = namedtuple("FakeArgs", ["command", "method"])
+    args = FakeArgs(command="check", method="check_foo")
     with pytest.raises(SystemExit) as E:
         certgrinder.grind(args=args)
     assert E.value.code == 1, "Exit code not 1 as expected"

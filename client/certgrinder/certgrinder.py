@@ -1685,23 +1685,27 @@ class Certgrinder:
         """Loop over enabled keytypes and domainsets in ``self.conf["domain-list"]`` and call args.method for each."""
         logger.debug(f"Certgrinder {__version__} running")
 
-        # loop over keytypes
-        kcounter = 0
-        assert isinstance(self.conf["key-type-list"], list)
-        for keytype in self.conf["key-type-list"]:
-            kcounter += 1
-            # loop over domains
-            dcounter = 0
-            assert isinstance(self.conf["domain-list"], list)
-            for domainset in self.conf["domain-list"]:
-                dcounter += 1
-                logger.debug(
-                    f"-- Processing keytype {keytype} ({kcounter} of {len(self.conf['key-type-list'])} keytypes) for domainset {dcounter} of {len(self.conf['domain-list'])}: {domainset.split(',')}"
-                )
-                # prepare paths and create/load private key
-                self.load_domainset(domainset=domainset.split(","), keytype=keytype)
-                # run the requested method
-                getattr(self, args.method)()
+        if args.method == "check_connection":
+            # we only need to do this once, and we don't need to load_domainset() first
+            getattr(self, args.method)()
+        else:
+            # loop over keytypes
+            kcounter = 0
+            assert isinstance(self.conf["key-type-list"], list)
+            for keytype in self.conf["key-type-list"]:
+                kcounter += 1
+                # loop over domains
+                dcounter = 0
+                assert isinstance(self.conf["domain-list"], list)
+                for domainset in self.conf["domain-list"]:
+                    dcounter += 1
+                    logger.debug(
+                        f"-- Processing keytype {keytype} ({kcounter} of {len(self.conf['key-type-list'])} keytypes) for domainset {dcounter} of {len(self.conf['domain-list'])}: {domainset.split(',')}"
+                    )
+                    # prepare paths and create/load private key
+                    self.load_domainset(domainset=domainset.split(","), keytype=keytype)
+                    # run the requested method
+                    getattr(self, args.method)()
 
         # do we need to run post-renew hooks?
         if self.hook_needed:
