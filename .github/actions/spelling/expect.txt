@@ -186,6 +186,7 @@ semver
 setuptools
 showspki
 showtlsa
+sitecustomize
 skipsdist
 smtp
 SOURCEDIR
