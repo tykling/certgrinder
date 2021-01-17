@@ -94,10 +94,14 @@ Set this to a DNS server IP (v4 or v6, no hostnames) to use that DNS server inst
 .sp
 Default: \fBNone\fP
 .TP
-.B \fIocsp\-renew\-threshold\-seconds\fP
-The number of seconds after the \fBproduced_by\fP time of an OCSP response it will be considered too old and attempted renewed.
+.B \fIocsp\-renew\-threshold\-percent\fP
+The amount of time in percent between \fBproduced_at\fP and \fBnext_update\fP that must have passed before an OCSP response is considered too old. As of January 2021 LetsEncrypt has 7 days between \fBproduced_at\fP and \fBnext_update\fP in OCSP responses, so the default of 50% means OCSP responses will be renewed after 3.5 days (half of the validity period) has passed.
 .sp
-Default: \fB86400\fP (1 day)
+As of January 2021 LetsEncrypt produces new OCSP responses after half of the validity period has passed, so any setting lower than that will be pointless. Setting this lower than 50 will just result in Certgrinder fetching the same OCSP response over and over.
+.sp
+Set to 0 to always renew OCSP responses regardless of their age.
+.sp
+Default: \fB50\fP
 .TP
 .B \fIpath\fP
 The directory used for keys, CSRs and certificates. Must exist and be writable by the user running Certgrinder.
@@ -213,7 +217,9 @@ All the subcommands for the \fBcheck\fP commands return exit code 1 if a problem
 The \fBcheck certificate\fP subcommand loops over the configured domainsets and checks the validity of the certificate for each. If a problem is found \fBcertgrinder\fP will exit with exit code 1, if all is well the exit code will be 0.
 .SS check ocsp command
 .sp
-The \fBcheck ocsp\fP subcommand loops over the configured domainsets and checks for the existance of an OCSP response for each. If a missing response is found \fBcertgrinder\fP will exit with exit code 1, if all is well the exit code will be 0.
+The \fBcheck ocsp\fP subcommand loops over the configured domainsets and checks for the existance of an OCSP response for each. If an OCSP response for a certificate is missing or too old \fBcertgrinder\fP will exit with exit code 1, if all is well the exit code will be 0.
+.sp
+An OCSP response is considered too old when more than \fBocsp\-renew\-threshold\-percent\fP percent of the time between \fBproducedAt\fP and \fBnextUpdate\fP has passed. As of January 2021 LetsEncrypt has 7 days (one week) between \fBproducedAt\fP and \fBnextUpdate\fP which means OCSP responses will be renewed after 3.5 days with the default \fBocsp\-renew\-threshold\-percent\fP setting of \fB50\fP\&.
 .SS check tlsa command
 .sp
 The \fBcheck tlsa\fP subcommand is like the \fBshow tlsa\fP subcommand but it goes one step further and actually checks in the \fBDNS\fP if the records could be found, and prints some output accordingly. The following example shows two runs of \fBcheck tlsa\fP mode. The first run finds no TLSA records and outputs what needs to be added:
@@ -349,7 +355,7 @@ usage: certgrinder [\-h] [\-\-certgrinderd CERTGRINDERD]
                    [\-c CONFIG\-FILE] [\-d] [\-D DOMAIN\-LIST]
                    [\-\-invalid\-ca\-cn\-list INVALID\-CA\-CN\-LIST]
                    [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-k {rsa,ecdsa}]
-                   [\-n NAME\-SERVER] [\-\-now] [\-o OCSP\-RENEW\-THRESHOLD\-SECONDS]
+                   [\-n NAME\-SERVER] [\-\-now] [\-o OCSP\-RENEW\-THRESHOLD\-PERCENT]
                    [\-\-path PATH]
                    [\-\-periodic\-sleep\-minutes PERIODIC\-SLEEP\-MINUTES]
                    [\-p PID\-DIR] [\-\-post\-renew\-hooks POST\-RENEW\-HOOKS] [\-q]
@@ -407,8 +413,10 @@ Tell certgrinder to use this DNS server IP to lookup TLSA records. Only relevant
 .B\-\-now
 Run periodic command without delay. Equal to setting \-\-periodic\-sleep\-minutes 0.
 .TP
-.B\-o, \-\-ocsp\-renew\-threshold\-seconds
-The maximum time in seconds after the produced_at time before an OCSP response is renewed.
+.B\-o, \-\-ocsp\-renew\-threshold\-percent
+Possible choices: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100
+.sp
+An integer between 0 and 100 specifying the amount of time in percent between \fBproduced_at\fP and \fBnext_update\fP which must have passed before an OCSP response is considered too old. Defaults to 50.
 .TP
 .B\-\-path
 Tell certgrinder to use the specified directory for keys, CSRs and certificates. The directory must exist and be writeable by the user running certgrinder.

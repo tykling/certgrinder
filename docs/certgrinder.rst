@@ -68,10 +68,14 @@ This is an alphabetical list of the configurable options:
 
      Default: ``None``
 
-   `ocsp-renew-threshold-seconds`
-     The number of seconds after the ``produced_by`` time of an OCSP response it will be considered too old and attempted renewed.
+   `ocsp-renew-threshold-percent`
+     The amount of time in percent between ``produced_at`` and ``next_update`` that must have passed before an OCSP response is considered too old. As of January 2021 LetsEncrypt has 7 days between ``produced_at`` and ``next_update`` in OCSP responses, so the default of 50% means OCSP responses will be renewed after 3.5 days (half of the validity period) has passed.
 
-     Default: ``86400`` (1 day)
+     As of January 2021 LetsEncrypt produces new OCSP responses after half of the validity period has passed, so any setting lower than that will be pointless. Setting this lower than 50 will just result in Certgrinder fetching the same OCSP response over and over.
+
+     Set to 0 to always renew OCSP responses regardless of their age.
+
+     Default: ``50``
 
    `path`
      The directory used for keys, CSRs and certificates. Must exist and be writable by the user running Certgrinder.
@@ -174,7 +178,9 @@ The ``check certificate`` subcommand loops over the configured domainsets and ch
 
 check ocsp command
 ^^^^^^^^^^^^^^^^^^
-The ``check ocsp`` subcommand loops over the configured domainsets and checks for the existance of an OCSP response for each. If a missing response is found ``certgrinder`` will exit with exit code 1, if all is well the exit code will be 0.
+The ``check ocsp`` subcommand loops over the configured domainsets and checks for the existance of an OCSP response for each. If an OCSP response for a certificate is missing or too old ``certgrinder`` will exit with exit code 1, if all is well the exit code will be 0.
+
+An OCSP response is considered too old when more than ``ocsp-renew-threshold-percent`` percent of the time between ``producedAt`` and ``nextUpdate`` has passed. As of January 2021 LetsEncrypt has 7 days (one week) between ``producedAt`` and ``nextUpdate`` which means OCSP responses will be renewed after 3.5 days with the default ``ocsp-renew-threshold-percent`` setting of ``50``.
 
 
 check tlsa command

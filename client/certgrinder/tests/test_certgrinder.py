@@ -273,8 +273,8 @@ def test_get_certificate(
                 + [
                     "--key-type-list",
                     "rsa",
-                    "--ocsp-renew-threshold-seconds",
-                    "5",
+                    "--ocsp-renew-threshold-percent",
+                    "0",
                     "check",
                     "ocsp",
                 ]
@@ -284,7 +284,10 @@ def test_get_certificate(
             E.value.code == 1
         ), "Exit code not 1 as expected with expired ocsp response"
         assert "OCSP response not found" not in caplog.text
-        assert "was produced_at more than 5 seconds ago" in caplog.text
+        assert (
+            "of the time between produced_at and next_update has passed, the limit is 0%"
+            in caplog.text
+        )
         caplog.clear()
 
         # and that exit code is 0 when all is well

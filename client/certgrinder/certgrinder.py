@@ -50,7 +50,7 @@ class Certgrinder:
             "key-type-list": ["rsa", "ecdsa"],
             "log-level": "INFO",
             "name-server": "",
-            "ocsp-renew-threshold-seconds": 86400,
+            "ocsp-renew-threshold-percent": 50,
             "path": "",
             "periodic-sleep-minutes": 60,
             "pid-dir": "/tmp",
@@ -1051,14 +1051,14 @@ class Certgrinder:
         ocsp_response = self.load_ocsp_response(self.ocsp_response_path)
 
         # consider the response produced_at (rather than next_update)
-        assert isinstance(self.conf["ocsp-renew-threshold-seconds"], int)
-        if (
-            ocsp_response.produced_at
-            + datetime.timedelta(seconds=self.conf["ocsp-renew-threshold-seconds"])
-            < datetime.datetime.utcnow()
-        ):
+        validity = ocsp_response.next_update - ocsp_response.produced_at
+        passed = datetime.datetime.utcnow() - ocsp_response.produced_at
+        percent = (passed / validity) * 100
+        logger.debug(f"{percent} percent of OCSP response validity period has passed")
+
+        if percent > self.conf["ocsp-renew-threshold-percent"]:
             logger.debug(
-                f"OCSP response for keytype {self.keytype} for domainset: {self.domainset} was produced_at more than {self.conf['ocsp-renew-threshold-seconds']} seconds ago, returning False"
+                f"OCSP response is too old for keytype {self.keytype} for domainset: {self.domainset} ({round(percent,2)}% of the time between produced_at and next_update has passed, the limit is {self.conf['ocsp-renew-threshold-percent']}%), returning False"
             )
             self.error = True
             return False
@@ -1909,10 +1909,12 @@ def get_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "-o",
-        "--ocsp-renew-threshold-seconds",
-        dest="ocsp-renew-threshold-seconds",
+        "--ocsp-renew-threshold-percent",
+        dest="ocsp-renew-threshold-percent",
         type=int,
-        help="The maximum time in seconds after the produced_at time before an OCSP response is renewed.",
+        choices=range(0, 101),
+        metavar="OCSP-RENEW-THRESHOLD-PERCENT",
+        help="An integer between 0 and 100 specifying the amount of time in percent between ``produced_at`` and ``next_update`` which must have passed before an OCSP response is considered too old. Defaults to 50.",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
