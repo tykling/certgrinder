@@ -183,6 +183,8 @@ All the functionality in Certgrinder can be accessed by using \fBcommands\fP and
 .IP \(bu 2
 \fI\%check certificate command\fP
 .IP \(bu 2
+\fI\%check connection command\fP
+.IP \(bu 2
 \fI\%check ocsp command\fP
 .IP \(bu 2
 \fI\%check tlsa command\fP
@@ -215,6 +217,9 @@ All the subcommands for the \fBcheck\fP commands return exit code 1 if a problem
 .SS check certificate command
 .sp
 The \fBcheck certificate\fP subcommand loops over the configured domainsets and checks the validity of the certificate for each. If a problem is found \fBcertgrinder\fP will exit with exit code 1, if all is well the exit code will be 0.
+.SS check connection command
+.sp
+The \fBcheck connection\fP subcommand simply checks that the connection to the \fBcertgrinderd\fP server works as expected. It calls the \fBping\fP command on the \fBcertgrinderd\fP server and expects to see the string \fBpong\fP on stdout. If the expected string is found the exit code will be 0, if a problem is found the exit code will be 1.
 .SS check ocsp command
 .sp
 The \fBcheck ocsp\fP subcommand loops over the configured domainsets and checks for the existance of an OCSP response for each. If an OCSP response for a certificate is missing or too old \fBcertgrinder\fP will exit with exit code 1, if all is well the exit code will be 0.
@@ -465,7 +470,7 @@ Use the "check" command to check certificates, OCSP responses and TLSA records. 
 .sp
 .nf
 .ft C
-certgrinder check [\-h] {certificate,ocsp,tlsa} ...
+certgrinder check [\-h] {certificate,connection,ocsp,tlsa} ...
 .ft P
 .fi
 .UNINDENT
@@ -474,7 +479,7 @@ certgrinder check [\-h] {certificate,ocsp,tlsa} ...
 .INDENT 0.0
 .TP
 .Bsubcommand
-Possible choices: certificate, ocsp, tlsa
+Possible choices: certificate, connection, ocsp, tlsa
 .sp
 Specify what to check using one of the available check sub\-commands.
 .UNINDENT
@@ -488,6 +493,19 @@ Tell certgrinder to check certificate validity for all configured domainsets. Re
 .nf
 .ft C
 certgrinder check certificate [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS connection
+.sp
+Tell certgrinder to check the connection to the certgrinderd server by calling the certgrinderd \(aqping\(aq command which should return the string \(aqpong\(aq if all is well.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder check connection [\-h]
 .ft P
 .fi
 .UNINDENT
@@ -879,6 +897,19 @@ Check that the SubjectAltName data is correct
 .TP
 .B Returns
 False if a problem is found, True if all is well.
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B check_connection(stdout: Optional[bytes] = None) -> bool
+The \fBcheck connection\fP subcommand method.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBstdout\fP \-\- The certgrinderd response to use instead of calling certgrinderd (optional)
+.TP
+.B Returns
+None
 .UNINDENT
 .UNINDENT
 .INDENT 7.0

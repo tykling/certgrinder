@@ -264,7 +264,7 @@ usage: certgrinderd [\-h] [\-\-acme\-email ACME\-EMAIL]
                     [\-\-syslog\-facility SYSLOG\-FACILITY]
                     [\-\-syslog\-socket SYSLOG\-SOCKET] [\-t TEMP\-DIR]
                     [\-w WEB\-ROOT]
-                    {get,show,help} ...
+                    {get,show,help,ping} ...
 .ft P
 .fi
 .UNINDENT
@@ -273,7 +273,7 @@ usage: certgrinderd [\-h] [\-\-acme\-email ACME\-EMAIL]
 .INDENT 0.0
 .TP
 .Bcommand
-Possible choices: get, show, help
+Possible choices: get, show, help, ping
 .sp
 Command (required)
 .UNINDENT
@@ -464,6 +464,19 @@ The "help" command just outputs the usage help
 .nf
 .ft C
 certgrinderd help [\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS ping
+.sp
+The "ping" command is used by the certgrinder client to verify connectivity to the server. It just outputs the word "pong" to stdout.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinderd ping [\-h]
 .ft P
 .fi
 .UNINDENT
@@ -708,6 +721,14 @@ Takes the CSR data from \fBsys.stdin\fP if the \fBcsrstring\fP argument is empty
 .B Returns
 The CSR object
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B static ping_command() -> None
+Reply to the ping command by outputting the string \(aqpong\(aq to stdout.
+.sp
+Args: None
+Returns: None
 .UNINDENT
 .INDENT 7.0
 .TP

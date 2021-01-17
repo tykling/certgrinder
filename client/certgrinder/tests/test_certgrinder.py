@@ -1437,3 +1437,48 @@ def test_show_paths(tmp_path_factory, caplog, tmpdir_factory):
     assert certgrinder.issuer_path in caplog.text
     assert certgrinder.concat_path in caplog.text
     assert certgrinder.ocsp_response_path in caplog.text
+
+
+def test_check_connection(
+    certgrinderd_configfile,
+    tmp_path_factory,
+    certgrinderd_env,
+    caplog,
+    capsys,
+    tmpdir_factory,
+):
+    """Test the 'check connection' subcommand."""
+    if certgrinderd_configfile[0] != "dns":
+        # we only need to test this once
+        return
+
+    caplog.set_level(logging.DEBUG)
+    mockargs = [
+        "--path",
+        str(tmpdir_factory.mktemp("certificates")),
+        "--domain-list",
+        "example.com,www.example.com",
+        "--certgrinderd",
+        f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]} --acme-server-url https://127.0.0.1:14000/dir",
+        "--debug",
+    ]
+    with pytest.raises(SystemExit) as E:
+        main(mockargs + ["check", "connection"])
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    assert "Success! Got pong response from certgrinderd" in caplog.text
+
+    caplog.clear()
+    mockargs = [
+        "--path",
+        str(tmpdir_factory.mktemp("certificates")),
+        "--domain-list",
+        "example.com,www.example.com",
+        "--certgrinderd",
+        "true",
+        "--debug",
+    ]
+    with pytest.raises(SystemExit) as E:
+        main(mockargs + ["check", "connection"])
+    assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+    assert E.value.code == 1, "Exit code not 1 as expected with no pong response"
+    assert "Did not get a pong response in stdout from certgrinderd" in caplog.text

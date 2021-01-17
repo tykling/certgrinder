@@ -1548,6 +1548,32 @@ class Certgrinder:
             f"OCSP response path: {self.ocsp_response_path} [{msg[os.path.exists(self.ocsp_response_path)]}]"
         )
 
+    def check_connection(
+        self,
+        stdout: typing.Optional[bytes] = None,
+    ) -> bool:
+        """The ``check connection`` subcommand method.
+
+        Args:
+            stdout: The certgrinderd response to use instead of calling certgrinderd (optional)
+
+        Returns:
+            None
+        """
+        if stdout is None:
+            # call certgrinderd ping command
+            stdout = self.run_certgrinderd(stdin=b"", command=["ping"])
+
+        if not stdout or stdout.decode() != "pong\n":
+            logger.error(
+                f"Did not get a pong response in stdout from certgrinderd, got '{stdout!r}' instead"
+            )
+            self.error = True
+            return False
+
+        logger.info("Success! Got pong response from certgrinderd.")
+        return True
+
     def get_filename(self, hostname: str) -> str:
         """Calculate the hostname string to be used for filenames.
 
@@ -1717,6 +1743,13 @@ def get_parser() -> argparse.ArgumentParser:
         help="Tell certgrinder to check certificate validity for all configured domainsets. Returns exit code 1 if any problem is found, exit code 0 if all is well.",
     )
     check_certificate_parser.set_defaults(method="check_certificate")
+
+    # "check connection" subcommand
+    check_connection_parser = check_subparsers.add_parser(
+        "connection",
+        help="Tell certgrinder to check the connection to the certgrinderd server by calling the certgrinderd 'ping' command which should return the string 'pong' if all is well.",
+    )
+    check_connection_parser.set_defaults(method="check_connection")
 
     # "check ocsp" subcommand
     check_ocsp_parser = check_subparsers.add_parser(

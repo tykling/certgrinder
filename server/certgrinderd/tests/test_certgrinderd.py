@@ -10,7 +10,7 @@ from collections import namedtuple
 import cryptography.x509
 import pytest
 import requests
-from certgrinderd.certgrinderd import Certgrinderd
+from certgrinderd.certgrinderd import Certgrinderd, main
 from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.backends.openssl import x509
@@ -911,3 +911,12 @@ def test_process_csr_from_file(known_csr, caplog, tmp_path_factory):
     assert (
         "Environment var CERTGRINDERD_DOMAINSETS not found, bailing out" in caplog.text
     )
+
+
+def test_help(capsys):
+    """Test the help command."""
+    with pytest.raises(SystemExit) as E:
+        main(["help"])
+    assert E.type == SystemExit
+    captured = capsys.readouterr()
+    assert "See the manpage certgrinderd(8)" in captured.out

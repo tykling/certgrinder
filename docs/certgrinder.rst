@@ -151,6 +151,7 @@ Client Commands
 All the functionality in Certgrinder can be accessed by using ``commands`` and ``subcommands``. The following ``commands`` are available:
 
 - `check certificate command`_
+- `check connection command`_
 - `check ocsp command`_
 - `check tlsa command`_
 - `get certificate command`_
@@ -174,6 +175,11 @@ All the subcommands for the ``check`` commands return exit code 1 if a problem i
 check certificate command
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 The ``check certificate`` subcommand loops over the configured domainsets and checks the validity of the certificate for each. If a problem is found ``certgrinder`` will exit with exit code 1, if all is well the exit code will be 0.
+
+
+check connection command
+^^^^^^^^^^^^^^^^^^^^^^^^
+The ``check connection`` subcommand simply checks that the connection to the ``certgrinderd`` server works as expected. It calls the ``ping`` command on the ``certgrinderd`` server and expects to see the string ``pong`` on stdout. If the expected string is found the exit code will be 0, if a problem is found the exit code will be 1.
 
 
 check ocsp command

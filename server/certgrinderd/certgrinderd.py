@@ -954,6 +954,16 @@ class Certgrinderd:
         logger.debug("Signature is valid")
         return True
 
+    @staticmethod
+    def ping_command() -> None:
+        """Reply to the ping command by outputting the string 'pong' to stdout.
+
+        Args: None
+        Returns: None
+        """
+        logger.debug("Responding to ping_command() with 'pong'")
+        print("pong")
+
 
 def get_parser() -> argparse.ArgumentParser:
     """Create and return the argparse object."""
@@ -1020,10 +1030,14 @@ def get_parser() -> argparse.ArgumentParser:
     show_configuration_parser.set_defaults(method="show_configuration_command")
 
     # "help" command
-    help_parser = subparsers.add_parser(
-        "help", help='The "help" command just outputs the usage help'
+    subparsers.add_parser("help", help='The "help" command just outputs the usage help')
+
+    # "ping" command
+    ping_parser = subparsers.add_parser(
+        "ping",
+        help='The "ping" command is used by the certgrinder client to verify connectivity to the server. It just outputs the word "pong" to stdout.',
     )
-    help_parser.set_defaults(method="help_command")
+    ping_parser.set_defaults(method="ping_command")
 
     parser.add_argument(
         "--acme-email",
@@ -1196,6 +1210,10 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
     """
     # get commandline arguments
     parser, args = parse_args(mockargs)
+
+    if args.command == "help":
+        parser.print_help()
+        sys.exit(0)
 
     # read and parse the config file
     if hasattr(args, "config-file"):

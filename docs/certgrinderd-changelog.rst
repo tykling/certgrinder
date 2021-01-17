@@ -15,6 +15,7 @@ v0.16.0 (unreleased)
 Added
 ~~~~~
 - Certgrinderd now keeps a pidfile while running to prevent running multiple times simultaneously.
+- New ``ping`` command used by the ``certgrinder`` command ``check connection`` to check connection to the ``certgrinderd`` server without doing anything else.
 
 
 v0.15.1 (29-Sep-2020)
