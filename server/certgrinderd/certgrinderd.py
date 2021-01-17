@@ -605,7 +605,7 @@ class Certgrinderd:
             # we only understand OCSP servers
             assert (
                 aia.access_method._name == "OCSP"
-            ), "Unsupported access method, please file a certgrinder bug"
+            ), f"Unsupported access method found in AUTHORITY_INFORMATION_ACCESS extension in certificate with subject {certificate.subject}. Access method found was: '{aia.access_method._name}', please file a certgrinder bug with this info and if possible a URL for the certificate."
 
             # get the OCSP server URL
             url = aia.access_location.value
