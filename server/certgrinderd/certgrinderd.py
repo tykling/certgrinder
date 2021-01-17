@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Certgrinderd v0.16.0-dev module.
+"""Certgrinderd v0.16.0-rc1 module.
 
 See https://certgrinder.readthedocs.io/en/latest/certgrinderd.html
 and https://github.com/tykling/certgrinder for more.
@@ -23,7 +23,7 @@ from cryptography.hazmat.backends.openssl import x509  # type: ignore
 from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinderd.%s" % __name__)
-__version__ = "0.16.0-dev"
+__version__ = "0.16.0-rc1"
 
 
 class Certgrinderd:
