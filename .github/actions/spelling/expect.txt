@@ -130,6 +130,7 @@ lse
 manpage
 maxdepth
 metadata
+metavar
 mkdir
 mkstemp
 mockargs
