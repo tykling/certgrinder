@@ -602,7 +602,8 @@ vMjDUV30GSeQe5KxMR3TmXUFXVXyJEr5FbcWIO//e3pYSBfEra1QDh6w
 def certgrinderd_env(monkeypatch):
     """Whip up a fake CERTGRINDERD_DOMAINSETS environment for certgrinderd."""
     monkeypatch.setenv(
-        "CERTGRINDERD_DOMAINSETS", "example.com,www.example.com;example.net"
+        "CERTGRINDERD_DOMAINSETS",
+        "example.com,www.example.com;example.net,blåbærsyltetøj.example.net;pølse.dk",
     )
 
 

@@ -499,6 +499,9 @@ class Certgrinder:
         assert isinstance(cert_san, cryptography.x509.SubjectAlternativeName)
         cert_san_names = cert_san.get_values_for_type(cryptography.x509.DNSName)
 
+        # make sure san_names list is idna encoded
+        san_names = [name.encode("idna").decode("ascii") for name in san_names]
+
         # if there is a difference between the sets we want to return False
         return not bool(set(cert_san_names).symmetric_difference(san_names))
 
@@ -547,7 +550,9 @@ class Certgrinder:
             logger.error("Certificate subject is different from the expected")
             return False
         if not cls.check_certificate_san_names(certificate, san_names):
-            logger.error("Certificate SAN name list is different from the expected")
+            logger.error(
+                f"Certificate SAN name list is different from the expected: {san_names}"
+            )
             return False
         logger.debug("Certificate is OK, returning True")
         return True

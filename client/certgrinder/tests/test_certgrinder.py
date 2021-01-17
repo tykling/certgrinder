@@ -122,7 +122,9 @@ def test_get_certificate(
         "--domain-list",
         "example.com,www.example.com",
         "--domain-list",
-        "example.net",
+        "example.net,blåbærsyltetøj.example.net",
+        "--domain-list",
+        "pølse.dk",
         "--certgrinderd",
         f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]} --acme-server-url https://127.0.0.1:14000/dir",
         "--debug",
@@ -157,7 +159,11 @@ def test_get_certificate(
     else:
         # check that the certificates were issued correctly
         for keytype in ["rsa", "ecdsa"]:
-            for domainset in ["example.com,www.example.com", "example.net"]:
+            for domainset in [
+                "example.com,www.example.com",
+                "example.net,blåbærsyltetøj.example.net",
+                "pølse.dk".encode("idna").decode("ascii"),
+            ]:
                 domains = domainset.split(",")
                 certpath = os.path.join(
                     mockargs[1], domains[0] + f"-certificate.{keytype}.crt"
@@ -176,11 +182,13 @@ def test_get_certificate(
                 assert len(cns) == 1, "Certificate must have exactly one CN attribute"
                 assert cns[0] == name, "Certificate CN does not match expected name"
                 # make sure we have the full domainlist in SubjectAltName
-                assert domains == certificate.extensions.get_extension_for_oid(
+                assert [
+                    d.encode("idna").decode("ascii") for d in domains
+                ] == certificate.extensions.get_extension_for_oid(
                     ExtensionOID.SUBJECT_ALTERNATIVE_NAME
                 ).value.get_values_for_type(
                     x509.DNSName
-                ), "SubjectAltName extension does not contain the right list of domains"
+                ), "SubjectAltName extension does not contain the right list of domains."
 
                 with pytest.raises(SystemExit) as E:
                     main(mockargs + ["show", "certificate"])

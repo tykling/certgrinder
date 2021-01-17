@@ -248,15 +248,21 @@ class Certgrinderd:
         # domainsets is a semicolon-separated list of comma-separated domainsets.
         # loop over domainsets until we find a match and break out, or hit the else
         # if we never find a domainset covering all names in the CSR
+        logger.debug(f"testing if {san_list} is allowed in {allowed_names}")
         for domainset in allowed_names.split(";"):
-            if cn not in domainset.split(","):
+            domainsetlist = [
+                d.encode("idna").decode("ascii") for d in domainset.split(",")
+            ]
+            logger.debug(f"checking domainset {domainsetlist} ...")
+            if cn not in domainsetlist:
                 # cert CN is not in this domainset
                 continue
             # loop over SubjectAltNames and check if each is present in domainset,
             # break out of the loop if a name is not in the domainset
             for san in san_list:
-                if san not in domainset.split(","):
-                    # this name is not in this domainset, no need to keep checking
+                if san not in domainsetlist:
+                    # this name is not in this domainset, no need to keep checking,
+                    # break out of the innermost loop and continue checking the list
                     break
             else:
                 # all names in the CSR are permitted for this client,
@@ -268,7 +274,7 @@ class Certgrinderd:
         else:
             # this CSR contains names which are not permitted for this client
             logger.error(
-                f"CSR contains one or more names which are not permitted for this client. Permitted names: {allowed_names}"
+                f"CSR contains one or more names which are not permitted for this client. Permitted names: {allowed_names} - Requested names: {san_list}"
             )
             return False
 

@@ -26,6 +26,7 @@ Fixed
 ~~~~~
 - Show keytype in ``show ocsp`` output
 - The new ``ocsp-renew-threshold-percent`` code and default setting eliminates redundant OCSP response fetching
+- IDN domain handling now works again
 
 
 v0.15.1 (29-Sep-2020)
