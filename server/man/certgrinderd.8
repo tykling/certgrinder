@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDERD" "8" "Jan 17, 2021" "0.16.0-dev" "Certgrinder"
+.TH "CERTGRINDERD" "8" "Jan 18, 2021" "0.16.0-dev" "Certgrinder"
 .SH NAME
 certgrinderd \- Manpage for certgrinderd
 .
@@ -181,7 +181,7 @@ To determine whether a Certgrinder client is authorised to get a certificate for
 .sp
 For example, if the Certgrinder client was a webserver with two vhosts, one with the name \fBexample.net\fP and another vhost with the two names \fBexample.com\fP and \fBwww.example.com\fP\&. In this case the environment variable \fBCERTGRINDERD_DOMAINSETS="example.net;example.com,www.example.com"\fP would permit the client to get the two certificates it needs, and nothing else.
 .sp
-The list of hostnames is case insensitive. IDNA names need to be in ascii format, meaning \fBxn\-\-plse\-gra.example\fP rather than \fBpølse.example\fP\&. The order of the hostnames in the list does not matter.
+The list of hostnames is case insensitive. IDN names can be in either IDNA or unicode format, meaning \fBxn\-\-plse\-gra.example\fP and \fBpølse.example\fP will both work. The order of the hostnames in the list does not matter.
 .SH CONFIGURE SSH ACCESS
 .sp
 Usually Certgrinder clients connect to the Certgrinder server using SSH, but other connection methods can be used if needed. The rest of this section is about configuring SSH access for clients.

@@ -144,7 +144,7 @@ To determine whether a Certgrinder client is authorised to get a certificate for
 
 For example, if the Certgrinder client was a webserver with two vhosts, one with the name ``example.net`` and another vhost with the two names ``example.com`` and ``www.example.com``. In this case the environment variable ``CERTGRINDERD_DOMAINSETS="example.net;example.com,www.example.com"`` would permit the client to get the two certificates it needs, and nothing else.
 
-The list of hostnames is case insensitive. IDNA names need to be in ascii format, meaning ``xn--plse-gra.example`` rather than ``pølse.example``. The order of the hostnames in the list does not matter.
+The list of hostnames is case insensitive. IDN names can be in either IDNA or unicode format, meaning ``xn--plse-gra.example`` and ``pølse.example`` will both work. The order of the hostnames in the list does not matter.
 
 
 Configure SSH Access
