@@ -56,6 +56,8 @@ class Certgrinder:
             "periodic-sleep-minutes": 60,
             "pid-dir": "/tmp",
             "post-renew-hooks": [],
+            "post-renew-hooks-dir": "",
+            "post-renew-hooks-dir-runner": "",
             "staging": False,
             "syslog-facility": "",
             "syslog-socket": "",
@@ -1131,32 +1133,77 @@ class Certgrinder:
     # POST RENEW HOOK METHOD
 
     def run_post_renew_hooks(self) -> bool:
-        """Loops over configured post_renew_hooks and runs them.
-
-        If the hook needs sudo or doas or similar that must be included in the command.
+        """Loops over configured post_renew_hooks and executables in post_renew_hooks_dir and runs them.
 
         Returns:
             None
         """
+        # Process any configured post-renew-hooks
         if "post-renew-hooks" not in self.conf or not self.conf["post-renew-hooks"]:
-            logger.debug("no post-renew-hooks found in config, not doing anything")
-            return True
+            logger.debug("No post-renew-hooks found in config")
+        else:
+            # loop over and run hooks
+            assert isinstance(self.conf["post-renew-hooks"], list)
+            for hook in self.conf["post-renew-hooks"]:
+                self.run_post_renew_hook(hook.split(" "))
 
-        # loop over and run hooks
-        assert isinstance(self.conf["post-renew-hooks"], list)
-        for hook in self.conf["post-renew-hooks"]:
-            logger.debug(f"Running post renew hook: {hook}")
-            p = subprocess.Popen(hook.split(" "))
-            exitcode = p.wait()
-            if exitcode != 0:
-                logger.error(
-                    f"Got exit code {exitcode} when running post_renew_hook {hook}"
-                )
-            else:
-                logger.debug("Post renew hook %s ended with exit code 0, good." % hook)
+        # Process any executables in post-renew-hooks-dir if configured
+        if (
+            "post-renew-hooks-dir" not in self.conf
+            or not self.conf["post-renew-hooks-dir"]
+        ):
+            logger.debug("No post-renew-hooks-dir found in config")
+        else:
+            # loop over files in the hooks dir
+            assert isinstance(self.conf["post-renew-hooks-dir"], str)
+            for hook in os.listdir(self.conf["post-renew-hooks-dir"]):
+                # skip directories and files not executable by the current user
+                if os.path.isfile(
+                    os.path.join(self.conf["post-renew-hooks-dir"], hook)
+                ) and os.access(
+                    os.path.join(self.conf["post-renew-hooks-dir"], hook), os.X_OK
+                ):
+                    command = os.path.join(self.conf["post-renew-hooks-dir"], hook)
+                    if (
+                        "post-renew-hooks-dir-runner" in self.conf
+                        and self.conf["post-renew-hooks-dir-runner"]
+                    ):
+                        assert isinstance(self.conf["post-renew-hooks-dir-runner"], str)
+                        # use the configured hook runner
+                        self.run_post_renew_hook(
+                            [self.conf["post-renew-hooks-dir-runner"]] + [command]
+                        )
+                    else:
+                        # run hooks in dir as is
+                        self.run_post_renew_hook([command])
 
         # all done
         return True
+
+    @staticmethod
+    def run_post_renew_hook(hook: typing.List[str]) -> bool:
+        """Run a specific post renew hook.
+
+        Args:
+            hook: A list of string components of the command and arguments
+
+        Returns: True if exit code was 0, False otherwise.
+        """
+        logger.info(f"Running post renew hook: {hook}")
+        start = datetime.datetime.now()
+        p = subprocess.Popen(hook)
+        runtime = datetime.datetime.now() - start
+        exitcode = p.wait()
+        if exitcode != 0:
+            logger.error(
+                f"Got exit code {exitcode} when running post_renew_hook {hook} - hook runtime was {runtime}"
+            )
+            return False
+        else:
+            logger.info(
+                f"Post renew hook {hook} ended with exit code 0, good. Hook runtime was {runtime}"
+            )
+            return True
 
     # SPKI METHODS
 
@@ -1985,6 +2032,18 @@ def get_parser() -> argparse.ArgumentParser:
         action="append",
         dest="post-renew-hooks",
         help="The list of commands to run after one or more certificates are renewed. Most such commands will need root access to run, remember to prefix the command with 'sudo' as needed. Can be specified multiple times. Default: `None`",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--post-renew-hooks-dir",
+        dest="post-renew-hooks-dir",
+        help="Path to a folder containing executables to run after one or more certificates or OCSP responses are renewed. These will execute under the regular certgrinder user uid, so make sure to use sudo/doas in scripts or suid executables as needed. Default: `None`",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--post-renew-hooks-dir-runner",
+        dest="post-renew-hooks-dir-runner",
+        help="Path to an executable like sudo to be used to run each of the executables in the post renew hooks dir. Default: `None`",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(

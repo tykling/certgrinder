@@ -93,12 +93,24 @@ This is an alphabetical list of the configurable options:
      Default: ``/tmp``
 
    `post-renew-hooks`
-     A list of commands which ``certgrinder`` must run after renewing one or more certificates. Use this to reload/restart services which need to be poked after the certificate changes. Can be specified multiple times on the command-line. Remember to include sudo or whatever if needed.
+     A list of commands which ``certgrinder`` must run after renewing one or more certificates or OCSP responses. Use this to reload/restart services which need to be poked after the certificate changes. Can be specified multiple times on the command-line. Remember to include sudo or whatever if needed. Wrap complex commands in a small shell script to avoid quoting issues.
+
+     Default: ``None``
+
+   `post-renew-hooks-dir`
+     A path to a hooks.d style directory containing files to be executed after renewing one or more certificates or OCSP responses. Each executable file in this path will be run in the order returned by ``os.listdir()``. Set ``post-renew-hooks-dir-runner`` if something like ``sudo`` is needed to elevate privileges before running the hooks.
+
+     Default: ``None``
+
+   `post-renew-hooks-dir-runner`
+     When this is set it will be executed in place of each executable in ``post-renew-hooks-dir`` with the executable as argument.
+
+     Example: If ``post-renew-hooks-dir`` contains two executable files ``hook1`` and ``hook2`` and ``post-renew-hooks-dir-runner`` is set to ``/usr/local/bin/sudo`` then certgrinder will execute ``/usr/local/bin/sudo /path/to/hooks/dir/hook1`` and then ``/usr/local/bin/sudo /path/to/hooks/dir/hook2`` instead of executing the two hooks directly.
 
      Default: ``None``
 
    `staging`
-     Enable staging mode. Adds ``--staging`` to the ``certgrinderd`` command, and sees certificates issued by LE staging servers as valid.
+     Enable staging mode. Adds ``--staging`` to the ``certgrinderd`` command, and considers certificates issued by LE staging servers as valid.
 
      Default: ``False``
 

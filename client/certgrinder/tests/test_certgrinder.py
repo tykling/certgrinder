@@ -132,6 +132,22 @@ def test_get_certificate(
     if certgrinderd_configfile[0] == "dns":
         # include a couple of post renew hook for one of the cert operations
         mockargs += ["--post-renew-hooks", "true", "--post-renew-hooks", "false"]
+    elif certgrinderd_configfile[0] == "http":
+        # include post-renew-hooks-dir for one of the cert operations
+        hookdir = str(tmpdir_factory.mktemp("hooks"))
+        mockargs += [
+            "--post-renew-hooks-dir",
+            hookdir,
+            "--post-renew-hooks-dir-runner",
+            "/bin/echo",
+        ]
+        # write mock hooks to hook dir
+        with open(os.path.join(hookdir, "hooktrue"), "w") as f:
+            f.write("#!/bin/sh\n/bin/true\n")
+        os.chmod(os.path.join(hookdir, "hooktrue"), 0o0755)
+        with open(os.path.join(hookdir, "hookfalse"), "w") as f:
+            f.write("#!/bin/sh\n/bin/false\n")
+        os.chmod(os.path.join(hookdir, "hookfalse"), 0o0755)
 
     with pytest.raises(SystemExit) as E:
         main(mockargs + ["get", "certificate"])
@@ -1490,3 +1506,24 @@ def test_check_connection(
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
     assert E.value.code == 1, "Exit code not 1 as expected with no pong response"
     assert "Did not get a pong response in stdout from certgrinderd" in caplog.text
+
+
+def test_post_renew_hooks_dir_without_runner(tmpdir_factory, caplog):
+    """Test the check_certificate_issuer() method with an empty invalid_ca_cn_list."""
+    caplog.set_level(logging.DEBUG)
+
+    # write mock hooks to hook dir
+    hookdir = str(tmpdir_factory.mktemp("hooks"))
+    with open(os.path.join(hookdir, "hooktrue"), "w") as f:
+        f.write("#!/bin/sh\n/bin/true\n")
+    os.chmod(os.path.join(hookdir, "hooktrue"), 0o0755)
+    with open(os.path.join(hookdir, "hookfalse"), "w") as f:
+        f.write("#!/bin/sh\n/bin/false\n")
+    os.chmod(os.path.join(hookdir, "hookfalse"), 0o0755)
+
+    certgrinder = Certgrinder()
+    certgrinder.conf["post-renew-hooks-dir"] = hookdir
+    certgrinder.run_post_renew_hooks()
+
+    assert "ended with exit code 0, good. Runtime was" in caplog.text
+    assert "Got exit code 1 when running post_renew_hook" in caplog.text

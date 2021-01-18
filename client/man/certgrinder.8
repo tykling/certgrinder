@@ -119,12 +119,24 @@ The directory to place the certgrinderd PID file in.
 Default: \fB/tmp\fP
 .TP
 .B \fIpost\-renew\-hooks\fP
-A list of commands which \fBcertgrinder\fP must run after renewing one or more certificates. Use this to reload/restart services which need to be poked after the certificate changes. Can be specified multiple times on the command\-line. Remember to include sudo or whatever if needed.
+A list of commands which \fBcertgrinder\fP must run after renewing one or more certificates or OCSP responses. Use this to reload/restart services which need to be poked after the certificate changes. Can be specified multiple times on the command\-line. Remember to include sudo or whatever if needed. Wrap complex commands in a small shell script to avoid quoting issues.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIpost\-renew\-hooks\-dir\fP
+A path to a hooks.d style directory containing files to be executed after renewing one or more certificates or OCSP responses. Each executable file in this path will be run in the order returned by \fBos.listdir()\fP\&. Set \fBpost\-renew\-hooks\-dir\-runner\fP if something like \fBsudo\fP is needed to elevate privileges before running the hooks.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIpost\-renew\-hooks\-dir\-runner\fP
+When this is set it will be executed in place of each executable in \fBpost\-renew\-hooks\-dir\fP with the executable as argument.
+.sp
+Example: If \fBpost\-renew\-hooks\-dir\fP contains two executable files \fBhook1\fP and \fBhook2\fP and \fBpost\-renew\-hooks\-dir\-runner\fP is set to \fB/usr/local/bin/sudo\fP then certgrinder will execute \fB/usr/local/bin/sudo /path/to/hooks/dir/hook1\fP and then \fB/usr/local/bin/sudo /path/to/hooks/dir/hook2\fP instead of executing the two hooks directly.
 .sp
 Default: \fBNone\fP
 .TP
 .B \fIstaging\fP
-Enable staging mode. Adds \fB\-\-staging\fP to the \fBcertgrinderd\fP command, and sees certificates issued by LE staging servers as valid.
+Enable staging mode. Adds \fB\-\-staging\fP to the \fBcertgrinderd\fP command, and considers certificates issued by LE staging servers as valid.
 .sp
 Default: \fBFalse\fP
 .TP
@@ -363,8 +375,10 @@ usage: certgrinder [\-h] [\-\-certgrinderd CERTGRINDERD]
                    [\-n NAME\-SERVER] [\-\-now] [\-o OCSP\-RENEW\-THRESHOLD\-PERCENT]
                    [\-\-path PATH]
                    [\-\-periodic\-sleep\-minutes PERIODIC\-SLEEP\-MINUTES]
-                   [\-p PID\-DIR] [\-\-post\-renew\-hooks POST\-RENEW\-HOOKS] [\-q]
-                   [\-s] [\-\-syslog\-facility SYSLOG\-FACILITY]
+                   [\-p PID\-DIR] [\-\-post\-renew\-hooks POST\-RENEW\-HOOKS]
+                   [\-\-post\-renew\-hooks\-dir POST\-RENEW\-HOOKS\-DIR]
+                   [\-\-post\-renew\-hooks\-dir\-runner POST\-RENEW\-HOOKS\-DIR\-RUNNER]
+                   [\-q] [\-s] [\-\-syslog\-facility SYSLOG\-FACILITY]
                    [\-\-syslog\-socket SYSLOG\-SOCKET] [\-\-tlsa\-port TLSA\-PORT]
                    [\-\-tlsa\-protocol TLSA\-PROTOCOL]
                    [\-\-tlsa\-type\-list {310,311,312}] [\-v]
@@ -434,6 +448,12 @@ The directory to store the PID file in
 .TP
 .B\-\-post\-renew\-hooks
 The list of commands to run after one or more certificates are renewed. Most such commands will need root access to run, remember to prefix the command with \(aqsudo\(aq as needed. Can be specified multiple times. Default: \fINone\fP
+.TP
+.B\-\-post\-renew\-hooks\-dir
+Path to a folder containing executables to run after one or more certificates or OCSP responses are renewed. These will execute under the regular certgrinder user uid, so make sure to use sudo/doas in scripts or suid executables as needed. Default: \fINone\fP
+.TP
+.B\-\-post\-renew\-hooks\-dir\-runner
+Path to an executable like sudo to be used to run each of the executables in the post renew hooks dir. Default: \fINone\fP
 .TP
 .B\-q, \-\-quiet
 Quiet mode. No output at all if there is nothing to do, and no errors are encountered. Equal to setting \-\-log\-level=WARNING.
@@ -1321,10 +1341,20 @@ The bytes representing the stdout from the subprocess call
 .UNINDENT
 .INDENT 7.0
 .TP
-.B run_post_renew_hooks() -> bool
-Loops over configured post_renew_hooks and runs them.
+.B static run_post_renew_hook(hook: List[str]) -> bool
+Run a specific post renew hook.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBhook\fP \-\- A list of string components of the command and arguments
+.UNINDENT
 .sp
-If the hook needs sudo or doas or similar that must be included in the command.
+Returns: True if exit code was 0, False otherwise.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B run_post_renew_hooks() -> bool
+Loops over configured post_renew_hooks and executables in post_renew_hooks_dir and runs them.
 .INDENT 7.0
 .TP
 .B Returns
