@@ -139,11 +139,11 @@ At this point you should be ready to test! Start by checking with SSH manually t
 
 Crontab job
 ~~~~~~~~~~~
-I run Certgrinder daily, although it only attempts renewal when less than 30 days validity remains. When everything above works it is time to automate it by adding it to crontab. The following line works for me (I vary the times between servers)::
+I run Certgrinder daily, although by default it only attempts certificate renewal when less than 30 days validity remains, and OCSP response renewal when half the validity period has passed.
 
-    48 2 * * * certgrinder /usr/home/certgrinder/virtualenv/bin/certgrinder -f /usr/home/certgrinder/certgrinder.yml
+When everything above works it is time to automate it by adding it to crontab. The following line works for me (the ``periodic`` command sleeps a random number of minutes before doing its thing, so all the clients don't contact the Certgrinder server at once)::
 
-Note that I call it inside the virtualenv directly to make sure the correct environment is used!
+    0 2 * * * certgrinder /usr/home/certgrinder/virtualenv/bin/certgrinder -c /usr/home/certgrinder/certgrinder.conf periodic
 
 
 Client Commands
