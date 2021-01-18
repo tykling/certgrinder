@@ -18,6 +18,7 @@ Added
 - Certgrinder now keeps a pidfile while running to prevent running multiple times simultaneously.
 - New ``check connection`` command to check connection to the ``certgrinderd`` server without doing anything else.
 - New config options ``post-renew-hooks-dir`` and ``post-renew-hooks-dir-runner``. The former can be used to specify a path to a directory containing executables to run after a certificate or OCSP response has been renewed. The latter can be used to specify a runner like ``sudo`` to be used to run all the hooks. The existing ``post-renew-hooks`` setting will continue to work as expected.
+- Python3.9 support
 
 Removed
 ~~~~~~~
