@@ -17,6 +17,7 @@ Added
 - New config option ``ocsp-renew-threshold-percent`` to specify the amount of time in percent which must have passed before an OCSP response is considered too old. The new option defaults to 50% which matches when LetsEncrypt currently issues new OCSP responses, which is after half the time between produced_at and next_update has passed.
 - Certgrinder now keeps a pidfile while running to prevent running multiple times simultaneously.
 - New ``check connection`` command to check connection to the ``certgrinderd`` server without doing anything else.
+- New config options ``post-renew-hooks-dir`` and ``post-renew-hooks-dir-runner``. The former can be used to specify a path to a directory containing executables to run after a certificate or OCSP response has been renewed. The latter can be used to specify a runner like ``sudo`` to be used to run all the hooks. The existing ``post-renew-hooks`` setting will continue to work as expected.
 
 Removed
 ~~~~~~~
@@ -27,6 +28,10 @@ Fixed
 - Show keytype in ``show ocsp`` output
 - The new ``ocsp-renew-threshold-percent`` code and default setting eliminates redundant OCSP response fetching
 - IDN domain handling now works again
+
+Changed
+~~~~~~~
+- Better logging when running post renew hooks - exit code is always logged, and the time spent running each hook is now logged.
 
 
 v0.15.1 (29-Sep-2020)

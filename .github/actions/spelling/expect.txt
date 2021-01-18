@@ -77,6 +77,7 @@ eclient
 elif
 envlist
 eserver
+executables
 existance
 exitcode
 expiredelta
@@ -109,6 +110,7 @@ http
 idna
 img
 ip
+isfile
 isinstance
 JSON
 kcounter
@@ -123,6 +125,7 @@ letsencrypt
 levelname
 lgtm
 lineno
+listdir
 loadbalanced
 logformat
 loglevel
@@ -231,6 +234,7 @@ toxinidir
 tykling
 tyknet
 ubuntu
+uid
 Unittests
 unicode
 unixsocket
