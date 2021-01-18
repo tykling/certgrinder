@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDERD" "8" "Jan 18, 2021" "0.16.0-dev" "Certgrinder"
+.TH "CERTGRINDERD" "8" "Jan 18, 2021" "0.16.0-rc2" "Certgrinder"
 .SH NAME
 certgrinderd \- Manpage for certgrinderd
 .
@@ -31,14 +31,14 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
 .sp
-The Certgrinder server \fBcertgrinderd\fP takes care of getting certificates and OCSP responses on behalf of the calling clients. \fBcertgrinderd\fP doesn’t run always like a daemon, so it never acts on its own. It only does something when a Certgrinder client runs it, usually over SSH.
+The Certgrinder server \fBcertgrinderd\fP takes care of getting certificates and OCSP responses on behalf of the calling clients. \fBcertgrinderd\fP doesn\(aqt run always like a daemon, so it never acts on its own. It only does something when a Certgrinder client runs it, usually over SSH.
 .sp
 The following sections explain the steps you need to setup a Certgrinder server.
 .SH INSTALL CERTGRINDER SERVER
 .sp
 Create a VM or Jail or Docker thing or whatever somewhere. This will be your Certgrinder server. Give it a proper public hostname like \fBcertgrinder.example.com\fP\&. You can use real proper IP addresses or port forwarding, whichever you prefer. The relevant ports are \fBTCP/22\fP (so the Certgrinder clients can reach the Certgrinder server), \fBTCP/53\fP and \fBUDP/53\fP if you want to serve \fBDNS\-01\fP challenges locally, and \fBTCP/80\fP if you use \fBHTTP\-01\fP challenges locally.
 .sp
-Create DNS records for the new hostname (A+AAAA, and an SSHFP record wouldn’t hurt) and you should be ready to begin the install.
+Create DNS records for the new hostname (A+AAAA, and an SSHFP record wouldn\(aqt hurt) and you should be ready to begin the install.
 .sp
 The hostname of your Certgrinder server will be the hostname your Certgrinder clients use to SSH into (if you use SSH), and also the hostname you use to serve HTTP challenges locally (if you use \fBHTTP\-01\fP challenges).
 .SH CREATE USER
@@ -57,7 +57,7 @@ Defaults env_keep += "ACMEZONE WEBROOT"
 .UNINDENT
 .SH INSTALL CERTGRINDERD
 .sp
-You can install \fBcertgrinderd\fP from pip with \fBpip install certgrinderd\fP\&. It will pull in the dependencies it needs automatically. Create a venv for it if you don’t want to pollute the global Python env.
+You can install \fBcertgrinderd\fP from pip with \fBpip install certgrinderd\fP\&. It will pull in the dependencies it needs automatically. Create a venv for it if you don\(aqt want to pollute the global Python env.
 .sp
 You can also checkout the Github repo and install the deps from \fBrequirements.txt\fP by hand if you prefer. If you want to install with pip directly from Github the following may help:
 \fBpip install "git+https://github.com/tykling/certgrinder/#egg=certgrinderd&subdirectory=server"\fP
@@ -127,7 +127,7 @@ The path to the configuration file. The file is in YAML format.
 Default: \fBNone\fP
 .TP
 .B \fIdebug\fP
-Enables debug mode. This is the same as setting –log\-level to DEBUG. Outputs lots info about the internal workings of certgrinderd.
+Enables debug mode. This is the same as setting \-\-log\-level to DEBUG. Outputs lots info about the internal workings of certgrinderd.
 .sp
 Default: \fBFalse\fP
 .TP
@@ -244,7 +244,7 @@ Both scripts must be able to handle the challenge type(s) you use. The same scri
 When the server has been configured with hooks you can test from a client using just SSH and a manually generated CSR, with something like: \fBcat mail4.example.com.csr | ssh certgrinderd@certgrinder.example.org \-T \-\- \-\-staging get certificate\fP where \fB\-T\fP is to prevent SSH from allocating a TTY on the server, \fB\-\-\fP is to mark the end of the SSH args, and \fB\-\-staging\fP is to make \fBcertgrinderd\fP use the LetsEncrypt staging servers. If all goes well it should output some logging and a certificate chain.
 .SH COMMAND LINE USAGE
 .sp
-certgrinderd version 0.16.0\-dev. See the manpage certgrinderd(8) or ReadTheDocs for more info.
+certgrinderd version 0.16.0\-rc2. See the manpage certgrinderd(8) or ReadTheDocs for more info.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -296,13 +296,13 @@ The hook script to call to prepare auth challenges before calling Certbot
 The Certbot command to call between auth hook and cleanup hook
 .TP
 .B\-\-certbot\-config\-dir
-The path to pass to Certbot as –config\-dir
+The path to pass to Certbot as \-\-config\-dir
 .TP
 .B\-\-certbot\-logs\-dir
-The path to pass to Certbot as –logs\-dir
+The path to pass to Certbot as \-\-logs\-dir
 .TP
 .B\-\-certbot\-work\-dir
-The path to pass to Certbot as –work\-dir
+The path to pass to Certbot as \-\-work\-dir
 .TP
 .B\-C, \-\-cleanup\-hook
 The hook script to call to clean up auth challenges after calling Certbot
@@ -317,7 +317,7 @@ The path to the PEM formatted certificate chain file to use instead of getting i
 The path to the PEM formatted CSR file to use instead of getting it from stdin.
 .TP
 .B\-d, \-\-debug
-Debug mode. Equal to setting –log\-level=DEBUG.
+Debug mode. Equal to setting \-\-log\-level=DEBUG.
 .TP
 .B\-l, \-\-log\-level
 Possible choices: DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -331,7 +331,7 @@ The directory to store the PID file in
 Do not verify the ACME servers certificate
 .TP
 .B\-s, \-\-staging
-Staging mode. Equal to setting –acme\-server\-url \fI\%https://acme\-staging\-v02.api.letsencrypt.org/directory\fP
+Staging mode. Equal to setting \-\-acme\-server\-url \fI\%https://acme\-staging\-v02.api.letsencrypt.org/directory\fP
 .TP
 .B\-\-syslog\-facility
 The facility to use for syslog messages
@@ -348,7 +348,7 @@ The path to pass to the auth hook script as env WEBROOT to use for HTTP\-01 chal
 .SS Sub\-commands:
 .SS get
 .sp
-Use the “get” command to get certificates or OCSP responses
+Use the "get" command to get certificates or OCSP responses
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -396,7 +396,7 @@ certgrinderd get ocsp [\-h]
 .UNINDENT
 .SS show
 .sp
-Use the “show” command to show configuration, CSR info, or certificate info.
+Use the "show" command to show configuration, CSR info, or certificate info.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -457,7 +457,7 @@ certgrinderd show configuration [\-h]
 .UNINDENT
 .SS help
 .sp
-The “help” command just outputs the usage help
+The "help" command just outputs the usage help
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -470,7 +470,7 @@ certgrinderd help [\-h]
 .UNINDENT
 .SS ping
 .sp
-The “ping” command is used by the certgrinder client to verify connectivity to the server. It just outputs the word “pong” to stdout.
+The "ping" command is used by the certgrinder client to verify connectivity to the server. It just outputs the word "pong" to stdout.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -493,7 +493,7 @@ Merge userconfig with defaults and configure logging.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBuserconfig\fP – A dict of configuration to merge with default config
+\fBuserconfig\fP \-\- A dict of configuration to merge with default config
 .TP
 .B Returns
 None
@@ -512,7 +512,7 @@ and contains all the names from the CSR in one of the domainsets.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcsr\fP – The CSR object
+\fBcsr\fP \-\- The CSR object
 .TP
 .B Returns
 True if the CSR is OK, False otherwise
@@ -529,13 +529,13 @@ Return True if the OCSP response is good, regardless of the certificate revocati
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBocsp_request\fP – The OCSP request object to check
+\fBocsp_request\fP \-\- The OCSP request object to check
 .IP \(bu 2
-\fBocsp_response\fP – The OCSP response object to check
+\fBocsp_response\fP \-\- The OCSP response object to check
 .IP \(bu 2
-\fBcertificate\fP – The certificate the OCSP request is for
+\fBcertificate\fP \-\- The certificate the OCSP request is for
 .IP \(bu 2
-\fBissuer\fP – The issuer of the certificate
+\fBissuer\fP \-\- The issuer of the certificate
 .UNINDENT
 .TP
 .B Returns
@@ -551,9 +551,9 @@ Check that the response matches the request.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBocsp_request\fP – The OCSP request object
+\fBocsp_request\fP \-\- The OCSP request object
 .IP \(bu 2
-\fBocsp_response\fP – The OCSP response object
+\fBocsp_response\fP \-\- The OCSP response object
 .UNINDENT
 .TP
 .B Returns
@@ -567,7 +567,7 @@ Check the signature of the OCSP response.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBocsp_response\fP – The OCSP response to check
+\fBocsp_response\fP \-\- The OCSP response to check
 .TP
 .B Returns
 Boolean \- True if all is well, False if a problem was found
@@ -580,7 +580,7 @@ Check the timestamps of the OCSP response.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBocsp_response\fP – The OCSP response object to check
+\fBocsp_response\fP \-\- The OCSP response object to check
 .TP
 .B Returns
 Boolean \- True if all is well, False if a problem was found
@@ -595,9 +595,9 @@ Create and return an OCSP request based on the cert+issuer.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertificate\fP – The certificate to create an OCSP request for
+\fBcertificate\fP \-\- The certificate to create an OCSP request for
 .IP \(bu 2
-\fBissuer\fP – The issuer of the certificate
+\fBissuer\fP \-\- The issuer of the certificate
 .UNINDENT
 .TP
 .B Returns
@@ -617,15 +617,15 @@ Optionally add \fB\-\-email\fP and a bunch of certbot settings as needed.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBchallengetype\fP – The type of challenge, \fBdns\fP or \fBhttp\fP
+\fBchallengetype\fP \-\- The type of challenge, \fBdns\fP or \fBhttp\fP
 .IP \(bu 2
-\fBcsrpath\fP – The path to the CSR
+\fBcsrpath\fP \-\- The path to the CSR
 .IP \(bu 2
-\fBfullchainpath\fP – The path to save the certificate+issuer
+\fBfullchainpath\fP \-\- The path to save the certificate+issuer
 .IP \(bu 2
-\fBcertpath\fP – The path to save the certificate (without issuer)
+\fBcertpath\fP \-\- The path to save the certificate (without issuer)
 .IP \(bu 2
-\fBchainpath\fP – The path to save the issuer (without certificate)
+\fBchainpath\fP \-\- The path to save the issuer (without certificate)
 .UNINDENT
 .TP
 .B Returns
@@ -647,7 +647,7 @@ If there is still no certificate log an error and return anyway.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcsrpath\fP – The path to the CSR
+\fBcsrpath\fP \-\- The path to the CSR
 .TP
 .B Returns
 None
@@ -660,7 +660,7 @@ This method is called when the \fIget certificate\fP subcommand is used.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBNone\fP – 
+\fBNone\fP \-\- 
 .TP
 .B Returns
 None
@@ -675,7 +675,7 @@ It simply prints the DER formatted OCSP response to stdout if we get one.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBNone\fP – 
+\fBNone\fP \-\- 
 .TP
 .B Returns
 None
@@ -688,7 +688,7 @@ Parse certificate, get and return OCSP response.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcertpath\fP – The path of the certificate chain to get OCSP response for (optional)
+\fBcertpath\fP \-\- The path of the certificate chain to get OCSP response for (optional)
 .TP
 .B Returns
 The OCSPRequest object
@@ -701,7 +701,7 @@ Parse certificate chain from path or stdin.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcertpath\fP – The path of the certificate chain to parse (optional)
+\fBcertpath\fP \-\- The path of the certificate chain to parse (optional)
 .TP
 .B Returns
 A tuple of (certificate, issuer) cryptography.x509.Certificate objects
@@ -716,7 +716,7 @@ Takes the CSR data from \fBsys.stdin\fP if the \fBcsrstring\fP argument is empty
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcsrstring\fP – The PEM formatted CSR as a string (optional)
+\fBcsrstring\fP \-\- The PEM formatted CSR as a string (optional)
 .TP
 .B Returns
 The CSR object
@@ -725,7 +725,7 @@ The CSR object
 .INDENT 7.0
 .TP
 .B static ping_command() -> None
-Reply to the ping command by outputting the string ‘pong’ to stdout.
+Reply to the ping command by outputting the string \(aqpong\(aq to stdout.
 .sp
 Args: None
 Returns: None
@@ -745,7 +745,7 @@ Finally the CSR is deleted.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBNone\fP – 
+\fBNone\fP \-\- 
 .TP
 .B Returns
 None
@@ -760,11 +760,11 @@ Call certbot, check exitcode, output cert, return bool success.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcommand\fP – A list of certbot command elements
+\fBcommand\fP \-\- A list of certbot command elements
 .IP \(bu 2
-\fBenv\fP – A dictionary of the environment to pass to subprocess.run()
+\fBenv\fP \-\- A dictionary of the environment to pass to subprocess.run()
 .IP \(bu 2
-\fBfullchainpath\fP – The path to read the certificate+chain from after Certbot runs
+\fBfullchainpath\fP \-\- The path to read the certificate+chain from after Certbot runs
 .UNINDENT
 .TP
 .B Returns
@@ -780,9 +780,9 @@ Save the CSR object to the path in PEM format.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcsr\fP – The CSR object
+\fBcsr\fP \-\- The CSR object
 .IP \(bu 2
-\fBpath\fP – The path to save it in
+\fBpath\fP \-\- The path to save it in
 .UNINDENT
 .TP
 .B Returns
@@ -796,7 +796,7 @@ Split a PEM chain into a list of bytes of the individual PEM certificates.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBpem_chain_bytes\fP – The bytes representing the PEM chain
+\fBpem_chain_bytes\fP \-\- The bytes representing the PEM chain
 .TP
 .B Returns
 A list of 0 or more bytes chunks representing each certificate
@@ -813,13 +813,13 @@ Supports RSA and EC public keys. Assumes PKCS1v15 padding for RSA keys.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBpubkey\fP – The public key
+\fBpubkey\fP \-\- The public key
 .IP \(bu 2
-\fBsignature\fP – The bytes representing the signature
+\fBsignature\fP \-\- The bytes representing the signature
 .IP \(bu 2
-\fBpayload\fP – The bytes representing the signed data
+\fBpayload\fP \-\- The bytes representing the signed data
 .IP \(bu 2
-\fBhashalgo\fP – The hashing algorithm used for the signature
+\fBhashalgo\fP \-\- The hashing algorithm used for the signature
 .UNINDENT
 .UNINDENT
 .UNINDENT
