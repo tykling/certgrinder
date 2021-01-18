@@ -232,6 +232,7 @@ tykling
 tyknet
 ubuntu
 Unittests
+unicode
 unixsocket
 uri
 url
