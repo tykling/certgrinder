@@ -1525,5 +1525,5 @@ def test_post_renew_hooks_dir_without_runner(tmpdir_factory, caplog):
     certgrinder.conf["post-renew-hooks-dir"] = hookdir
     certgrinder.run_post_renew_hooks()
 
-    assert "ended with exit code 0, good. Runtime was" in caplog.text
+    assert "ended with exit code 0, good. Hook runtime was" in caplog.text
     assert "Got exit code 1 when running post_renew_hook" in caplog.text
