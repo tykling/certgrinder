@@ -1,4 +1,4 @@
-PyYAML==5.3.1
+PyYAML==5.4
 pid==3.0.4
 dnspython==2.1.0
 cryptography==3.3.1
