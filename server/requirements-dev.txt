@@ -9,7 +9,7 @@ Sphinx==3.4.3
 sphinx-rtd-theme==0.5.1
 sphinx-argparse==0.2.5
 pytest==6.2.1
-pytest-cov==2.11.0
+pytest-cov==2.11.1
 pytest-randomly==3.5.0
 tox==3.21.2
 twine==3.3.0
