@@ -1,4 +1,4 @@
-PyYAML==5.4
+PyYAML==5.4.1
 pid==3.0.4
 certbot==1.11.0
 requests==2.25.1
