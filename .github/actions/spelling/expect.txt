@@ -16,6 +16,7 @@ backend
 binascii
 BUILDDIR
 CAs
+CNs
 certbot
 certbytes
 certgrinder
