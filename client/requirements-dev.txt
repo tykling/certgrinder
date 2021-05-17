@@ -6,7 +6,7 @@ isort==5.8.0
 pre-commit==2.12.1
 mypy==0.812
 Sphinx==3.4.3
-sphinx-rtd-theme==0.5.1
+sphinx-rtd-theme==0.5.2
 sphinx-argparse==0.2.5
 pytest==6.2.4
 pytest-cov==2.12.0
