@@ -4,3 +4,9 @@
 ^conftest.py$
 ^client/certgrinder/tests/
 ^server/certgrinderd/tests/
+^\.github/
+^\.gitignore
+^\.pydocstyle\.ini
+^client/requirements\.txt
+^server/requirements\.txt
+^tox\.ini
