@@ -10,3 +10,4 @@
 ^client/requirements\.txt
 ^server/requirements\.txt
 ^tox\.ini
+^\.pre-commit-config.yaml
