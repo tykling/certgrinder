@@ -15,15 +15,16 @@ import time
 import urllib.request
 from collections import namedtuple
 
-import certgrinder.certgrinder
 import dns.resolver
 import pytest
-from certgrinder.certgrinder import Certgrinder, main, parse_args
 from cryptography import x509
 from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend, openssl
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import ExtensionOID, NameOID
+
+import certgrinder.certgrinder
+from certgrinder.certgrinder import Certgrinder, main, parse_args
 
 
 def test_certgrinderd_broken_configfile(

@@ -19,7 +19,7 @@ import requests
 import yaml
 from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.backends.openssl import x509  # type: ignore
+from cryptography.hazmat.backends.openssl import x509
 from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinderd.%s" % __name__)
@@ -608,7 +608,7 @@ class Certgrinderd:
             sys.exit(1)
 
         # loop over AuthorityInformationAccess extensions in the cert and try each OCSP server
-        for aia in aias.value:  # type: ignore
+        for aia in aias.value:
             # we only understand OCSP servers
             assert (
                 aia.access_method._name == "OCSP"
@@ -883,7 +883,7 @@ class Certgrinderd:
 
             # check if the delegated responder cert is permitted to sign OCSP responses
             if (
-                cryptography.x509.oid.ExtendedKeyUsageOID.OCSP_SIGNING  # type: ignore
+                cryptography.x509.oid.ExtendedKeyUsageOID.OCSP_SIGNING
                 not in extension.value
             ):
                 logger.error(

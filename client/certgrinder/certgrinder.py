@@ -25,7 +25,7 @@ import dns.resolver  # type: ignore
 import yaml
 from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend, openssl
-from cryptography.hazmat.backends.openssl import x509  # type: ignore
+from cryptography.hazmat.backends.openssl import x509
 from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinder.%s" % __name__)
