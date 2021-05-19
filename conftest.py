@@ -16,7 +16,7 @@ from cryptography.hazmat.backends import default_backend
 
 
 @pytest.fixture(scope="session")
-def pebble_server():
+def pebble_server_build():
     """Get the pebble sources, and build the binary, and run it."""
     print("Making sure we have Go and Git...")
     assert (
@@ -39,7 +39,7 @@ def pebble_server():
 
     print("Building pebble...")
     proc = subprocess.run(
-        args=[shutil.which("go"), "install", "./..."],
+        args=[shutil.which("go"), "install", "./ ..."],
         env={"GOPATH": pathlib.Path.home() / "go"},
         cwd=pathlib.Path.home() / "go/src/github.com/letsencrypt/pebble",
     )
@@ -56,10 +56,23 @@ def pebble_server():
     with open(pebbleconfig, "w") as f:
         f.write(json.dumps(conf))
 
+
+# run pebble server with 1 and 2 intermediates
+@pytest.fixture(scope="session", params=["1", "2"])
+def pebble_server_run(request, pebble_server_build):
+    """Run pebble server with primary or alternate chain as needed."""
+    pebbleconfig = (
+        pathlib.Path.home()
+        / "go/src/github.com/letsencrypt/pebble/test/config/pebble-config.json"
+    )
     print("Running pebble server...")
     proc = subprocess.Popen(
         args=[pathlib.Path.home() / "go/bin/pebble", "-config", pebbleconfig],
-        env={"PEBBLE_VA_ALWAYS_VALID": "1", "PEBBLE_WFE_NONCEREJECT": "0"},
+        env={
+            "PEBBLE_VA_ALWAYS_VALID": "1",
+            "PEBBLE_WFE_NONCEREJECT": "0",
+            "PEBBLE_CHAIN_LENGTH": request.param,
+        },
         cwd=pathlib.Path.home() / "go/src/github.com/letsencrypt/pebble",
     )
 
@@ -67,7 +80,7 @@ def pebble_server():
     print("Setup finished - pebble is running!")
 
     # end buildup
-    yield
+    yield request.param
     # begin teardown
 
     print("Beginning teardown")
@@ -76,7 +89,7 @@ def pebble_server():
     print("Teardown finished!")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def pebble_issuer(tmp_path_factory):
     """Download issuer cert and key from pebble and write it to a temp file."""
     certpath = tmp_path_factory.mktemp("pebble") / "pebble-issuer.crt"

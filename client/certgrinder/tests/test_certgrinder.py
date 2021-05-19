@@ -102,10 +102,9 @@ def test_certgrinderd_broken_csr(
 
 
 def test_get_certificate(
-    pebble_server,
+    pebble_server_run,
     pebble_issuer,
     certgrinderd_configfile,
-    tmp_path_factory,
     certgrinderd_env,
     caplog,
     capsys,
@@ -117,6 +116,7 @@ def test_get_certificate(
     Also get OCSP responses for the certificates.
     """
     caplog.set_level(logging.DEBUG)
+
     mockargs = [
         "--path",
         str(tmpdir_factory.mktemp("certificates")),
@@ -127,9 +127,14 @@ def test_get_certificate(
         "--domain-list",
         "pølse.dk",
         "--certgrinderd",
-        f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]} --acme-server-url https://127.0.0.1:14000/dir",
+        f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]} --acme-server-url https://127.0.0.1:14000/dir ",
         "--debug",
     ]
+
+    if pebble_server_run == "1":
+        # we are only expecting one intermediate, use alternate chain
+        mockargs.append("--alternate-chain")
+
     if certgrinderd_configfile[0] == "dns":
         # include a couple of post renew hook for one of the cert operations
         mockargs += ["--post-renew-hooks", "true", "--post-renew-hooks", "false"]
@@ -223,6 +228,7 @@ def test_get_certificate(
                         )
                     print(f"wrote cert info to CA index file {ocsp_ca_index_file}")
 
+            if keytype == "ecdsa":
                 # delete the certificate and issuer to test the cert/issuer splitter
                 certificate_path = os.path.join(
                     mockargs[1], domains[0] + f"-certificate.{keytype}.crt"
@@ -264,6 +270,7 @@ def test_get_certificate(
                 "7",
             ]
         )
+
         # wait for it to start up
         time.sleep(5)
         proc.poll()
@@ -271,17 +278,16 @@ def test_get_certificate(
             proc.returncode is None
         ), f"OpenSSL OCSP responder not running, it quit with exit code {proc.returncode}"
 
-        # get OCSP responses for both certificates
+        # get OCSP responses for all three RSA certificates
         with pytest.raises(SystemExit) as E:
             main(mockargs + ["--key-type-list", "rsa", "get", "ocsp"])
-
-        print(f"Killing openssl ocsp responder with pid {proc.pid}...")
-        os.kill(proc.pid, 9)
-        # wait for it to exit before continuing
-        time.sleep(5)
-
         assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
         assert "Did not get an OCSP response" not in caplog.text
+
+        print(f"Killing openssl ocsp responder with pid {proc.pid}...")
+        proc.kill()
+        proc.poll()
+        proc.wait(timeout=5)
         caplog.clear()
 
         # make sure we have an OCSP response
@@ -324,7 +330,7 @@ def test_get_certificate(
         assert "was produced_at more than" not in caplog.text
 
 
-def test_show_spki(tmp_path_factory, caplog, tmpdir_factory):
+def test_show_spki(caplog, tmpdir_factory):
     """Test the 'show spki' subcommand."""
     # SPKI is output at level INFO
     caplog.set_level(logging.INFO)
@@ -680,6 +686,7 @@ def test_parse_certificate_chain_not_pem(
             "path": str(tmpdir_factory.mktemp("certificates")),
             "domain-list": ["example.com,www.example.com"],
             "certgrinderd": "true",
+            "alternate-chain": True,
         }
     )
     csr = x509.load_pem_x509_csr(known_csr.encode("ascii"), default_backend())
@@ -689,7 +696,7 @@ def test_parse_certificate_chain_not_pem(
         )
         is None
     ), "The parse_certificate_chain() method did not return None with a non-PEM certificate input"
-    assert "This is the certificate chain that failed to parse" in caplog.text
+    assert "This is the certificate chain which failed to parse" in caplog.text
     assert "NOT_A_PEM_CERT" in caplog.text
     caplog.clear()
 
@@ -702,7 +709,7 @@ ALSO_NOT_A_PEM
     assert (
         certgrinder.parse_certificate_chain(certificate_chain=stdout, csr=csr) is None
     ), "The parse_certificate_chain() method did not return None with a PEM-ish but invalid certificate input"
-    assert "This is the certificate that failed to parse" in caplog.text
+    assert "This is the certificate which failed to parse" in caplog.text
     assert "NOT_A_PEM" in caplog.text
     caplog.clear()
 
@@ -714,10 +721,9 @@ ALSO_NOT_A_PEM
         certgrinder.parse_certificate_chain(certificate_chain=stdout, csr=csr) is None
     ), "The parse_certificate_chain() method did not return None with a non-PEM certificate input"
     assert (
-        "The Certgrinder server did not return a valid PEM formatted issuer."
-        in caplog.text
+        "Unable to parse, this is not a valid PEM formatted certificate." in caplog.text
     )
-    assert "This is the issuer that failed to parse" in caplog.text
+    assert "This is the certificate which failed to parse" in caplog.text
     assert "ALSO_NOT_A_PEM" in caplog.text
 
 
@@ -731,6 +737,7 @@ def test_get_certificate_method(caplog, tmpdir_factory, known_csr, signed_certif
             "domain-list": ["example.com,www.example.com"],
             "certgrinderd": "true",
             "log-level": "DEBUG",
+            "alternate-chain": True,
         }
     )
     certgrinder.load_domainset(
@@ -1390,7 +1397,7 @@ def test_get_ocsp_falsy_input(signed_certificate, caplog):
     caplog.set_level(logging.DEBUG)
     certgrinder = Certgrinder()
     certgrinder.get_ocsp(
-        certificate=signed_certificate, issuer=signed_certificate, stdout=False
+        certificate=signed_certificate, issuers=[signed_certificate], stdout=False
     )
     assert "Did not get an OCSP response in stdout from certgrinderd" in caplog.text
 
@@ -1400,7 +1407,9 @@ def test_get_ocsp_wrong_input(signed_certificate, caplog):
     caplog.set_level(logging.DEBUG)
     certgrinder = Certgrinder()
     certgrinder.get_ocsp(
-        certificate=signed_certificate, issuer=signed_certificate, stdout=b"not-a-cert"
+        certificate=signed_certificate,
+        issuers=[signed_certificate],
+        stdout=b"not-a-cert",
     )
     assert "Unable to parse OCSP response" in caplog.text
 
@@ -1434,7 +1443,7 @@ def test_run_certgrinderd_unparseable_output(
     assert "world" in caplog.text
 
 
-def test_show_paths(tmp_path_factory, caplog, tmpdir_factory):
+def test_show_paths(caplog, tmpdir_factory):
     """Test the 'show paths' subcommand."""
     # paths are output at level INFO
     caplog.set_level(logging.INFO)
@@ -1466,7 +1475,6 @@ def test_show_paths(tmp_path_factory, caplog, tmpdir_factory):
 
 def test_check_connection(
     certgrinderd_configfile,
-    tmp_path_factory,
     certgrinderd_env,
     caplog,
     capsys,
@@ -1528,3 +1536,49 @@ def test_post_renew_hooks_dir_without_runner(tmpdir_factory, caplog):
 
     assert "ended with exit code 0, good. Hook runtime was" in caplog.text
     assert "Got exit code 1 when running post_renew_hook" in caplog.text
+
+
+def test_configure_staging_alternate_chain(tmpdir_factory):
+    """Test the configure() method with --staging and --alternate-chain."""
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+            "staging": True,
+            "alternate-chain": True,
+        }
+    )
+    assert certgrinder.conf["preferred-chain"] == "Fake LE Root X2"
+
+
+def test_load_certificates_broken_input(tmpdir_factory):
+    """Test the load_certificates() method with some broken input."""
+    certgrinder = Certgrinder()
+    certgrinder.configure(
+        userconfig={
+            "path": str(tmpdir_factory.mktemp("certificates")),
+            "domain-list": ["example.com"],
+            "certgrinderd": "true",
+            "log-level": "DEBUG",
+            "staging": True,
+            "alternate-chain": True,
+        }
+    )
+    certgrinder.load_domainset(
+        certgrinder.conf["domain-list"][0].split(","), keytype="rsa"
+    )
+    path = tmpdir_factory.mktemp("fakecert") / "not_a_PEM.pem"
+    with open(path, "w") as f:
+        f.write(
+            """-----BEGIN CERTIFICATE-----
+NOT_A_PEM
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+ALSO_NOT_A_PEM
+-----END CERTIFICATE-----"""
+        )
+
+    certgrinder.load_certificates(path)

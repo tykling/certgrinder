@@ -121,7 +121,7 @@ def test_parse_certificate_chain_path(certificate_chain_file):
     """Test the parse_certificate_chain() method with a valid chain."""
     certgrinderd = Certgrinderd({"log-level": "DEBUG"})
     certificate, issuer = certgrinderd.parse_certificate_chain(
-        certpath=certificate_chain_file
+        certpath=certificate_chain_file, expected_length=2
     )
     assert isinstance(
         certificate, cryptography.x509.Certificate
@@ -138,12 +138,11 @@ def test_parse_certificate_chain_path_broken_cert(
     certgrinderd = Certgrinderd({"log-level": "DEBUG"})
     with pytest.raises(SystemExit) as E:
         certificate, issuer = certgrinderd.parse_certificate_chain(
-            certpath=certificate_chain_file_broken_cert
+            certpath=certificate_chain_file_broken_cert, expected_length=2
         )
     assert E.value.code == 1, "Exit code not 1 as expected"
     assert (
-        "The input resembles a valid PEM formatted certificate chain, but parsing certificate failed"
-        in caplog.text
+        "Parsing certificate failed" in caplog.text
     ), "Expected error message not found with a broken cert"
 
 
@@ -154,12 +153,11 @@ def test_parse_certificate_chain_path_broken_issuer(
     certgrinderd = Certgrinderd({"log-level": "DEBUG"})
     with pytest.raises(SystemExit) as E:
         certificate, issuer = certgrinderd.parse_certificate_chain(
-            certpath=certificate_chain_file_broken_issuer
+            certpath=certificate_chain_file_broken_issuer, expected_length=2
         )
     assert E.value.code == 1, "Exit code not 1 as expected"
     assert (
-        "The input resembles a valid PEM formatted certificate chain, but parsing issuer failed"
-        in caplog.text
+        "Parsing certificate failed" in caplog.text
     ), "Expected error message not found with a broken issuer"
 
 
@@ -170,17 +168,20 @@ def test_parse_certificate_chain_path_broken_input(
     certgrinderd = Certgrinderd({"log-level": "DEBUG"})
     with pytest.raises(SystemExit) as E:
         certificate, issuer = certgrinderd.parse_certificate_chain(
-            certpath=certificate_chain_file_not_a_pem
+            certpath=certificate_chain_file_not_a_pem, expected_length=2
         )
     assert E.value.code == 1, "Exit code not 1 as expected"
     assert (
-        "The input is not a valid PEM formatted certificate chain." in caplog.text
+        "The input has 0 certificates, expected a chain with 2 certificates, something is not right"
+        in caplog.text
     ), "Expected error message not found with a non-PEM input"
 
 
 def test_get_ocsp_response_no_aia(certificate_file_no_aia, caplog):
     """Test the get_ocsp_response() method with a cert with no AIA."""
-    certgrinderd = Certgrinderd({"log-level": "DEBUG"})
+    certgrinderd = Certgrinderd(
+        {"log-level": "DEBUG", "preferred-chain": "Fake LE Root X2"}
+    )
     with pytest.raises(SystemExit) as E:
         certgrinderd.get_ocsp_response(certpath=certificate_file_no_aia)
     assert E.value.code == 1, "Exit code not 1 as expected"
@@ -199,7 +200,9 @@ def mock_requests_response_http_500(url, payload, headers):
 def test_get_ocsp_response_not_http_200(certificate_chain_file, monkeypatch, caplog):
     """Test the get_ocsp_response() method with a mocked requests response with a HTTP status code other than 200."""
     monkeypatch.setattr(requests, "post", mock_requests_response_http_500)
-    certgrinderd = Certgrinderd({"log-level": "DEBUG"})
+    certgrinderd = Certgrinderd(
+        {"log-level": "DEBUG", "preferred-chain": "Fake LE Root X2"}
+    )
     with pytest.raises(SystemExit) as E:
         certgrinderd.get_ocsp_response(certpath=certificate_chain_file)
     assert E.value.code == 1, "Exit code not 1 as expected"

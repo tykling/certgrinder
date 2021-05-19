@@ -47,7 +47,7 @@ class Certgrinderd:
             None
         """
         # default config
-        self.conf: typing.Dict[str, typing.Union[str, bool, None]] = {
+        self.conf: typing.Dict[str, typing.Union[str, bool, int, None]] = {
             "acme-email": None,
             "acme-server-url": "https://acme-v02.api.letsencrypt.org/directory",
             "acme-zone": None,
@@ -63,6 +63,7 @@ class Certgrinderd:
             "debug": False,
             "log-level": "INFO",
             "pid-dir": "/tmp",
+            "preferred-chain": "DST Root CA X3",
             "skip-acme-server-cert-verify": False,
             "syslog-facility": None,
             "syslog-socket": None,
@@ -113,6 +114,14 @@ class Certgrinderd:
         logger.info(
             f"certgrinderd {__version__} running, log-level is {self.conf['log-level']}"
         )
+
+        if self.conf["preferred-chain"] in ["DST Root CA X3", "Fake LE Root X1"]:
+            # two intermediates
+            self.conf["expected-chain-length"] = 3
+        else:
+            # one intermediate
+            self.conf["expected-chain-length"] = 2
+
         logger.debug("Running with config: %s" % self.conf)
 
     # CSR methods
@@ -330,7 +339,6 @@ class Certgrinderd:
             str(self.conf["auth-hook"]),
             "--manual-cleanup-hook",
             str(self.conf["cleanup-hook"]),
-            "--manual-public-ip-logging-ok",
             "--csr",
             csrpath,
             "--fullchain-path",
@@ -364,6 +372,11 @@ class Certgrinderd:
         if self.conf["certbot-logs-dir"]:
             command.append("--logs-dir")
             command.append(str(self.conf["certbot-logs-dir"]))
+
+        if self.conf["preferred-chain"]:
+            command.append("--preferred-chain")
+            command.append(str(self.conf["preferred-chain"]))
+
         return command
 
     def get_certificate(self, csrpath: str) -> None:
@@ -451,7 +464,10 @@ class Certgrinderd:
             # success, read chain from disk
             with open(fullchainpath) as f:
                 chainbytes = f.read()
-            certificate, issuer = self.parse_certificate_chain(fullchainpath)
+            assert isinstance(self.conf["expected-chain-length"], int)
+            self.parse_certificate_chain(
+                fullchainpath, expected_length=self.conf["expected-chain-length"]
+            )
             # output chain to stdout
             print(chainbytes)
             return True
@@ -484,54 +500,59 @@ class Certgrinderd:
 
     @classmethod
     def parse_certificate_chain(
-        cls, certpath: typing.Optional[str]
-    ) -> typing.Tuple[cryptography.x509.Certificate, cryptography.x509.Certificate]:
+        cls, certpath: typing.Optional[str], expected_length: int
+    ) -> typing.List[cryptography.x509.Certificate]:
         """Parse certificate chain from path or stdin.
 
         Args:
-            certpath: The path of the certificate chain to parse (optional)
+            certpath: The path of the certificate chain to parse (optional),
+                      chainbytes are taken from stdin if not provided.
+            expected_length: The number of certificates to expect
 
         Returns:
-            A tuple of (certificate, issuer) cryptography.x509.Certificate objects
+            A list of cryptography.x509.Certificate objects, with the leaf
+            certificate as the first list element.
         """
         if certpath:
             logger.debug(f"Reading PEM cert chain from file {certpath} ...")
             with open(certpath, "rb") as f:
-                certbytes = f.read()
+                chainbytes = f.read()
         else:
-            # get the PEM chain from stdin
             logger.debug("Reading PEM cert chain from stdin ...")
-            certbytes = sys.stdin.read().encode("ASCII")
+            chainbytes = sys.stdin.read().encode("ASCII")
 
-        certs = cls.split_pem_chain(certbytes)
-        if len(certs) != 2:
-            logger.error("The input is not a valid PEM formatted certificate chain.")
+        certs = cls.split_pem_chain(chainbytes)
+        if len(certs) != expected_length:
+            logger.error(
+                f"The input has {len(certs)} certificates, expected a chain with {expected_length} certificates, something is not right."
+            )
             sys.exit(1)
-        certificate_bytes, issuer_bytes = certs
 
-        # parse certificate
+        chain = []
+        for certbytes in certs:
+            cert = cls.parse_certificate(certbytes)
+            chain.append(cert)
+        return chain
+
+    @classmethod
+    def parse_certificate(
+        cls, certificate_bytes: bytes
+    ) -> cryptography.x509.Certificate:
+        """Parse and return individual certificate, or calls sys.exit(1) if something goes wrong.
+
+        Args:
+            certificate_bytes: A chunk of bytes representing a PEM certificate
+
+        Returns:
+            A cryptography.x509.Certificate object.
+        """
         try:
-            certificate = cryptography.x509.load_pem_x509_certificate(
+            return cryptography.x509.load_pem_x509_certificate(
                 certificate_bytes, default_backend()
             )
         except Exception:
-            logger.error(
-                "The input resembles a valid PEM formatted certificate chain, but parsing certificate failed."
-            )
+            logger.error("Parsing certificate failed.")
             sys.exit(1)
-
-        # parse issuer
-        try:
-            issuer = cryptography.x509.load_pem_x509_certificate(
-                issuer_bytes, default_backend()
-            )
-        except Exception:
-            logger.error(
-                "The input resembles a valid PEM formatted certificate chain, but parsing issuer failed."
-            )
-            sys.exit(1)
-
-        return certificate, issuer
 
     # OCSP methods
 
@@ -586,11 +607,15 @@ class Certgrinderd:
         Returns:
             The OCSPRequest object
         """
-        # parse certificates
-        certificate, issuer = self.parse_certificate_chain(certpath)
+        assert isinstance(self.conf["expected-chain-length"], int)
+        chain = self.parse_certificate_chain(
+            certpath, expected_length=self.conf["expected-chain-length"]
+        )
+        certificate = chain[0]
+        issuers = chain[1:]
         logger.debug(f"Getting OCSP response for cert {certificate.subject}")
 
-        ocsp_request_object = self.create_ocsp_request(certificate, issuer)
+        ocsp_request_object = self.create_ocsp_request(certificate, issuers[0])
         ocsp_request_bytes = ocsp_request_object.public_bytes(
             primitives.serialization.Encoding.DER
         )
@@ -649,7 +674,7 @@ class Certgrinderd:
                 f"Received response with HTTP status code {r.status_code} and OCSP response status {ocsp_response_object.response_status}"
             )
             if self.check_ocsp_response(
-                ocsp_request_object, ocsp_response_object, certificate, issuer
+                ocsp_request_object, ocsp_response_object, certificate, issuers[0]
             ):
                 logger.debug(
                     f"Certificate status: {ocsp_response_object.certificate_status}"
@@ -708,7 +733,7 @@ class Certgrinderd:
             logger.error("Check timing failed")
             return False
 
-        if not cls.check_ocsp_response_signature(ocsp_response, issuer):
+        if not cls.check_ocsp_response_signature(ocsp_response, [issuer]):
             logger.error("Check signature failed")
             return False
 
@@ -803,17 +828,19 @@ class Certgrinderd:
     def check_ocsp_response_signature(
         cls,
         ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
-        issuer: cryptography.x509.Certificate,
+        issuers: typing.List[cryptography.x509.Certificate],
     ) -> bool:
         """Check the signature of the OCSP response.
 
         Args:
             ocsp_response: The OCSP response to check
+            issuers: A list of issuer(s)
 
         Returns:
             Boolean - True if all is well, False if a problem was found
         """
         # to check the signature we need to know if the responder is also the issuer
+        issuer = issuers[0]
         if (
             ocsp_response.responder_name == issuer.subject
             or ocsp_response.responder_key_hash
@@ -841,17 +868,27 @@ class Certgrinderd:
                 ):
                     ocsp_responder_cert = cert
                     logger.debug(
-                        f"Found OCSP responder cert with the right namehash and keyhash in OCSP response: {ocsp_responder_cert.subject} serial {ocsp_responder_cert.serial_number}"
+                        f"Found OCSP responder cert with the right namehash and keyhash in OCSP response: {ocsp_responder_cert.subject} serial {ocsp_responder_cert.serial_number}. It is signed by {ocsp_responder_cert.issuer}"
                     )
                     break
             else:
                 logger.error("Unable to find delegated OCSP responder certificate")
                 return False
 
-            # check that the issuer signed the responder cert
-            if ocsp_responder_cert.issuer != issuer.subject:
+            # check that the issuer (or issuers issuer) signed the responder cert
+            for issuer in issuers:
+                if ocsp_responder_cert.issuer == issuer.subject:
+                    logger.debug(
+                        "The delegated OCSP responder cert is signed by a cert in the issuer chain."
+                    )
+                    break
+                else:
+                    logger.debug(
+                        f"The delegated OCSP responder cert is not signed by the issuer {issuer.subject}"
+                    )
+            else:
                 logger.error(
-                    "The OCSP responder certificate is not signed by certificate issuer"
+                    "The OCSP responder certificate is not signed by certificate issuer or issuers issuer."
                 )
                 return False
 
@@ -1143,6 +1180,12 @@ def get_parser() -> argparse.ArgumentParser:
         "--pid-dir",
         dest="pid-dir",
         help="The directory to store the PID file in",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--preferred-chain",
+        dest="preferred-chain",
+        help="The preferred chain to use. Adds --preferred-chain to the Certbot command. Use to pick preferred signing chain when alternatives are available.",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(

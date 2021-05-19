@@ -33,6 +33,15 @@ Each config item can be specified either in the YAML config file as a ``key: val
 
 This is an alphabetical list of the configurable options:
 
+   `alternate-chain`
+     Instruct certgrinder to request the alternate chain for signing.
+
+     For production this means using the short chain with 1 intermediate signed by ``ISRG Root X1`` instead of using the default long chain with 2 intermediates signed by ``DST Root CA X3``.
+
+     For staging it means using ``Fake LE Root X2`` (1 intermediate) instead of the usual ``Fake LE Root X1`` (2 intermediates).
+
+     Default: ``False``
+
    `certgrinderd`
      The command to run as ``certgrinderd``. Usually this will be something like ``ssh certgrinderd@certgrinder.example.com -T``, possibly also with a ``--config-file`` for ``certgrinderd`` if needed.
 

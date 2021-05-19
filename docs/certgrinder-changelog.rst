@@ -11,7 +11,20 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.17.0 (unreleased)
 --------------------
-- No changes
+
+Added
+~~~~~
+- New config option ``alternate-chain`` to tell certgrinderd to tell Certbot to tell LetsEncrypt to use the alternate chain. Sets the certgrinderd option ``preferred-chain`` to the appropriate value accordingly.
+
+Fixed
+~~~~~
+- Support the new longer chain from LetsEncrypt (with two intermediates).
+- Use ``shlex`` to parse certgrinderd command instead of just splitting on spaces
+
+Changed
+~~~~~~~
+- Refactor a bunch of code to deal with multiple intermediates
+- Upgrade dependencies
 
 
 v0.16.0 (18-Jan-2021)

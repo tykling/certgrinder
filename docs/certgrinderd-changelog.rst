@@ -11,7 +11,15 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 v0.17.0 (unreleased)
 --------------------
-- No changes
+
+Added
+~~~~~
+- New config and command-line option ``preferred-chain`` can be used to ask the ACME server (LetsEncrypt) to sign with the specified chain. This is used by the certgrinder clients ``alternate-chain`` option to ask for primary or alternate chain for staging or prod. The value of the option is passed directly to Certbot as ``--preferred-chain``.
+
+Changed
+~~~~~~~
+- Refactor a bunch of code to support the new two-intermediates chain from LetsEncrypt
+- Upgrade dependencies
 
 
 v0.16.0 (18-Jan-2021)

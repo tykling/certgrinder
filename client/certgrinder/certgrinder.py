@@ -13,6 +13,7 @@ import logging
 import logging.handlers
 import os
 import random
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -41,6 +42,7 @@ class Certgrinder:
     def __init__(self) -> None:
         """Define the default config."""
         self.conf: typing.Dict[str, typing.Union[str, int, bool, typing.List[str]]] = {
+            "alternate-chain": False,
             "certgrinderd": "certgrinderd",
             "cert-renew-threshold-days": 30,
             "domain-list": [],
@@ -173,6 +175,28 @@ class Certgrinder:
                 "acme-server-url"
             ] = "https://acme-staging-v02.api.letsencrypt.org/directory"
             self.conf["invalid-ca-cn-list"] = []
+            # set preferred-chain based on the value of alternate-chain
+            if self.conf["alternate-chain"]:
+                # one intermediate
+                self.conf["preferred-chain"] = "Fake LE Root X2"
+            else:
+                # two intermediates
+                self.conf["preferred-chain"] = "Fake LE Root X1"
+        else:
+            # set preferred-chain based on the value of alternate-chain
+            if self.conf["alternate-chain"]:
+                # the alternate chain has one intermediate
+                self.conf["preferred-chain"] = "ISRG Root X1"
+            else:
+                # the defaiæt chain has two intermediates
+                self.conf["preferred-chain"] = "DST Root CA X3"
+
+        if self.conf["preferred-chain"] in ["DST Root CA X3", "Fake LE Root X1"]:
+            # two intermediates
+            self.conf["expected-chain-length"] = 3
+        else:
+            # one intermediate
+            self.conf["expected-chain-length"] = 2
 
         logger.debug(
             f"Certgrinder {__version__} configured OK - running with config: {self.conf}"
@@ -369,19 +393,29 @@ class Certgrinder:
 
     # CERTIFICATE METHODS
 
-    @staticmethod
-    def load_certificate(path: str) -> cryptography.x509.Certificate:
-        """Reads PEM certificate data from the path and returns the object.
+    def load_certificates(
+        self, path: str
+    ) -> typing.List[cryptography.x509.Certificate]:
+        """Reads PEM certificate data from the path, parses the certificate(s), and returns them in a list.
 
         Args:
-            path: The path to read the certificate from
+            path: The path to read the PEM certificate(s) from
 
         Returns:
-            The certificate object
+            A list of cryptography.x509.Certificate objects
         """
         with open(path, "rb") as f:
-            pem_data = f.read()
-        return cryptography.x509.load_pem_x509_certificate(pem_data, default_backend())
+            pem_bytes = f.read()
+        cert_bytes_list = self.split_pem_chain(pem_bytes)
+        certificates = []
+        for certbytes in cert_bytes_list:
+            certificate = self.parse_certificate(certbytes)
+            if not certificate:
+                # something went wrong while parsing this certificate,
+                # just return an empty list
+                return []
+            certificates.append(certificate)
+        return certificates
 
     @staticmethod
     def check_certificate_issuer(
@@ -563,22 +597,23 @@ class Certgrinder:
     def save_certificate(
         certificate: cryptography.x509.Certificate,
         path: str,
-        issuer: typing.Optional[cryptography.x509.Certificate] = None,
+        issuers: typing.List[cryptography.x509.Certificate] = [],
     ) -> None:
-        """Save the PEM certificate to the path, optionally with an issuer.
+        """Save the PEM certificate to the path, optionally with an issuer chain.
 
         Args:
             certificate: The certificate to save
             path: The path to save the certificate in
-            issuer: The issuer to write after the certificate (if any)
+            issuer: The list of issuer certificates to write after the certificate (if any)
 
         Returns:
             None
         """
         with open(path, "wb") as f:
             f.write(certificate.public_bytes(primitives.serialization.Encoding.PEM))
-            if issuer:
-                f.write(issuer.public_bytes(primitives.serialization.Encoding.PEM))
+            if issuers:
+                for issuer in issuers:
+                    f.write(issuer.public_bytes(primitives.serialization.Encoding.PEM))
         os.chmod(path, 0o644)
 
     @classmethod
@@ -588,15 +623,15 @@ class Certgrinder:
             openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey
         ],
         certificate: cryptography.x509.Certificate,
-        issuer: cryptography.x509.Certificate,
+        issuers: typing.List[cryptography.x509.Certificate],
         path: str,
     ) -> None:
-        """Create a single file with the private key, the cert and the issuer, in that order.
+        """Create a single file with the private key, the cert and the issuer(s), in that order.
 
         Args:
             keypair: The keypair to save in the concat file
             certificate: The certificate to save in the concat file
-            issuer: The issuer to save in the concat file
+            issuers: The list of issuer(s) to save in the concat file
             path: The path to save the concat file in
 
         Returns:
@@ -605,7 +640,8 @@ class Certgrinder:
         cls.save_keypair(keypair, path)
         with open(path, "ab") as f:
             f.write(certificate.public_bytes(primitives.serialization.Encoding.PEM))
-            f.write(issuer.public_bytes(primitives.serialization.Encoding.PEM))
+            for issuer in issuers:
+                f.write(issuer.public_bytes(primitives.serialization.Encoding.PEM))
         os.chmod(path, 0o640)
 
     def get_certgrinderd_command(
@@ -614,6 +650,7 @@ class Certgrinder:
         """Return the certgrinderd command to run.
 
         Adds ``--log-level`` with the current ``self.conf["log-level"]``.
+        Also adds --acme-server-url if configured, and --preferred-chain.
 
         Args:
             subcommand: The certgrinderd subcommand to run as a list, like ["get", "ocsp"]
@@ -623,7 +660,7 @@ class Certgrinder:
         """
         # put the command together, first the base command, then the args, then subcommand
         command = str(self.conf["certgrinderd"])
-        commandlist = [str(x) for x in command.split(" ")]
+        commandlist = shlex.split(command)
 
         # pass the certgrinder log-level to certgrinderd
         commandlist.append("--log-level")
@@ -633,6 +670,10 @@ class Certgrinder:
         if "acme-server-url" in self.conf:
             commandlist.append("--acme-server-url")
             commandlist.append(str(self.conf["acme-server-url"]))
+
+        # pass the preferred-chain
+        commandlist.append("--preferred-chain")
+        commandlist.append(str(self.conf["preferred-chain"]))
 
         # add the requested certgrinderd command and subcommand,
         # "get certificate" or "get ocsp" mostly
@@ -726,66 +767,66 @@ class Certgrinder:
         )
         return certificates
 
+    @staticmethod
+    def parse_certificate(
+        certificate_bytes: bytes,
+    ) -> typing.Optional[cryptography.x509.Certificate]:
+        """Parse a bunch of bytes representing a PEM certificate and return.
+
+        Args:
+            certificate_bytes: The PEM certificate
+
+        Returns:
+            The parsed cryptography.x509.Certificate object or None
+        """
+        try:
+            return cryptography.x509.load_pem_x509_certificate(
+                certificate_bytes, default_backend()
+            )
+        except Exception:
+            logger.error(
+                "Unable to parse, this is not a valid PEM formatted certificate."
+            )
+            logger.debug("This is the certificate which failed to parse:")
+            logger.debug(certificate_bytes)
+            return None
+
     def parse_certificate_chain(
         self, certificate_chain: bytes, csr: x509._CertificateSigningRequest
-    ) -> typing.Optional[
-        typing.Tuple[cryptography.x509.Certificate, cryptography.x509.Certificate]
-    ]:
-        """Split a PEM chain into certificate and issuer, parse and return both.
+    ) -> typing.Optional[typing.List[cryptography.x509.Certificate]]:
+        """Split a PEM chain into a list of certificates.
 
         Args:
             certificate_chain: The bytes representing the PEM formatted certificate chain
             csr: The CSR this certificate was issued from
 
         Returns:
-            A tuple of certificate, issuer if the certificate chain is valid, None otherwise
+            A list of certificates with the leaf certificate first,
+            or None if an error happens
         """
         certs = self.split_pem_chain(certificate_chain)
-        if len(certs) == 2:
-            certificate_bytes, issuer_bytes = certs
-        else:
+        if len(certs) != self.conf["expected-chain-length"]:
             logger.error(
-                f"The input does not contain a valid certificate chain (it does not have 2 PEM-looking chunks, it has {len(certs)})."
+                f"The input does not contain a valid certificate chain (it does not have {self.conf['expected-chain-length']} PEM-looking chunks, it has {len(certs)})."
             )
-            logger.debug("This is the certificate chain that failed to parse:")
+            logger.debug("This is the certificate chain which failed to parse:")
             logger.debug(certificate_chain)
             # we do not have a valid certificate
             return None
 
-        # parse certificate
-        try:
-            certificate = cryptography.x509.load_pem_x509_certificate(
-                certificate_bytes, default_backend()
-            )
-        except Exception:
-            logger.error(
-                "The Certgrinder server did not return a valid PEM formatted certificate."
-            )
-            logger.debug("This is the certificate that failed to parse:")
-            logger.debug(certificate_bytes)
-            # we dont have a valid certificate
-            return None
-
-        # parse issuer
-        try:
-            issuer = cryptography.x509.load_pem_x509_certificate(
-                issuer_bytes, default_backend()
-            )
-        except Exception:
-            logger.error(
-                "The Certgrinder server did not return a valid PEM formatted issuer."
-            )
-            logger.debug("This is the issuer that failed to parse:")
-            logger.debug(issuer_bytes)
-            # we dont have a valid issuer
-            return None
+        certificates = []
+        for certbytes in certs:
+            certificate = self.parse_certificate(certbytes)
+            if not certificate:
+                return None
+            certificates.append(certificate)
 
         # keep mypy happy in spite of the mixed type self.conf dict
         assert isinstance(self.conf["invalid-ca-cn-list"], list)
         assert isinstance(self.conf["cert-renew-threshold-days"], int)
         # a few sanity checks of the certificate seems like a good idea
         valid = self.check_certificate_validity(
-            certificate=certificate,
+            certificate=certificates[0],
             invalid_ca_cn_list=[]
             if self.conf["staging"]
             else [str(x) for x in self.conf["invalid-ca-cn-list"]],
@@ -803,7 +844,7 @@ class Certgrinder:
         self.hook_needed = True
 
         # done, return the certificate chain bytes
-        return certificate, issuer
+        return certificates
 
     def get_certificate(
         self,
@@ -850,29 +891,34 @@ class Certgrinder:
             return False
 
         # parse the output
-        result = self.parse_certificate_chain(stdout, csr)
+        certificates = self.parse_certificate_chain(stdout, csr)
 
-        # result should be a tuple of two certificates
-        if result:
-            certificate, issuer = result
+        # certificates should be a tuple of 2 or 3 certificates
+        if certificates:
+            certificate = certificates[0]
+            issuers = certificates[1:]
         else:
             logger.error("Did not get a certificate :(")
             return False
 
+        issuerlen = 0
+        for issuer in issuers:
+            issuerlen += len(issuer.public_bytes(primitives.serialization.Encoding.PEM))
+
         logger.info(
-            f"Success! Got {len(certificate.public_bytes(primitives.serialization.Encoding.PEM))} bytes certificate and {len(issuer.public_bytes(primitives.serialization.Encoding.PEM))} bytes issuer from certgrinderd"
+            f"Success! Got {len(certificate.public_bytes(primitives.serialization.Encoding.PEM))} bytes certificate and {issuerlen} bytes representing {len(issuers)} issuer certificates from certgrinderd"
         )
 
         # save cert, chain and concat
         self.save_certificate(certificate, self.certificate_path)
-        self.save_certificate(certificate, self.certificate_chain_path, issuer)
-        self.save_certificate(issuer, self.issuer_path)
-        self.save_concat_certkey(self.keypair, certificate, issuer, self.concat_path)
+        self.save_certificate(certificate, self.certificate_chain_path, issuers)
+        self.save_certificate(issuers[0], self.issuer_path, issuers[1:])
+        self.save_concat_certkey(self.keypair, certificate, issuers, self.concat_path)
 
         # all done
         self.hook_needed = True
         logger.debug(
-            f"Saved new certificate to files {self.certificate_chain_path}, {self.certificate_path}, and {self.concat_path}"
+            f"Saved new certificate and chain to files {self.certificate_chain_path}, {self.certificate_path}, and {self.concat_path}"
         )
         return True
 
@@ -900,7 +946,7 @@ class Certgrinder:
         if not certificate:
             # does the file exist?
             if os.path.exists(self.certificate_chain_path):
-                certificate = self.load_certificate(self.certificate_chain_path)
+                certificate = self.load_certificates(self.certificate_chain_path)[0]
             else:
                 logger.error(f"Certificate {self.certificate_chain_path} not found")
                 self.error = True
@@ -933,7 +979,7 @@ class Certgrinder:
         if not os.path.exists(self.certificate_path):
             logger.error(f"Certificate {self.certificate_path} not found")
             return
-        certificate = self.load_certificate(self.certificate_path)
+        certificate = self.load_certificates(self.certificate_path)[0]
         logger.info(
             f"- Showing certificate for keytype '{self.keytype}' for domain set: {self.domainset}"
         )
@@ -974,49 +1020,56 @@ class Certgrinder:
     def get_ocsp(
         self,
         certificate: typing.Optional[cryptography.x509.Certificate] = None,
-        issuer: typing.Optional[cryptography.x509.Certificate] = None,
+        issuers: typing.List[cryptography.x509.Certificate] = [],
         stdout: typing.Optional[bytes] = None,
     ) -> bool:
         """The ``get ocsp`` subcommand method, called for each domainset by ``self.grind()``.
 
         Args:
             certificate: The certificate to get OCSP response for (optional)
-            issuer: The issuer of the certificate to get OCSP response for (optional)
-            stdout: The OCSP response to use instead of calling certgrinderd (optional)
+            issuers: The list of issuer(s) of the certificate to get OCSP response for (optional)
+            stdout: The mock OCSP response to return instead of calling certgrinderd (optional, used for unit tests)
 
         Returns:
             None
         """
-        if not certificate or not issuer:
+        if not certificate or not issuers:
+            # read chain from disk
+            with open(self.certificate_chain_path, "rb") as f:
+                certificate_bytes_list = self.split_pem_chain(f.read())
             try:
-                certificate = self.load_certificate(path=self.certificate_path)
+                certificate = self.load_certificates(path=self.certificate_path)[0]
             except FileNotFoundError:
                 logger.warning(
                     f"Certificate {self.certificate_path} not found, parsing certificate from chain (this is a workaround for upgrades from older versions where foo-certificate.crt was not written separately)."
                 )
-                with open(self.certificate_chain_path, "rb") as f:
-                    certificate_bytes, issuer_bytes = self.split_pem_chain(f.read())
                 certificate = cryptography.x509.load_pem_x509_certificate(
-                    certificate_bytes, default_backend()
+                    certificate_bytes_list[0], default_backend()
                 )
                 self.save_certificate(certificate, self.certificate_path)
 
             try:
-                issuer = self.load_certificate(path=self.issuer_path)
+                issuers = self.load_certificates(path=self.issuer_path)
             except FileNotFoundError:
                 logger.warning(
                     f"Issuer cert {self.issuer_path} not found, parsing issuer from chain (this is a workaround for upgrades from older versions where foo-issuer.crt was not written separately)."
                 )
-                with open(self.certificate_chain_path, "rb") as f:
-                    certificate_bytes, issuer_bytes = self.split_pem_chain(f.read())
-                issuer = cryptography.x509.load_pem_x509_certificate(
-                    issuer_bytes, default_backend()
-                )
-                self.save_certificate(issuer, self.issuer_path)
+                issuers = []
+                for issuerbytes in certificate_bytes_list[1:]:
+                    issuers.append(
+                        cryptography.x509.load_pem_x509_certificate(
+                            issuerbytes, default_backend()
+                        )
+                    )
+                self.save_certificate(issuers[0], self.issuer_path, issuers[1:])
 
+        # we need the full chain to get OCSP
         stdin = certificate.public_bytes(primitives.serialization.Encoding.PEM)
-        stdin += issuer.public_bytes(primitives.serialization.Encoding.PEM)
+        for issuer in issuers:
+            stdin += issuer.public_bytes(primitives.serialization.Encoding.PEM)
 
+        logger.debug("sending this to certgrinderd to get ocsp:")
+        logger.debug(stdin)
         if stdout is None:
             # get ocsp response from certgrinderd
             stdout = self.run_certgrinderd(stdin=stdin, command=["get", "ocsp"])
@@ -1921,6 +1974,14 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     # optional arguments
+    parser.add_argument(
+        "-a",
+        "--alternate-chain",
+        dest="alternate-chain",
+        action="store_true",
+        help="Use alternate chain. For production this means using the short chain with 1 intermediate signed by 'ISRG Root X1' instead of using the long chain with 2 intermediates signed by 'DST Root CA X3'. For staging it means using 'Fake LE Root X2' (1 intermediate) instead of the usual 'Fake LE Root X1' (2 intermediates).",
+        default=argparse.SUPPRESS,
+    )
     parser.add_argument(
         "--certgrinderd",
         dest="certgrinderd",
