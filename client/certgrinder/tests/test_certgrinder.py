@@ -1551,7 +1551,7 @@ def test_configure_staging_alternate_chain(tmpdir_factory):
             "alternate-chain": True,
         }
     )
-    assert certgrinder.conf["preferred-chain"] == "Fake LE Root X2"
+    assert certgrinder.conf["preferred-chain"] == "Fake_LE_Root_X2"
 
 
 def test_load_certificates_broken_input(tmpdir_factory):

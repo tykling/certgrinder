@@ -1,7 +1,6 @@
 abspath
 ACMEZONE
 aia
-ambv
 ansible
 anycast
 api
@@ -101,6 +100,8 @@ idna
 img
 isfile
 isinstance
+issuerbytes
+issuerlen
 JSON
 kcounter
 keyformat
@@ -155,7 +156,6 @@ pubin
 pubkey
 publickey
 pycqa
-pydocstyle
 pypi
 pytest
 pyyaml
@@ -186,6 +186,7 @@ SPHINXOPTS
 spki
 ssh
 sshd
+shlex
 SSHFP
 ssl
 staticmethod

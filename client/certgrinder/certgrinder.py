@@ -178,20 +178,20 @@ class Certgrinder:
             # set preferred-chain based on the value of alternate-chain
             if self.conf["alternate-chain"]:
                 # one intermediate
-                self.conf["preferred-chain"] = "Fake LE Root X2"
+                self.conf["preferred-chain"] = "Fake_LE_Root_X2"
             else:
                 # two intermediates
-                self.conf["preferred-chain"] = "Fake LE Root X1"
+                self.conf["preferred-chain"] = "Fake_LE_Root_X1"
         else:
             # set preferred-chain based on the value of alternate-chain
             if self.conf["alternate-chain"]:
                 # the alternate chain has one intermediate
-                self.conf["preferred-chain"] = "ISRG Root X1"
+                self.conf["preferred-chain"] = "ISRG_Root_X1"
             else:
-                # the defaiæt chain has two intermediates
-                self.conf["preferred-chain"] = "DST Root CA X3"
+                # the default chain has two intermediates
+                self.conf["preferred-chain"] = "DST_Root_CA_X3"
 
-        if self.conf["preferred-chain"] in ["DST Root CA X3", "Fake LE Root X1"]:
+        if self.conf["preferred-chain"] in ["DST_Root_CA_X3", "Fake_LE_Root_X1"]:
             # two intermediates
             self.conf["expected-chain-length"] = 3
         else:
