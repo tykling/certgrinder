@@ -375,7 +375,7 @@ class Certgrinderd:
 
         if self.conf["preferred-chain"]:
             command.append("--preferred-chain")
-            command.append(str(self.conf["preferred-chain"]))
+            command.append(str(self.conf["preferred-chain"]).replace("_", " "))
 
         return command
 
