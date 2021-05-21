@@ -1,4 +1,4 @@
-rtgrinder Change Log
+Certgrinder Change Log
 =======================
 
 This is the changelog for ``certgrinder``. The latest version of this file
