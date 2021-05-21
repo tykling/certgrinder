@@ -9,6 +9,15 @@ All notable changes to ``certgrinderd`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+v0.17.0-rc3 (21-may-2021)
+-------------------------
+
+Fixed
+~~~~~
+- Replace underscores with spaces in the preferred-chain name
+- Do not check number of intermediates when getting OCSP.
+
+
 v0.17.0-rc2 (20-may-2021)
 -------------------------
 

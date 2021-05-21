@@ -1,4 +1,4 @@
-Certgrinder Change Log
+rtgrinder Change Log
 =======================
 
 This is the changelog for ``certgrinder``. The latest version of this file
@@ -8,6 +8,12 @@ Github <https://github.com/tykling/certgrinder/blob/master/docs/certgrinder-chan
 All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
+
+v0.17.0-rc3 (21-may-2021)
+-------------------------
+
+- No changes
+
 
 v0.17.0-rc2 (20-may-2021)
 -------------------------

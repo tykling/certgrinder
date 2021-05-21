@@ -375,7 +375,9 @@ class Certgrinderd:
 
         if self.conf["preferred-chain"]:
             command.append("--preferred-chain")
-            command.append(str(self.conf["preferred-chain"]).replace("_", " "))
+            # replace underscores with spaces in the chain name before passing to Certbot
+            assert isinstance(self.conf["preferred-chain"], str)
+            command.append(self.conf["preferred-chain"].replace("_", " "))
 
         return command
 
@@ -500,18 +502,20 @@ class Certgrinderd:
 
     @classmethod
     def parse_certificate_chain(
-        cls, certpath: typing.Optional[str], expected_length: int
+        cls,
+        certpath: typing.Optional[str],
+        expected_length: typing.Optional[int] = None,
     ) -> typing.List[cryptography.x509.Certificate]:
         """Parse certificate chain from path or stdin.
 
         Args:
             certpath: The path of the certificate chain to parse (optional),
                       chainbytes are taken from stdin if not provided.
-            expected_length: The number of certificates to expect
+            expected_length: The number of certificates to expect. Optional.
 
         Returns:
-            A list of cryptography.x509.Certificate objects, with the leaf
-            certificate as the first list element.
+            A list of cryptography.x509.Certificate objects in the order they appear
+            in the input.
         """
         if certpath:
             logger.debug(f"Reading PEM cert chain from file {certpath} ...")
@@ -522,7 +526,7 @@ class Certgrinderd:
             chainbytes = sys.stdin.read().encode("ASCII")
 
         certs = cls.split_pem_chain(chainbytes)
-        if len(certs) != expected_length:
+        if expected_length and len(certs) != expected_length:
             logger.error(
                 f"The input has {len(certs)} certificates, expected a chain with {expected_length} certificates, something is not right."
             )
@@ -608,9 +612,7 @@ class Certgrinderd:
             The OCSPRequest object
         """
         assert isinstance(self.conf["expected-chain-length"], int)
-        chain = self.parse_certificate_chain(
-            certpath, expected_length=self.conf["expected-chain-length"]
-        )
+        chain = self.parse_certificate_chain(certpath)
         certificate = chain[0]
         issuers = chain[1:]
         logger.debug(f"Getting OCSP response for cert {certificate.subject}")
