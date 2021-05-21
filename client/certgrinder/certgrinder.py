@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Certgrinder v0.17.0 module.
+"""Certgrinder v0.18.0-dev module.
 
 See https://certgrinder.readthedocs.io/en/latest/certgrinder.html
 and https://github.com/tykling/certgrinder for more.
@@ -30,7 +30,7 @@ from cryptography.hazmat.backends.openssl import x509
 from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinder.%s" % __name__)
-__version__ = "0.17.0"
+__version__ = "0.18.0-dev"
 
 
 class Certgrinder:
