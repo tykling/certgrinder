@@ -3,7 +3,7 @@ black==21.9b0
 codecov==2.1.11
 flake8==3.9.2
 isort==5.8.0
-pre-commit==2.12.1
+pre-commit==2.15.0
 mypy==0.910
 Sphinx==4.0.1
 sphinx-rtd-theme==0.5.2
