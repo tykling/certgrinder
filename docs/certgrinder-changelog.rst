@@ -9,10 +9,15 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-v0.18.0 (unreleased)
---------------------
+v0.17.1 (21-nov-2021)
+---------------------
 
-- No changes
+Changed
+~~~~~~~
+- Update dependency PyYAML==5.4.1 to PyYAML==6.0
+- Cryptography 35.0.0 is incompatible with Certgrinder v0.17.x so the Cryptography dependency has been pinned to a version lower than <35 in setup.py. Next version of Certgrinder will support cryptography v35.0.0 and newer.
+- Update a bunch of development dependencies
+- Switch to Github Actions instead of Travis CI
 
 
 v0.17.0 (21-may-2021)

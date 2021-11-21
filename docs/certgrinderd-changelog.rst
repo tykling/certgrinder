@@ -9,10 +9,16 @@ All notable changes to ``certgrinderd`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-v0.18.0 (unreleased)
+v0.17.1 (21-nov-2021)
 --------------------
 
-- No changes
+Changed
+~~~~~~~
+- Update dependency PyYAML==5.4.1 to PyYAML==6.0
+- Update dependency certbot==1.15.0 to certbot==1.21.0
+- Update dependency requests==2.25.1 to requests==2.26.0
+- Update a bunch of development dependencies
+- Switch to Github Actions instead of Travis CI
 
 
 v0.17.0 (21-may-2021)
