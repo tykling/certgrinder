@@ -237,6 +237,7 @@ webserver
 wiki
 wikipedia
 workaround
+workflows
 www
 wwwroot
 yaml
