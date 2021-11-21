@@ -10,6 +10,6 @@ sphinx-rtd-theme==1.0.0
 sphinx-argparse==0.3.1
 pytest==6.2.5
 pytest-cov==3.0.0
-pytest-randomly==3.10.1
+pytest-randomly==3.10.2
 tox==3.24.4
 twine==3.6.0
