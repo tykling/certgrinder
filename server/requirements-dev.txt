@@ -1,15 +1,15 @@
 -r requirements.txt
-black==21.9b0
+black==21.11b1
 codecov==2.1.12
 flake8==4.0.1
-isort==5.9.3
+isort==5.10.1
 pre-commit==2.15.0
 mypy==0.910
-Sphinx==4.2.0
+Sphinx==4.3.0
 sphinx-rtd-theme==1.0.0
 sphinx-argparse==0.3.1
 pytest==6.2.5
 pytest-cov==3.0.0
-pytest-randomly==3.10.1
+pytest-randomly==3.10.2
 tox==3.24.4
-twine==3.4.2
+twine==3.6.0
