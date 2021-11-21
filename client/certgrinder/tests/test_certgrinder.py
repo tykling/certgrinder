@@ -102,6 +102,7 @@ def test_certgrinderd_broken_csr(
 
 
 def test_get_certificate(
+    pebble_server_build,
     pebble_server_run,
     pebble_issuer,
     certgrinderd_configfile,
@@ -160,12 +161,7 @@ def test_get_certificate(
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
 
     # initialise a TLS context with the pebble minica.pem to download certs
-    tls_context = ssl.create_default_context(
-        cafile=str(
-            pathlib.Path.home()
-            / "go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem"
-        )
-    )
+    tls_context = ssl.create_default_context(cafile=str(pebble_server_build / "test/certs/pebble.minica.pem"))
 
     # download issuer cert
     with urllib.request.urlopen(
