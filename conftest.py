@@ -16,8 +16,9 @@ from cryptography.hazmat.backends import default_backend
 
 
 @pytest.fixture(scope="session")
-def pebble_server_build():
+def pebble_server_build(tmp_path_factory):
     """Get the pebble sources, and build the binary, and run it."""
+    pebblepath = tmp_path_factory.mktemp("pebble")
     print("Making sure we have Go and Git...")
     assert (
         shutil.which("go") is not None
@@ -26,45 +27,44 @@ def pebble_server_build():
         shutil.which("git") is not None
     ), "Git is required to run the testsuite (for getting Pebble sources)"
     print("Begginning setup")
-    print("Getting pebble sources ...")
+    print("Getting pebble sources...")
     proc = subprocess.run(
-        args=[shutil.which("go"), "get", "-u", "github.com/letsencrypt/pebble/..."],
-        env={
-            "GOPATH": pathlib.Path.home() / "go",
-            "PATH": "/bin:/usr/bin:/usr/local/bin:"
-            + str(pathlib.Path(shutil.which("git")).parent),
-        },
+        args=[shutil.which("git"), "clone", "https://github.com/letsencrypt/pebble/", pebblepath],
+        cwd=pebblepath,
+    )
+    assert proc.returncode == 0
+    proc = subprocess.run(
+        args=[shutil.which("git"), "checkout", "v2.3.1"],
+        cwd=pebblepath,
     )
     assert proc.returncode == 0
 
-    print("Building pebble...")
+    print(f"Building pebble in pebblepath {pebblepath}...")
     proc = subprocess.run(
-        args=[shutil.which("go"), "install", "./ ..."],
-        env={"GOPATH": pathlib.Path.home() / "go"},
-        cwd=pathlib.Path.home() / "go/src/github.com/letsencrypt/pebble",
+        args=[shutil.which("go"), "install", "./..."],
+        env={
+            "GOPATH": pathlib.Path.home() / "go",
+            "HOME": pebblepath,
+        },
+        cwd=pebblepath,
     )
     assert proc.returncode == 0
 
     print("Patching pebble config file...")
-    pebbleconfig = (
-        pathlib.Path.home()
-        / "go/src/github.com/letsencrypt/pebble/test/config/pebble-config.json"
-    )
+    pebbleconfig = pebblepath / "test/config/pebble-config.json"
     with open(pebbleconfig, "r") as f:
         conf = json.loads(f.read())
     conf["pebble"].update({"ocspResponderURL": "http://127.0.0.1:8080"})
     with open(pebbleconfig, "w") as f:
         f.write(json.dumps(conf))
+    return pebblepath
 
 
 # run pebble server with 1 and 2 intermediates
 @pytest.fixture(scope="session", params=["1", "2"])
 def pebble_server_run(request, pebble_server_build):
     """Run pebble server with primary or alternate chain as needed."""
-    pebbleconfig = (
-        pathlib.Path.home()
-        / "go/src/github.com/letsencrypt/pebble/test/config/pebble-config.json"
-    )
+    pebbleconfig = pebble_server_build / "test/config/pebble-config.json"
     print("Running pebble server...")
     proc = subprocess.Popen(
         args=[pathlib.Path.home() / "go/bin/pebble", "-config", pebbleconfig],
@@ -73,7 +73,7 @@ def pebble_server_run(request, pebble_server_build):
             "PEBBLE_WFE_NONCEREJECT": "0",
             "PEBBLE_CHAIN_LENGTH": request.param,
         },
-        cwd=pathlib.Path.home() / "go/src/github.com/letsencrypt/pebble",
+        cwd=pebble_server_build,
     )
 
     time.sleep(2)
@@ -90,13 +90,12 @@ def pebble_server_run(request, pebble_server_build):
 
 
 @pytest.fixture(scope="function")
-def pebble_issuer(tmp_path_factory):
+def pebble_issuer(tmp_path_factory, pebble_server_build):
     """Download issuer cert and key from pebble and write it to a temp file."""
     certpath = tmp_path_factory.mktemp("pebble") / "pebble-issuer.crt"
     r = requests.get(
         "https://127.0.0.1:15000/intermediates/0",
-        verify=pathlib.Path.home()
-        / "go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem",
+        verify=pebble_server_build / "test/certs/pebble.minica.pem",
     )
     with open(certpath, "wb") as f:
         f.write(r.content)
@@ -104,8 +103,7 @@ def pebble_issuer(tmp_path_factory):
     keypath = tmp_path_factory.mktemp("pebble") / "pebble-issuer.key"
     r = requests.get(
         "https://localhost:15000/intermediate-keys/0",
-        verify=pathlib.Path.home()
-        / "go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem",
+        verify=pebble_server_build / "test/certs/pebble.minica.pem",
     )
     with open(keypath, "wb") as f:
         f.write(r.content)
