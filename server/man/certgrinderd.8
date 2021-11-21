@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDERD" "8" "May 17, 2021" "0.17.0-dev" "Certgrinder"
+.TH "CERTGRINDERD" "8" "Nov 21, 2021" "0.18.0-dev" "Certgrinder"
 .SH NAME
 certgrinderd \- Manpage for certgrinderd
 .
@@ -244,7 +244,7 @@ Both scripts must be able to handle the challenge type(s) you use. The same scri
 When the server has been configured with hooks you can test from a client using just SSH and a manually generated CSR, with something like: \fBcat mail4.example.com.csr | ssh certgrinderd@certgrinder.example.org \-T \-\- \-\-staging get certificate\fP where \fB\-T\fP is to prevent SSH from allocating a TTY on the server, \fB\-\-\fP is to mark the end of the SSH args, and \fB\-\-staging\fP is to make \fBcertgrinderd\fP use the LetsEncrypt staging servers. If all goes well it should output some logging and a certificate chain.
 .SH COMMAND LINE USAGE
 .sp
-certgrinderd version 0.17.0\-dev. See the manpage certgrinderd(8) or ReadTheDocs for more info.
+certgrinderd version 0.18.0\-dev. See the manpage certgrinderd(8) or ReadTheDocs for more info.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -260,6 +260,7 @@ usage: certgrinderd [\-h] [\-\-acme\-email ACME\-EMAIL]
                     [\-c CONFIG\-FILE] [\-\-certificate\-file CERTIFICATE\-FILE]
                     [\-\-csr\-file CSR\-FILE] [\-d]
                     [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-p PID\-DIR]
+                    [\-\-preferred\-chain PREFERRED\-CHAIN]
                     [\-\-skip\-acme\-server\-cert\-verify] [\-s]
                     [\-\-syslog\-facility SYSLOG\-FACILITY]
                     [\-\-syslog\-socket SYSLOG\-SOCKET] [\-t TEMP\-DIR]
@@ -326,6 +327,9 @@ Logging level. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Defaults to INFO.
 .TP
 .B\-p, \-\-pid\-dir
 The directory to store the PID file in
+.TP
+.B\-\-preferred\-chain
+The preferred chain to use. Adds \-\-preferred\-chain to the Certbot command. Use to pick preferred signing chain when alternatives are available. Replace spaces with underscores in the chain name, so DST_Root_CA_X3 or ISRG_Root_X1 for prod or Fake_LE_Root_X1 or Fake_LE_Root_X2 for staging.
 .TP
 .B\-\-skip\-acme\-server\-cert\-verify
 Do not verify the ACME servers certificate
@@ -562,12 +566,17 @@ Boolean \- True if all is well, False if a problem was found
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod check_ocsp_response_signature(ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse, issuer: cryptography.x509.base.Certificate) -> bool
+.B classmethod check_ocsp_response_signature(ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse, issuers: List[cryptography.x509.base.Certificate]) -> bool
 Check the signature of the OCSP response.
 .INDENT 7.0
 .TP
 .B Parameters
+.INDENT 7.0
+.IP \(bu 2
 \fBocsp_response\fP \-\- The OCSP response to check
+.IP \(bu 2
+\fBissuers\fP \-\- A list of issuer(s)
+.UNINDENT
 .TP
 .B Returns
 Boolean \- True if all is well, False if a problem was found
@@ -696,15 +705,35 @@ The OCSPRequest object
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod parse_certificate_chain(certpath: Optional[str]) -> Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]
+.B classmethod parse_certificate(certificate_bytes: bytes) -> cryptography.x509.base.Certificate
+Parse and return individual certificate, or calls sys.exit(1) if something goes wrong.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBcertificate_bytes\fP \-\- A chunk of bytes representing a PEM certificate
+.TP
+.B Returns
+A cryptography.x509.Certificate object.
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B classmethod parse_certificate_chain(certpath: Optional[str], expected_length: Optional[int] = None) -> List[cryptography.x509.base.Certificate]
 Parse certificate chain from path or stdin.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcertpath\fP \-\- The path of the certificate chain to parse (optional)
+.INDENT 7.0
+.IP \(bu 2
+\fBcertpath\fP \-\- The path of the certificate chain to parse (optional),
+chainbytes are taken from stdin if not provided.
+.IP \(bu 2
+\fBexpected_length\fP \-\- The number of certificates to expect. Optional.
+.UNINDENT
 .TP
 .B Returns
-A tuple of (certificate, issuer) cryptography.x509.Certificate objects
+A list of cryptography.x509.Certificate objects in the order they appear
+in the input.
 .UNINDENT
 .UNINDENT
 .INDENT 7.0

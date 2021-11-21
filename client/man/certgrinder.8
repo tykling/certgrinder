@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDER" "8" "May 17, 2021" "0.17.0-dev" "Certgrinder"
+.TH "CERTGRINDER" "8" "Nov 21, 2021" "0.18.0-dev" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .
@@ -58,6 +58,15 @@ This is an alphabetical list of the configurable options:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
+.TP
+.B \fIalternate\-chain\fP
+Instruct certgrinder to request the alternate chain for signing.
+.sp
+For production this means using the short chain with 1 intermediate signed by \fBISRG Root X1\fP instead of using the default long chain with 2 intermediates signed by \fBDST Root CA X3\fP\&.
+.sp
+For staging it means using \fBFake LE Root X2\fP (1 intermediate) instead of the usual \fBFake LE Root X1\fP (2 intermediates).
+.sp
+Default: \fBFalse\fP
 .TP
 .B \fIcertgrinderd\fP
 The command to run as \fBcertgrinderd\fP\&. Usually this will be something like \fBssh certgrinderd@certgrinder.example.com \-T\fP, possibly also with a \fB\-\-config\-file\fP for \fBcertgrinderd\fP if needed.
@@ -360,14 +369,14 @@ Shown above is the \fBshow tlsa\fP subcommand in action. The value supplied shou
 The \fBversion\fP command is just a shortcut for \fB\-v\fP which shows the Certgrinder version and exits.
 .SH COMMAND LINE USAGE
 .sp
-Certgrinder version 0.17.0\-dev. See the manpage or ReadTheDocs for more info.
+Certgrinder version 0.18.0\-dev. See the manpage or ReadTheDocs for more info.
 
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-usage: certgrinder [\-h] [\-\-certgrinderd CERTGRINDERD]
+usage: certgrinder [\-h] [\-a] [\-\-certgrinderd CERTGRINDERD]
                    [\-\-cert\-renew\-threshold\-days CERT\-RENEW\-THRESHOLD\-DAYS]
                    [\-c CONFIG\-FILE] [\-d] [\-D DOMAIN\-LIST]
                    [\-\-invalid\-ca\-cn\-list INVALID\-CA\-CN\-LIST]
@@ -397,6 +406,9 @@ Command (required)
 .UNINDENT
 .SS Named Arguments
 .INDENT 0.0
+.TP
+.B\-a, \-\-alternate\-chain
+Use alternate chain. For production this means using the short chain with 1 intermediate signed by \(aqISRG Root X1\(aq instead of using the long chain with 2 intermediates signed by \(aqDST Root CA X3\(aq. For staging it means using \(aqFake LE Root X2\(aq (1 intermediate) instead of the usual \(aqFake LE Root X1\(aq (2 intermediates).
 .TP
 .B\-\-certgrinderd
 The command to reach the certgrinderd server, will get the input (CSR or cert chain) on stdin. Usually something like \(aqssh \fI\%certgrinderd@server\fP \-T\(aq
@@ -1056,6 +1068,7 @@ String of the TLSA data
 Return the certgrinderd command to run.
 .sp
 Adds \fB\-\-log\-level\fP with the current \fBself.conf["log\-level"]\fP\&.
+Also adds \-\-acme\-server\-url if configured, and \-\-preferred\-chain.
 .INDENT 7.0
 .TP
 .B Parameters
@@ -1123,7 +1136,7 @@ The string to use in filenames
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_ocsp(certificate: Optional[cryptography.x509.base.Certificate] = None, issuer: Optional[cryptography.x509.base.Certificate] = None, stdout: Optional[bytes] = None) -> bool
+.B get_ocsp(certificate: Optional[cryptography.x509.base.Certificate] = None, issuers: List[cryptography.x509.base.Certificate] = [], stdout: Optional[bytes] = None) -> bool
 The \fBget ocsp\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
 .INDENT 7.0
 .TP
@@ -1132,9 +1145,9 @@ The \fBget ocsp\fP subcommand method, called for each domainset by \fBself.grind
 .IP \(bu 2
 \fBcertificate\fP \-\- The certificate to get OCSP response for (optional)
 .IP \(bu 2
-\fBissuer\fP \-\- The issuer of the certificate to get OCSP response for (optional)
+\fBissuers\fP \-\- The list of issuer(s) of the certificate to get OCSP response for (optional)
 .IP \(bu 2
-\fBstdout\fP \-\- The OCSP response to use instead of calling certgrinderd (optional)
+\fBstdout\fP \-\- The mock OCSP response to return instead of calling certgrinderd (optional, used for unit tests)
 .UNINDENT
 .TP
 .B Returns
@@ -1148,15 +1161,15 @@ Loop over enabled keytypes and domainsets in \fBself.conf["domain\-list"]\fP and
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static load_certificate(path: str) -> cryptography.x509.base.Certificate
-Reads PEM certificate data from the path and returns the object.
+.B load_certificates(path: str) -> List[cryptography.x509.base.Certificate]
+Reads PEM certificate data from the path, parses the certificate(s), and returns them in a list.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBpath\fP \-\- The path to read the certificate from
+\fBpath\fP \-\- The path to read the PEM certificate(s) from
 .TP
 .B Returns
-The certificate object
+A list of cryptography.x509.Certificate objects
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
@@ -1289,8 +1302,21 @@ cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
 .UNINDENT
 .INDENT 7.0
 .TP
-.B parse_certificate_chain(certificate_chain: bytes, csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[Tuple[cryptography.x509.base.Certificate, cryptography.x509.base.Certificate]]
-Split a PEM chain into certificate and issuer, parse and return both.
+.B static parse_certificate(certificate_bytes: bytes) -> Optional[cryptography.x509.base.Certificate]
+Parse a bunch of bytes representing a PEM certificate and return.
+.INDENT 7.0
+.TP
+.B Parameters
+\fBcertificate_bytes\fP \-\- The PEM certificate
+.TP
+.B Returns
+The parsed cryptography.x509.Certificate object or None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B parse_certificate_chain(certificate_chain: bytes, csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[List[cryptography.x509.base.Certificate]]
+Split a PEM chain into a list of certificates.
 .INDENT 7.0
 .TP
 .B Parameters
@@ -1302,7 +1328,8 @@ Split a PEM chain into certificate and issuer, parse and return both.
 .UNINDENT
 .TP
 .B Returns
-A tuple of certificate, issuer if the certificate chain is valid, None otherwise
+A list of certificates with the leaf certificate first,
+or None if an error happens
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
@@ -1363,8 +1390,8 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_certificate(certificate: cryptography.x509.base.Certificate, path: str, issuer: Optional[cryptography.x509.base.Certificate] = None) -> None
-Save the PEM certificate to the path, optionally with an issuer.
+.B static save_certificate(certificate: cryptography.x509.base.Certificate, path: str, issuers: List[cryptography.x509.base.Certificate] = []) -> None
+Save the PEM certificate to the path, optionally with an issuer chain.
 .INDENT 7.0
 .TP
 .B Parameters
@@ -1374,7 +1401,7 @@ Save the PEM certificate to the path, optionally with an issuer.
 .IP \(bu 2
 \fBpath\fP \-\- The path to save the certificate in
 .IP \(bu 2
-\fBissuer\fP \-\- The issuer to write after the certificate (if any)
+\fBissuer\fP \-\- The list of issuer certificates to write after the certificate (if any)
 .UNINDENT
 .TP
 .B Returns
@@ -1383,8 +1410,8 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod save_concat_certkey(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey], certificate: cryptography.x509.base.Certificate, issuer: cryptography.x509.base.Certificate, path: str) -> None
-Create a single file with the private key, the cert and the issuer, in that order.
+.B classmethod save_concat_certkey(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey], certificate: cryptography.x509.base.Certificate, issuers: List[cryptography.x509.base.Certificate], path: str) -> None
+Create a single file with the private key, the cert and the issuer(s), in that order.
 .INDENT 7.0
 .TP
 .B Parameters
@@ -1394,7 +1421,7 @@ Create a single file with the private key, the cert and the issuer, in that orde
 .IP \(bu 2
 \fBcertificate\fP \-\- The certificate to save in the concat file
 .IP \(bu 2
-\fBissuer\fP \-\- The issuer to save in the concat file
+\fBissuers\fP \-\- The list of issuer(s) to save in the concat file
 .IP \(bu 2
 \fBpath\fP \-\- The path to save the concat file in
 .UNINDENT
