@@ -14,7 +14,9 @@ v0.18.0 (unreleased)
 
 Changed
 ~~~~~~~
-- No changes
+- Include Python 3.10 support
+- Update setup.py to include license_file
+- Update description in setup.py
 
 
 v0.17.1 (21-nov-2021)
