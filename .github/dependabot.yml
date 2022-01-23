@@ -2,9 +2,11 @@ version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/client/"
+    open-pull-requests-limit: 100
     schedule:
       interval: "daily"
   - package-ecosystem: "pip"
     directory: "/server/"
+    open-pull-requests-limit: 100
     schedule:
       interval: "daily"
