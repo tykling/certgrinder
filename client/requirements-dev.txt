@@ -1,7 +1,7 @@
 -r requirements.txt
 black==21.11b1
 codecov==2.1.12
-flake8==4.0.1
+flake8==5.0.3
 isort==5.10.1
 pre-commit==2.15.0
 mypy==0.910
