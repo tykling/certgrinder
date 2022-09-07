@@ -31,6 +31,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.7",
-    install_requires=["PyYAML", "dnspython", "cryptography<35", "pid"],
+    install_requires=["PyYAML", "dnspython", "cryptography<39", "pid"],
     include_package_data=True,
 )
