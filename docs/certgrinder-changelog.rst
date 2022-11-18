@@ -13,6 +13,11 @@ v0.18.0 (unreleased)
 --------------------
 
 This version drops support for Python 3.7 and only supports cryptograpy version 38 or greater.
+It also includes a Dockerfile and images can be found at https://hub.docker.com/r/certgrinder/certgrinder
+
+Added
+~~~~~
+- Added Dockerfile - images can be found at https://hub.docker.com/r/certgrinder/certgrinder
 
 Changed
 ~~~~~~~
