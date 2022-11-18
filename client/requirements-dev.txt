@@ -1,5 +1,5 @@
 -r requirements.txt
-black==21.11b1
+black==22.10.0
 codecov==2.1.12
 flake8==5.0.4
 isort==5.10.1
