@@ -30,7 +30,7 @@ setuptools.setup(
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.7",
-    install_requires=["PyYAML", "dnspython", "cryptography<39", "pid"],
+    python_requires=">=3.8",
+    install_requires=["PyYAML", "dnspython", "cryptography>38", "pid"],
     include_package_data=True,
 )

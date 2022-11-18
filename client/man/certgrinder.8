@@ -1,8 +1,5 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "CERTGRINDER" "8" "Jan 23, 2022" "0.18.0-dev" "Certgrinder"
-.SH NAME
-certgrinder \- Manpage for certgrinder
 .
 .nr rst2man-indent-level 0
 .
@@ -30,6 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
+.TH "CERTGRINDER" "8" "Nov 18, 2022" "0.18.0-dev" "Certgrinder"
+.SH NAME
+certgrinder \- Manpage for certgrinder
 .sp
 The \fBcertgrinder\fP client is responsible for generating a keypair and a CSR, which it uses to contact the Certgrinder server \fBcertgrinderd\fP over SSH to get a signed certificate. The following section explains how to install and configure it to get certificates from the Certgrinder server.
 .SH INSTALLATION
@@ -186,7 +186,7 @@ At this point you should be ready to test! Start by checking with SSH manually t
 .sp
 I run Certgrinder daily, although by default it only attempts certificate renewal when less than 30 days validity remains, and OCSP response renewal when half the validity period has passed.
 .sp
-When everything above works it is time to automate it by adding it to crontab. The following line works for me (the \fBperiodic\fP command sleeps a random number of minutes before doing its thing, so all the clients don\(aqt contact the Certgrinder server at once):
+When everything above works it is time to automate it by adding it to crontab. The following line works for me (the \fBperiodic\fP command sleeps a random number of minutes before doing its thing, so all the clients don’t contact the Certgrinder server at once):
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -326,7 +326,7 @@ The \fBshow ocsp\fP subcommand loops over the configured domainsets and shows in
 The \fBshow paths\fP subcommand loops over the configured domainsets and outputs the paths used for keys, certificates and OCSP responses.
 .SS show spki command
 .sp
-The \fBshow spki\fP subcommand outputs pin\-sha256 spki pins for the public keys. The \fBHPKP\fP standard \fI\%https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning\fP defined the \fBpin\-sha256\fP format for public key pins. While the \fBHPKP\fP standard didn\(aqt get much traction the pinning format is used in various places now, so \fBcertgrinder\fP can generate them.
+The \fBshow spki\fP subcommand outputs pin\-sha256 spki pins for the public keys. The \fBHPKP\fP standard \fI\%https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning\fP defined the \fBpin\-sha256\fP format for public key pins. While the \fBHPKP\fP standard didn’t get much traction the pinning format is used in various places now, so \fBcertgrinder\fP can generate them.
 .sp
 The operation is pretty simple:
 .INDENT 0.0
@@ -376,21 +376,10 @@ Certgrinder version 0.18.0\-dev. See the manpage or ReadTheDocs for more info.
 .sp
 .nf
 .ft C
-usage: certgrinder [\-h] [\-a] [\-\-certgrinderd CERTGRINDERD]
-                   [\-\-cert\-renew\-threshold\-days CERT\-RENEW\-THRESHOLD\-DAYS]
-                   [\-c CONFIG\-FILE] [\-d] [\-D DOMAIN\-LIST]
-                   [\-\-invalid\-ca\-cn\-list INVALID\-CA\-CN\-LIST]
-                   [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [\-k {rsa,ecdsa}]
-                   [\-n NAME\-SERVER] [\-\-now] [\-o OCSP\-RENEW\-THRESHOLD\-PERCENT]
-                   [\-\-path PATH]
-                   [\-\-periodic\-sleep\-minutes PERIODIC\-SLEEP\-MINUTES]
-                   [\-p PID\-DIR] [\-\-post\-renew\-hooks POST\-RENEW\-HOOKS]
-                   [\-\-post\-renew\-hooks\-dir POST\-RENEW\-HOOKS\-DIR]
-                   [\-\-post\-renew\-hooks\-dir\-runner POST\-RENEW\-HOOKS\-DIR\-RUNNER]
-                   [\-q] [\-s] [\-\-syslog\-facility SYSLOG\-FACILITY]
-                   [\-\-syslog\-socket SYSLOG\-SOCKET] [\-\-tlsa\-port TLSA\-PORT]
-                   [\-\-tlsa\-protocol TLSA\-PROTOCOL]
-                   [\-\-tlsa\-type\-list {310,311,312}] [\-v]
+usage: certgrinder [\-h] [\-a] [\-\-certgrinderd CERTGRINDERD] [\-\-cert\-renew\-threshold\-days CERT\-RENEW\-THRESHOLD\-DAYS] [\-c CONFIG\-FILE] [\-d] [\-D DOMAIN\-LIST] [\-\-invalid\-ca\-cn\-list INVALID\-CA\-CN\-LIST] [\-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+                   [\-k {rsa,ecdsa}] [\-n NAME\-SERVER] [\-\-now] [\-o OCSP\-RENEW\-THRESHOLD\-PERCENT] [\-\-path PATH] [\-\-periodic\-sleep\-minutes PERIODIC\-SLEEP\-MINUTES] [\-p PID\-DIR] [\-\-post\-renew\-hooks POST\-RENEW\-HOOKS]
+                   [\-\-post\-renew\-hooks\-dir POST\-RENEW\-HOOKS\-DIR] [\-\-post\-renew\-hooks\-dir\-runner POST\-RENEW\-HOOKS\-DIR\-RUNNER] [\-q] [\-s] [\-\-syslog\-facility SYSLOG\-FACILITY] [\-\-syslog\-socket SYSLOG\-SOCKET] [\-\-tlsa\-port TLSA\-PORT]
+                   [\-\-tlsa\-protocol TLSA\-PROTOCOL] [\-\-tlsa\-type\-list {310,311,312}] [\-v]
                    {check,get,help,periodic,show,version} ...
 .ft P
 .fi
@@ -399,7 +388,7 @@ usage: certgrinder [\-h] [\-a] [\-\-certgrinderd CERTGRINDERD]
 .SS Positional Arguments
 .INDENT 0.0
 .TP
-.Bcommand
+.B command
 Possible choices: check, get, help, periodic, show, version
 .sp
 Command (required)
@@ -407,96 +396,96 @@ Command (required)
 .SS Named Arguments
 .INDENT 0.0
 .TP
-.B\-a, \-\-alternate\-chain
-Use alternate chain. For production this means using the short chain with 1 intermediate signed by \(aqISRG Root X1\(aq instead of using the long chain with 2 intermediates signed by \(aqDST Root CA X3\(aq. For staging it means using \(aqFake LE Root X2\(aq (1 intermediate) instead of the usual \(aqFake LE Root X1\(aq (2 intermediates).
+.B \-a, \-\-alternate\-chain
+Use alternate chain. For production this means using the short chain with 1 intermediate signed by ‘ISRG Root X1’ instead of using the long chain with 2 intermediates signed by ‘DST Root CA X3’. For staging it means using ‘Fake LE Root X2’ (1 intermediate) instead of the usual ‘Fake LE Root X1’ (2 intermediates).
 .TP
-.B\-\-certgrinderd
-The command to reach the certgrinderd server, will get the input (CSR or cert chain) on stdin. Usually something like \(aqssh \fI\%certgrinderd@server\fP \-T\(aq
+.B \-\-certgrinderd
+The command to reach the certgrinderd server, will get the input (CSR or cert chain) on stdin. Usually something like ‘ssh \fI\%certgrinderd@server\fP \-T’
 .TP
-.B\-\-cert\-renew\-threshold\-days
+.B \-\-cert\-renew\-threshold\-days
 A certificate is renewed when it has less than this many days of lifetime left. Default: \fI30\fP
 .TP
-.B\-c, \-\-config\-file
+.B \-c, \-\-config\-file
 The path to the certgrinder.yml config file to use
 .TP
-.B\-d, \-\-debug
-Debug mode. Equal to setting \-\-log\-level=DEBUG.
+.B \-d, \-\-debug
+Debug mode. Equal to setting –log\-level=DEBUG.
 .TP
-.B\-D, \-\-domain\-list
+.B \-D, \-\-domain\-list
 Comma separated list of domains for a certificate. Can be specified multiple times.
 .TP
-.B\-\-invalid\-ca\-cn\-list
+.B \-\-invalid\-ca\-cn\-list
 The CommonName of an issuer (CA intermediate) to consider invalid. Can be specified multiple times.
 .TP
-.B\-l, \-\-log\-level
+.B \-l, \-\-log\-level
 Possible choices: DEBUG, INFO, WARNING, ERROR, CRITICAL
 .sp
 Logging level. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Defaults to INFO.
 .TP
-.B\-k, \-\-key\-type\-list
+.B \-k, \-\-key\-type\-list
 Possible choices: rsa, ecdsa
 .sp
-The keytypes to enable. Valid values are \(aqrsa\(aq and \(aqecdsa\(aq. Can be specified multiple times. Defaults to both rsa and ecdsa.
+The keytypes to enable. Valid values are ‘rsa’ and ‘ecdsa’. Can be specified multiple times. Defaults to both rsa and ecdsa.
 .TP
-.B\-n, \-\-name\-server
-Tell certgrinder to use this DNS server IP to lookup TLSA records. Only relevant with \-c / \-\-checktlsa. Only v4/v6 IPs, no hostnames.
+.B \-n, \-\-name\-server
+Tell certgrinder to use this DNS server IP to lookup TLSA records. Only relevant with \-c / –checktlsa. Only v4/v6 IPs, no hostnames.
 .TP
-.B\-\-now
-Run periodic command without delay. Equal to setting \-\-periodic\-sleep\-minutes 0.
+.B \-\-now
+Run periodic command without delay. Equal to setting –periodic\-sleep\-minutes 0.
 .TP
-.B\-o, \-\-ocsp\-renew\-threshold\-percent
+.B \-o, \-\-ocsp\-renew\-threshold\-percent
 Possible choices: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100
 .sp
 An integer between 0 and 100 specifying the amount of time in percent between \fBproduced_at\fP and \fBnext_update\fP which must have passed before an OCSP response is considered too old. Defaults to 50.
 .TP
-.B\-\-path
+.B \-\-path
 Tell certgrinder to use the specified directory for keys, CSRs and certificates. The directory must exist and be writeable by the user running certgrinder.
 .TP
-.B\-\-periodic\-sleep\-minutes
+.B \-\-periodic\-sleep\-minutes
 Tell certgrinder to sleep for a random number of minutes between 0 and this number before doing anything when the periodic command is used. Set to 0 to disable sleeping.
 .TP
-.B\-p, \-\-pid\-dir
+.B \-p, \-\-pid\-dir
 The directory to store the PID file in
 .TP
-.B\-\-post\-renew\-hooks
-The list of commands to run after one or more certificates are renewed. Most such commands will need root access to run, remember to prefix the command with \(aqsudo\(aq as needed. Can be specified multiple times. Default: \fINone\fP
+.B \-\-post\-renew\-hooks
+The list of commands to run after one or more certificates are renewed. Most such commands will need root access to run, remember to prefix the command with ‘sudo’ as needed. Can be specified multiple times. Default: \fINone\fP
 .TP
-.B\-\-post\-renew\-hooks\-dir
+.B \-\-post\-renew\-hooks\-dir
 Path to a folder containing executables to run after one or more certificates or OCSP responses are renewed. These will execute under the regular certgrinder user uid, so make sure to use sudo/doas in scripts or suid executables as needed. Default: \fINone\fP
 .TP
-.B\-\-post\-renew\-hooks\-dir\-runner
+.B \-\-post\-renew\-hooks\-dir\-runner
 Path to an executable like sudo to be used to run each of the executables in the post renew hooks dir. Default: \fINone\fP
 .TP
-.B\-q, \-\-quiet
-Quiet mode. No output at all if there is nothing to do, and no errors are encountered. Equal to setting \-\-log\-level=WARNING.
+.B \-q, \-\-quiet
+Quiet mode. No output at all if there is nothing to do, and no errors are encountered. Equal to setting –log\-level=WARNING.
 .TP
-.B\-s, \-\-staging
-Staging mode. Sets \-\-acme\-server\-url \fI\%https://acme\-staging\-v02.api.letsencrypt.org/directory\fP and \-\-invalid\-ca\-cn\-list empty. Use this while playing around to avoid hitting rate limits!
+.B \-s, \-\-staging
+Staging mode. Sets –acme\-server\-url \fI\%https://acme\-staging\-v02.api.letsencrypt.org/directory\fP and –invalid\-ca\-cn\-list empty. Use this while playing around to avoid hitting rate limits!
 .TP
-.B\-\-syslog\-facility
+.B \-\-syslog\-facility
 The syslog facility to use. Set this and syslog\-socket to enable logging to syslog.
 .TP
-.B\-\-syslog\-socket
+.B \-\-syslog\-socket
 The syslog socket to connect to. Set this and syslog\-facility to enable logging to syslog.
 .TP
-.B\-\-tlsa\-port
+.B \-\-tlsa\-port
 The service port number (like 443) for TLSA operations.
 .TP
-.B\-\-tlsa\-protocol
+.B \-\-tlsa\-protocol
 The service protocol (like tcp) for TLSA operations.
 .TP
-.B\-\-tlsa\-type\-list
+.B \-\-tlsa\-type\-list
 Possible choices: 310, 311, 312
 .sp
 Enables a TLSA type for TLSA operations. Can be specified multiple times.
 .TP
-.B\-v, \-\-version
+.B \-v, \-\-version
 Show version and exit.
 .UNINDENT
-.SS Sub\-commands:
+.SS Sub\-commands
 .SS check
 .sp
-Use the "check" command to check certificates, OCSP responses and TLSA records. Returns exit code 0 if all is well, and 1 if something needs attention.
+Use the “check” command to check certificates, OCSP responses and TLSA records. Returns exit code 0 if all is well, and 1 if something needs attention.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -510,12 +499,12 @@ certgrinder check [\-h] {certificate,connection,ocsp,tlsa} ...
 .SS Positional Arguments
 .INDENT 0.0
 .TP
-.Bsubcommand
+.B subcommand
 Possible choices: certificate, connection, ocsp, tlsa
 .sp
 Specify what to check using one of the available check sub\-commands.
 .UNINDENT
-.SS Sub\-commands:
+.SS Sub\-commands
 .SS certificate
 .sp
 Tell certgrinder to check certificate validity for all configured domainsets. Returns exit code 1 if any problem is found, exit code 0 if all is well.
@@ -531,7 +520,7 @@ certgrinder check certificate [\-h]
 .UNINDENT
 .SS connection
 .sp
-Tell certgrinder to check the connection to the certgrinderd server by calling the certgrinderd \(aqping\(aq command which should return the string \(aqpong\(aq if all is well.
+Tell certgrinder to check the connection to the certgrinderd server by calling the certgrinderd ‘ping’ command which should return the string ‘pong’ if all is well.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -557,7 +546,7 @@ certgrinder check ocsp [\-h]
 .UNINDENT
 .SS tlsa
 .sp
-Tell certgrinder to lookup TLSA records for the given port and protocol in the DNS and compare with what we have locally, for example: \(aqcertgrinder check tlsa 853 tcp\(aq
+Tell certgrinder to lookup TLSA records for the given port and protocol in the DNS and compare with what we have locally, for example: ‘certgrinder check tlsa 853 tcp’
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -571,15 +560,15 @@ certgrinder check tlsa [\-h] tlsa\-port tlsa\-protocol
 .SS Positional Arguments
 .INDENT 0.0
 .TP
-.Btlsa\-port
+.B tlsa\-port
 The port of the service, for example 443
 .TP
-.Btlsa\-protocol
+.B tlsa\-protocol
 The protocol of the service, for example tcp
 .UNINDENT
 .SS get
 .sp
-Use the "get" command to get certificates and OCSP responses
+Use the “get” command to get certificates and OCSP responses
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -593,15 +582,15 @@ certgrinder get [\-h] {certificate,ocsp} ...
 .SS Positional Arguments
 .INDENT 0.0
 .TP
-.Bsubcommand
+.B subcommand
 Possible choices: certificate, ocsp
 .sp
 Specify what to get using one of the available get sub\-commands
 .UNINDENT
-.SS Sub\-commands:
+.SS Sub\-commands
 .SS certificate
 .sp
-Tell certgrinder to get new certificate(s), regardless of their current state. Rarely needed, use \(aqperiodic\(aq command instead.
+Tell certgrinder to get new certificate(s), regardless of their current state. Rarely needed, use ‘periodic’ command instead.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -614,7 +603,7 @@ certgrinder get certificate [\-h]
 .UNINDENT
 .SS ocsp
 .sp
-Tell certgrinder to get OCSP responses for the configured domainset(s). Rarely needed, use \(aqperiodic\(aq command instead.
+Tell certgrinder to get OCSP responses for the configured domainset(s). Rarely needed, use ‘periodic’ command instead.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -627,7 +616,7 @@ certgrinder get ocsp [\-h]
 .UNINDENT
 .SS help
 .sp
-The "help" command just outputs the usage help
+The “help” command just outputs the usage help
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -640,7 +629,7 @@ certgrinder help [\-h]
 .UNINDENT
 .SS periodic
 .sp
-The "periodic" command checks certificates and renews them as needed. Meant to be run from cron or similar daily.
+The “periodic” command checks certificates and renews them as needed. Meant to be run from cron or similar daily.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -653,7 +642,7 @@ certgrinder periodic [\-h]
 .UNINDENT
 .SS show
 .sp
-Use the "show" command to show certificates, TLSA records, SPKI pins or configuration.
+Use the “show” command to show certificates, TLSA records, SPKI pins or configuration.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -667,12 +656,12 @@ certgrinder show [\-h] {certificate,configuration,paths,ocsp,spki,tlsa} ...
 .SS Positional Arguments
 .INDENT 0.0
 .TP
-.Bsubcommand
+.B subcommand
 Possible choices: certificate, configuration, paths, ocsp, spki, tlsa
 .sp
 Specify what to show using one of the available show sub\-commands
 .UNINDENT
-.SS Sub\-commands:
+.SS Sub\-commands
 .SS certificate
 .sp
 Tell certgrinder to output information about certificates.
@@ -740,7 +729,7 @@ certgrinder show spki [\-h]
 .UNINDENT
 .SS tlsa
 .sp
-Use the \(aqshow tlsa\(aq sub\-command to tell certgrinder to generate and print TLSA records for the given service, for example: \(aqcertgrinder show tlsa 443 tcp\(aq
+Use the ‘show tlsa’ sub\-command to tell certgrinder to generate and print TLSA records for the given service, for example: ‘certgrinder show tlsa 443 tcp’
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -754,15 +743,15 @@ certgrinder show tlsa [\-h] tlsa\-port tlsa\-protocol
 .SS Positional Arguments
 .INDENT 0.0
 .TP
-.Btlsa\-port
+.B tlsa\-port
 The port of the service, for example 443
 .TP
-.Btlsa\-protocol
+.B tlsa\-protocol
 The protocol of the service, for example tcp
 .UNINDENT
 .SS version
 .sp
-The "version" command just outputs the version of Certgrinder
+The “version” command just outputs the version of Certgrinder
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -776,7 +765,7 @@ certgrinder version [\-h]
 .SH CLASS METHODS
 .INDENT 0.0
 .TP
-.B class certgrinder.Certgrinder
+.B class  certgrinder.Certgrinder
 The Certgrinder client class.
 .INDENT 7.0
 .TP
@@ -785,10 +774,10 @@ Define the default config.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B check_certificate(certificate: Optional[cryptography.x509.base.Certificate] = None, public_key: Optional[Union[cryptography.hazmat.backends.openssl.rsa._RSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey]] = None) -> bool
+.B check_certificate(certificate:  Optional[Certificate]  =  None, public_key:  Optional[Union[_RSAPublicKey,  Ed25519PublicKey]]  =  None) -> bool
 Check certificate validity and returns True or False.
 .sp
-This method is called by self.grind() once per domainset when the "check certificate"
+This method is called by self.grind() once per domainset when the “check certificate”
 subcommand is invoked.
 It reads the certificate from self.certificate_path if there is no certificate arg
 .INDENT 7.0
@@ -796,9 +785,9 @@ It reads the certificate from self.certificate_path if there is no certificate a
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertificate\fP \-\- The certificate to be checked
+\fBcertificate\fP – The certificate to be checked
 .IP \(bu 2
-\fBpublic_key\fP \-\- The keypair the certificate is based on
+\fBpublic_key\fP – The keypair the certificate is based on
 .UNINDENT
 .TP
 .B Returns
@@ -807,16 +796,16 @@ True if everything is OK, False otherwise
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static check_certificate_expiry(certificate: cryptography.x509.base.Certificate, threshold_days: int) -> bool
+.B static  check_certificate_expiry(certificate:  Certificate, threshold_days:  int) -> bool
 Check the remaining validity of the certificate.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertificate\fP \-\- The certificate to check
+\fBcertificate\fP – The certificate to check
 .IP \(bu 2
-\fBthreshold_days\fP \-\- The lowest number of remaining days of validity that is considered valid
+\fBthreshold_days\fP – The lowest number of remaining days of validity that is considered valid
 .UNINDENT
 .TP
 .B Returns
@@ -825,16 +814,16 @@ True if remaining certificate lifetime is >= threshold_days, False if not
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static check_certificate_issuer(certificate: cryptography.x509.base.Certificate, invalid_ca_cn_list: List[str]) -> bool
+.B static  check_certificate_issuer(certificate:  Certificate, invalid_ca_cn_list:  List[str]) -> bool
 Check the issuer of the certificate.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertificate\fP \-\- The certificate to check
+\fBcertificate\fP – The certificate to check
 .IP \(bu 2
-\fBinvalid_ca_cn_list\fP \-\- The list of CA CommonName strings to consider invalid
+\fBinvalid_ca_cn_list\fP – The list of CA CommonName strings to consider invalid
 .UNINDENT
 .TP
 .B Returns
@@ -843,16 +832,16 @@ True if the certificate issuer CN is not in invalid_ca_cn_list
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static check_certificate_public_key(certificate: cryptography.x509.base.Certificate, public_key: Union[cryptography.hazmat.backends.openssl.rsa._RSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey]) -> bool
+.B static  check_certificate_public_key(certificate:  Certificate, public_key:  Union[_RSAPublicKey,  Ed25519PublicKey]) -> bool
 Make sure certificate has the specified public key.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertificate\fP \-\- The certificate to check
+\fBcertificate\fP – The certificate to check
 .IP \(bu 2
-\fBpublic_key\fP \-\- The public key
+\fBpublic_key\fP – The public key
 .UNINDENT
 .TP
 .B Returns
@@ -861,16 +850,16 @@ True if the public key matches, False if not
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static check_certificate_san_names(certificate: cryptography.x509.base.Certificate, san_names: List[str]) -> bool
+.B static  check_certificate_san_names(certificate:  Certificate, san_names:  List[str]) -> bool
 Make sure the certificate has the provided list of names as SAN.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertificate\fP \-\- The certificate to check
+\fBcertificate\fP – The certificate to check
 .IP \(bu 2
-\fBsan_names\fP \-\- A list of the names to expect
+\fBsan_names\fP – A list of the names to expect
 .UNINDENT
 .TP
 .B Returns
@@ -879,16 +868,16 @@ True if all san_names were found in the cert, and no others.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static check_certificate_subject(certificate: cryptography.x509.base.Certificate, subject: str) -> bool
+.B static  check_certificate_subject(certificate:  Certificate, subject:  Name) -> bool
 Make sure the certificate has the specified subject.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertificate\fP \-\- The certificate to check
+\fBcertificate\fP – The certificate to check
 .IP \(bu 2
-\fBsubject\fP \-\- The subject to expect
+\fBsubject\fP – The subject to expect
 .UNINDENT
 .TP
 .B Returns
@@ -897,7 +886,7 @@ True if the subject matches the cert, False if not
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod check_certificate_validity(certificate: cryptography.x509.base.Certificate, invalid_ca_cn_list: List[str], threshold_days: int, san_names: List[str], public_key: Optional[Union[cryptography.hazmat.backends.openssl.rsa._RSAPublicKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PublicKey]] = None, subject: str = \(aq\(aq) -> bool
+.B classmethod  check_certificate_validity(certificate:  Certificate, invalid_ca_cn_list:  List[str], threshold_days:  int, san_names:  List[str], public_key:  Optional[Union[_RSAPublicKey,  Ed25519PublicKey]]  =  None, subject:  Optional[Name]  =  None) -> bool
 Perform a few sanity checks of the certificate.
 .INDENT 7.0
 .IP \(bu 2
@@ -905,9 +894,9 @@ Check that the issuer is valid
 .IP \(bu 2
 Check that the certificate expiry is not exceeded
 .IP \(bu 2
-Check that the public key is correct
+Check that the public key is correct (if provided)
 .IP \(bu 2
-Check that the subject is correct
+Check that the subject is correct (if provided)
 .IP \(bu 2
 Check that the SubjectAltName data is correct
 .UNINDENT
@@ -916,15 +905,15 @@ Check that the SubjectAltName data is correct
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertificate\fP \-\- The certificate to check
+\fBcertificate\fP – The certificate to check
 .IP \(bu 2
-\fBinvalid_ca_cn_list\fP \-\- A list of CA CommonNames to consider invalid
+\fBinvalid_ca_cn_list\fP – A list of CA CommonNames to consider invalid
 .IP \(bu 2
-\fBthreshold_days\fP \-\- The minimum number of remaining days lifetime to considered valid.
+\fBthreshold_days\fP – The minimum number of remaining days lifetime to considered valid.
 .IP \(bu 2
-\fBsan_names\fP \-\- A list of domain names to expect in SubjectAltName of the certificate.
+\fBsan_names\fP – A list of domain names to expect in SubjectAltName of the certificate.
 .IP \(bu 2
-\fBkeypair\fP \-\- The keypair the certificate is for.
+\fBkeypair\fP – The keypair the certificate is for.
 .UNINDENT
 .TP
 .B Returns
@@ -933,12 +922,12 @@ False if a problem is found, True if all is well.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B check_connection(stdout: Optional[bytes] = None) -> bool
+.B check_connection(stdout:  Optional[bytes]  =  None) -> bool
 The \fBcheck connection\fP subcommand method.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBstdout\fP \-\- The certgrinderd response to use instead of calling certgrinderd (optional)
+\fBstdout\fP – The certgrinderd response to use instead of calling certgrinderd (optional)
 .TP
 .B Returns
 None
@@ -957,7 +946,7 @@ True if the OCSP response was found and is not too old, False otherwise
 .INDENT 7.0
 .TP
 .B check_tlsa() -> None
-The \(aqcheck tlsa\(aq subcommand method, called for each domainset by \fBself.grind()\fP\&.
+The ‘check tlsa’ subcommand method, called for each domainset by \fBself.grind()\fP\&.
 .sp
 Loops over the configured TLSA types and calls \fBself.verify_tlsa_record()\fP which
 does the heavy lifting.
@@ -969,7 +958,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B configure(userconfig: Dict[str, Union[str, int, bool, List[str]]]) -> None
+.B configure(userconfig:  Dict[str,  Union[str,  int,  bool,  List[str]]]) -> None
 Merge and check configuration and configure logging.
 .sp
 Merge the supplied userconfig dict with the default config,
@@ -977,7 +966,7 @@ checks for missing required settings, and configures logging and syslog.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBuserconfig\fP \-\- dict of the config to be merged with the default config
+\fBuserconfig\fP – dict of the config to be merged with the default config
 .TP
 .B Returns
 None
@@ -985,7 +974,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static generate_csr(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey], domains: List[str]) -> cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest
+.B static  generate_csr(keypair:  Union[_RSAPrivateKey,  Ed25519PrivateKey], domains:  List[str]) -> CertificateSigningRequest
 Generate and return a new CSR based on the public key and list of domains.
 .sp
 Only set CN since everything else is removed by LetsEncrypt in the certificate anyway.
@@ -995,9 +984,9 @@ Add all domains in subjectAltName, including the one put into CN.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBkeypair\fP \-\- The keypair to base the CSR on
+\fBkeypair\fP – The keypair to base the CSR on
 .IP \(bu 2
-\fBdomains\fP \-\- A list of domains to put in the CSR. First in the list will be cert CN.
+\fBdomains\fP – A list of domains to put in the CSR. First in the list will be cert CN.
 .UNINDENT
 .TP
 .B Returns
@@ -1006,23 +995,23 @@ The CSR object
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static generate_private_key(keytype: str) -> Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.backends.openssl.ec._EllipticCurvePrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey]
+.B static  generate_private_key(keytype:  str) -> Union[_RSAPrivateKey,  _EllipticCurvePrivateKey,  Ed25519PrivateKey]
 Generate and returns a private key.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBkeytype\fP \-\- "rsa" for RSA key, "ecdsa" for ECDSA and "ed25519" for ed25519
+\fBkeytype\fP – “rsa” for RSA key, “ecdsa” for ECDSA and “ed25519” for ed25519
 .TP
 .B Returns
 The keypair object
 .TP
 .B Raises
-\fBValueError\fP \-\- For unsupported keytypes
+\fBValueError\fP – For unsupported keytypes
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static generate_spki(derkey: bytes) -> str
+.B static  generate_spki(derkey:  bytes) -> str
 Generate and return a pin\-sha256 spki hpkp style pin for the provided public key.
 .INDENT 7.0
 .TP
@@ -1032,7 +1021,7 @@ openssl x509 \-in example.com.crt \-pubkey \-noout | openssl pkey \-pubin \-outf
 .INDENT 7.0
 .TP
 .B Parameters
-\fBderkey\fP \-\- The bytes representing the public key in DER format
+\fBderkey\fP – The bytes representing the public key in DER format
 .TP
 .B Returns
 A string of the SPKI pin
@@ -1040,7 +1029,7 @@ A string of the SPKI pin
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static generate_tlsa_record(derkey: bytes, tlsatype: str) -> str
+.B static  generate_tlsa_record(derkey:  bytes, tlsatype:  str) -> str
 Generate and return the data part of a TLSA record of the requested type.
 .sp
 TLSA record is generated from the DER formatted public key supplied.
@@ -1050,29 +1039,29 @@ Returns an uppercase hex string.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBderkey\fP \-\- The bytes representing the public key in DER format
+\fBderkey\fP – The bytes representing the public key in DER format
 .IP \(bu 2
-\fBtlsatype\fP \-\- The TLSA type (like "310")
+\fBtlsatype\fP – The TLSA type (like “310”)
 .UNINDENT
 .TP
 .B Returns
 String of the TLSA data
 .TP
 .B Raises
-\fBValueError\fP \-\- If an unknown TLSA type is passed
+\fBValueError\fP – If an unknown TLSA type is passed
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_certgrinderd_command(subcommand: List[str]) -> List[str]
+.B get_certgrinderd_command(subcommand:  List[str]) -> List[str]
 Return the certgrinderd command to run.
 .sp
 Adds \fB\-\-log\-level\fP with the current \fBself.conf["log\-level"]\fP\&.
-Also adds \-\-acme\-server\-url if configured, and \-\-preferred\-chain.
+Also adds –acme\-server\-url if configured, and –preferred\-chain.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBsubcommand\fP \-\- The certgrinderd subcommand to run as a list, like ["get", "ocsp"]
+\fBsubcommand\fP – The certgrinderd subcommand to run as a list, like [“get”, “ocsp”]
 .TP
 .B Returns
 A list of the elements which make up the \fBcertgrinderd\fP command
@@ -1080,7 +1069,7 @@ A list of the elements which make up the \fBcertgrinderd\fP command
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_certificate(csr: Optional[cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest] = None, stdout: Optional[bytes] = None) -> bool
+.B get_certificate(csr:  Optional[CertificateSigningRequest]  =  None, stdout:  Optional[bytes]  =  None) -> bool
 Get a new certificate for self.domainset.
 .sp
 This methods gets a new certificate regardless of the status of any
@@ -1091,9 +1080,9 @@ It can also be called by the \fBget certificate\fP subcommand.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcsr\fP \-\- The CSR to use instead of generating one
+\fBcsr\fP – The CSR to use instead of generating one
 .IP \(bu 2
-\fBstdout\fP \-\- The stdout bytes to use instead of calling self.run_certgrinderd(csr)
+\fBstdout\fP – The stdout bytes to use instead of calling self.run_certgrinderd(csr)
 .UNINDENT
 .TP
 .B Returns
@@ -1102,12 +1091,12 @@ False something goes wrong, True if all is well
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static get_der_pubkey(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey]) -> bytes
+.B static  get_der_pubkey(keypair:  Union[_RSAPrivateKey,  Ed25519PrivateKey]) -> bytes
 Return the DER formatted publickey.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBkeypair\fP \-\- The keypair which contains the public key
+\fBkeypair\fP – The keypair which contains the public key
 .TP
 .B Returns
 The bytes representing the DER formatted public key
@@ -1115,7 +1104,7 @@ The bytes representing the DER formatted public key
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_filename(hostname: str) -> str
+.B get_filename(hostname:  str) -> str
 Calculate the hostname string to be used for filenames.
 .sp
 Files are named after the ascii idna representation of the first hostname
@@ -1128,7 +1117,7 @@ representation of the hostname for the filename, leaving 25 bytes for metadata.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBdomainset\fP \-\- The list of hostnames
+\fBdomainset\fP – The list of hostnames
 .TP
 .B Returns
 The string to use in filenames
@@ -1136,18 +1125,18 @@ The string to use in filenames
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_ocsp(certificate: Optional[cryptography.x509.base.Certificate] = None, issuers: List[cryptography.x509.base.Certificate] = [], stdout: Optional[bytes] = None) -> bool
+.B get_ocsp(certificate:  Optional[Certificate]  =  None, issuers:  List[Certificate]  =  [], stdout:  Optional[bytes]  =  None) -> bool
 The \fBget ocsp\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertificate\fP \-\- The certificate to get OCSP response for (optional)
+\fBcertificate\fP – The certificate to get OCSP response for (optional)
 .IP \(bu 2
-\fBissuers\fP \-\- The list of issuer(s) of the certificate to get OCSP response for (optional)
+\fBissuers\fP – The list of issuer(s) of the certificate to get OCSP response for (optional)
 .IP \(bu 2
-\fBstdout\fP \-\- The mock OCSP response to return instead of calling certgrinderd (optional, used for unit tests)
+\fBstdout\fP – The mock OCSP response to return instead of calling certgrinderd (optional, used for unit tests)
 .UNINDENT
 .TP
 .B Returns
@@ -1156,17 +1145,17 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B grind(args: argparse.Namespace) -> None
+.B grind(args:  Namespace) -> None
 Loop over enabled keytypes and domainsets in \fBself.conf["domain\-list"]\fP and call args.method for each.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B load_certificates(path: str) -> List[cryptography.x509.base.Certificate]
+.B load_certificates(path:  str) -> List[Certificate]
 Reads PEM certificate data from the path, parses the certificate(s), and returns them in a list.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBpath\fP \-\- The path to read the PEM certificate(s) from
+\fBpath\fP – The path to read the PEM certificate(s) from
 .TP
 .B Returns
 A list of cryptography.x509.Certificate objects
@@ -1174,16 +1163,16 @@ A list of cryptography.x509.Certificate objects
 .UNINDENT
 .INDENT 7.0
 .TP
-.B load_domainset(domainset: List[str], keytype: str) -> None
+.B load_domainset(domainset:  List[str], keytype:  str) -> None
 Prepare paths and create/load private key.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBdomainset\fP \-\- The list of hostnames to load
+\fBdomainset\fP – The list of hostnames to load
 .IP \(bu 2
-\fBkeytype\fP \-\- The keytype to use, "rsa" or "ecdsa".
+\fBkeytype\fP – The keytype to use, “rsa” or “ecdsa”.
 .UNINDENT
 .TP
 .B Returns
@@ -1192,14 +1181,14 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static load_keypair(path: str) -> Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey]
+.B static  load_keypair(path:  str) -> Union[_RSAPrivateKey,  Ed25519PrivateKey]
 Load keypair bytes from disk, load key and return the object.
 .sp
 Fixes keypair permissions to 640 if they are not 640.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBpath\fP \-\- The path to load the keypair from
+\fBpath\fP – The path to load the keypair from
 .TP
 .B Returns
 The keypair object
@@ -1207,12 +1196,12 @@ The keypair object
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static load_ocsp_response(path: str) -> cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
+.B static  load_ocsp_response(path:  str) -> OCSPResponse
 Reads OCSP response in DER format from the path and returns the object.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBpath\fP \-\- The path to read the OCSP response from
+\fBpath\fP – The path to read the OCSP response from
 .TP
 .B Returns
 The OCSP response object
@@ -1220,7 +1209,7 @@ The OCSP response object
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static lookup_tlsa_record(domain: str, port: int, protocol: str, tlsatype: Optional[str] = None, nameserver: str = \(aq\(aq) -> Optional[List[str]]
+.B static  lookup_tlsa_record(domain:  str, port:  int, protocol:  str, tlsatype:  Optional[str]  =  None, nameserver:  str  =  \(aq\(aq) -> Optional[List[str]]
 Lookup TLSA records in DNS for the configured domain, port, and protocol.
 .sp
 Loop over any responses and look for the requested tlsatype.
@@ -1231,15 +1220,15 @@ Use system resolver unless nameserver is specified.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBdomain\fP \-\- The service domain name (like \fBmail.example.com\fP)
+\fBdomain\fP – The service domain name (like \fBmail.example.com\fP)
 .IP \(bu 2
-\fBport\fP \-\- The service port (like \fB443\fP)
+\fBport\fP – The service port (like \fB443\fP)
 .IP \(bu 2
-\fBprotocol\fP \-\- The service protocol (like \fBtcp\fP)
+\fBprotocol\fP – The service protocol (like \fBtcp\fP)
 .IP \(bu 2
-\fBtlsatype\fP \-\- The TLSA type (like \fB312\fP)
+\fBtlsatype\fP – The TLSA type (like \fB312\fP)
 .IP \(bu 2
-\fBnameserver\fP \-\- The DNS server IP to use instead of system resolver (optional)
+\fBnameserver\fP – The DNS server IP to use instead of system resolver (optional)
 .UNINDENT
 .TP
 .B Returns
@@ -1248,12 +1237,12 @@ A list of records or None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod output_spki(derkey: bytes) -> None
+.B classmethod  output_spki(derkey:  bytes) -> None
 Get and print the spki pin for the supplied DER public key.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBderkey\fP \-\- The bytes representation of the DER formatted public key
+\fBderkey\fP – The bytes representation of the DER formatted public key
 .TP
 .B Returns
 None
@@ -1261,7 +1250,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod output_tlsa_record(derkey: bytes, domain: str, port: int, protocol: str, tlsatype: str, warning: bool = False) -> None
+.B classmethod  output_tlsa_record(derkey:  bytes, domain:  str, port:  int, protocol:  str, tlsatype:  str, warning:  bool  =  False) -> None
 Output the TLSA record for the given DER key, domain, port, protocol and tlsatype.
 .sp
 Call \fBself.generate_tlsa()\fP and output the result formatted as a DNS record
@@ -1270,17 +1259,17 @@ Call \fBself.generate_tlsa()\fP and output the result formatted as a DNS record
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBderkey\fP \-\- The bytes representation the public key in DER format
+\fBderkey\fP – The bytes representation the public key in DER format
 .IP \(bu 2
-\fBdomain\fP \-\- The service domain name (like \fBmail.example.com\fP)
+\fBdomain\fP – The service domain name (like \fBmail.example.com\fP)
 .IP \(bu 2
-\fBport\fP \-\- The service port (like \fB443\fP)
+\fBport\fP – The service port (like \fB443\fP)
 .IP \(bu 2
-\fBprotocol\fP \-\- The service protocol (like \fBtcp\fP)
+\fBprotocol\fP – The service protocol (like \fBtcp\fP)
 .IP \(bu 2
-\fBtlsatype\fP \-\- The TLSA type (like \fB312\fP)
+\fBtlsatype\fP – The TLSA type (like \fB312\fP)
 .IP \(bu 2
-\fBwarning\fP \-\- Set True to output at level \fBWARNING\fP (default \fBINFO\fP)
+\fBwarning\fP – Set True to output at level \fBWARNING\fP (default \fBINFO\fP)
 .UNINDENT
 .TP
 .B Returns
@@ -1289,25 +1278,25 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static parse_certgrinderd_ocsp_output(certgrinderd_stdout: bytes) -> Optional[cryptography.hazmat.backends.openssl.ocsp._OCSPResponse]
+.B static  parse_certgrinderd_ocsp_output(certgrinderd_stdout:  bytes) -> Optional[OCSPResponse]
 Parse a DER encoded binary OCSP response as returned by Certgrinderd.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcertgrinderd_output\fP \-\- The bytes representing the OCSP response in DER format
+\fBcertgrinderd_output\fP – The bytes representing the OCSP response in DER format
 .TP
 .B Returns
-cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
+cryptography.x509.ocsp.OCSPResponse
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static parse_certificate(certificate_bytes: bytes) -> Optional[cryptography.x509.base.Certificate]
+.B static  parse_certificate(certificate_bytes:  bytes) -> Optional[Certificate]
 Parse a bunch of bytes representing a PEM certificate and return.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcertificate_bytes\fP \-\- The PEM certificate
+\fBcertificate_bytes\fP – The PEM certificate
 .TP
 .B Returns
 The parsed cryptography.x509.Certificate object or None
@@ -1315,16 +1304,16 @@ The parsed cryptography.x509.Certificate object or None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B parse_certificate_chain(certificate_chain: bytes, csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest) -> Optional[List[cryptography.x509.base.Certificate]]
+.B parse_certificate_chain(certificate_chain:  bytes, csr:  CertificateSigningRequest) -> Optional[List[Certificate]]
 Split a PEM chain into a list of certificates.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertificate_chain\fP \-\- The bytes representing the PEM formatted certificate chain
+\fBcertificate_chain\fP – The bytes representing the PEM formatted certificate chain
 .IP \(bu 2
-\fBcsr\fP \-\- The CSR this certificate was issued from
+\fBcsr\fP – The CSR this certificate was issued from
 .UNINDENT
 .TP
 .B Returns
@@ -1337,29 +1326,29 @@ or None if an error happens
 .B periodic() -> bool
 The periodic method performs periodic maintenance tasks.
 .sp
-This method is called by the \(aqperiodic\(aq command, from cron or similar.
+This method is called by the ‘periodic’ command, from cron or similar.
 It starts out by sleeping for a random period and then checks certificates and renews as needed.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B run_certgrinderd(stdin: bytes, command: List[str], certgrinderd_stdout: Optional[bytes] = None, certgrinderd_stderr: Optional[bytes] = None) -> Optional[bytes]
+.B run_certgrinderd(stdin:  bytes, command:  List[str], certgrinderd_stdout:  Optional[bytes]  =  None, certgrinderd_stderr:  Optional[bytes]  =  None) -> Optional[bytes]
 Run the configured \fBself.conf["certgrinderd"]\fP command.
 .sp
 The stdin argument will be passed to stdin of the command. A CSR is needed for
-the "get certificate" certgrinderd command, and a certificate chain is needed for
-the "get ocsp" command.
+the “get certificate” certgrinderd command, and a certificate chain is needed for
+the “get ocsp” command.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBstdin\fP \-\- bytes representing CSR or cert chain to pass to the certgrinderd command
+\fBstdin\fP – bytes representing CSR or cert chain to pass to the certgrinderd command
 .IP \(bu 2
-\fBcommand\fP \-\- The certgrinderd command and subcommand to call
+\fBcommand\fP – The certgrinderd command and subcommand to call
 .IP \(bu 2
-\fBcertgrinderd_stdout\fP \-\- Mocked certgrinderd stdout to use instead of calling the command
+\fBcertgrinderd_stdout\fP – Mocked certgrinderd stdout to use instead of calling the command
 .IP \(bu 2
-\fBcertgrinderd_stderr\fP \-\- Mocked certgrinderd stderr to use instead of calling the command
+\fBcertgrinderd_stderr\fP – Mocked certgrinderd stderr to use instead of calling the command
 .UNINDENT
 .TP
 .B Returns
@@ -1368,12 +1357,12 @@ The bytes representing the stdout from the subprocess call
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static run_post_renew_hook(hook: List[str]) -> bool
+.B static  run_post_renew_hook(hook:  List[str]) -> bool
 Run a specific post renew hook.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBhook\fP \-\- A list of string components of the command and arguments
+\fBhook\fP – A list of string components of the command and arguments
 .UNINDENT
 .sp
 Returns: True if exit code was 0, False otherwise.
@@ -1390,18 +1379,18 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_certificate(certificate: cryptography.x509.base.Certificate, path: str, issuers: List[cryptography.x509.base.Certificate] = []) -> None
+.B static  save_certificate(certificate:  Certificate, path:  str, issuers:  List[Certificate]  =  []) -> None
 Save the PEM certificate to the path, optionally with an issuer chain.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertificate\fP \-\- The certificate to save
+\fBcertificate\fP – The certificate to save
 .IP \(bu 2
-\fBpath\fP \-\- The path to save the certificate in
+\fBpath\fP – The path to save the certificate in
 .IP \(bu 2
-\fBissuer\fP \-\- The list of issuer certificates to write after the certificate (if any)
+\fBissuer\fP – The list of issuer certificates to write after the certificate (if any)
 .UNINDENT
 .TP
 .B Returns
@@ -1410,20 +1399,20 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod save_concat_certkey(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey], certificate: cryptography.x509.base.Certificate, issuers: List[cryptography.x509.base.Certificate], path: str) -> None
+.B classmethod  save_concat_certkey(keypair:  Union[_RSAPrivateKey,  Ed25519PrivateKey], certificate:  Certificate, issuers:  List[Certificate], path:  str) -> None
 Create a single file with the private key, the cert and the issuer(s), in that order.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBkeypair\fP \-\- The keypair to save in the concat file
+\fBkeypair\fP – The keypair to save in the concat file
 .IP \(bu 2
-\fBcertificate\fP \-\- The certificate to save in the concat file
+\fBcertificate\fP – The certificate to save in the concat file
 .IP \(bu 2
-\fBissuers\fP \-\- The list of issuer(s) to save in the concat file
+\fBissuers\fP – The list of issuer(s) to save in the concat file
 .IP \(bu 2
-\fBpath\fP \-\- The path to save the concat file in
+\fBpath\fP – The path to save the concat file in
 .UNINDENT
 .TP
 .B Returns
@@ -1432,7 +1421,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_csr(csr: cryptography.hazmat.backends.openssl.x509._CertificateSigningRequest, path: str) -> None
+.B static  save_csr(csr:  CertificateSigningRequest, path:  str) -> None
 Save the PEM version of the CSR to the path.
 .sp
 chmods the file 644 after writing.
@@ -1441,9 +1430,9 @@ chmods the file 644 after writing.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcsr\fP \-\- The CSR to be saved
+\fBcsr\fP – The CSR to be saved
 .IP \(bu 2
-\fBpath\fP \-\- The path to save the CSR to
+\fBpath\fP – The path to save the CSR to
 .UNINDENT
 .TP
 .B Returns
@@ -1452,37 +1441,37 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_keypair(keypair: Union[cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey, cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey], path: str) -> None
+.B static  save_keypair(keypair:  Union[_RSAPrivateKey,  Ed25519PrivateKey], path:  str) -> None
 Save keypair to disk.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBkeypair\fP \-\- The keypair to save
+\fBkeypair\fP – The keypair to save
 .IP \(bu 2
-\fBpath\fP \-\- The path to save the keypair in
+\fBpath\fP – The path to save the keypair in
 .UNINDENT
 .TP
 .B Returns
 None
 .TP
 .B Raises
-\fBValueError\fP \-\- For unsupported keytypes
+\fBValueError\fP – For unsupported keytypes
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_ocsp_response(ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse, path: str) -> None
+.B static  save_ocsp_response(ocsp_response:  OCSPResponse, path:  str) -> None
 Save the OCSP response to disk in DER format.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBocsp_response\fP \-\- The OCSP response to save
+\fBocsp_response\fP – The OCSP response to save
 .IP \(bu 2
-\fBpath\fP \-\- The path to save in
+\fBpath\fP – The path to save in
 .UNINDENT
 .TP
 .B Returns
@@ -1534,7 +1523,7 @@ None
 .INDENT 7.0
 .TP
 .B show_tlsa() -> None
-The \(aqshow tlsa\(aq subcommand method, called for each domainset by \fBself.grind()\fP\&.
+The ‘show tlsa’ subcommand method, called for each domainset by \fBself.grind()\fP\&.
 .INDENT 7.0
 .TP
 .B Returns
@@ -1543,12 +1532,12 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static split_pem_chain(pem_chain_bytes: bytes) -> List[bytes]
+.B static  split_pem_chain(pem_chain_bytes:  bytes) -> List[bytes]
 Split a PEM chain into a list of bytes of the individual PEM certificates.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBpem_chain_bytes\fP \-\- The bytes representing the PEM chain
+\fBpem_chain_bytes\fP – The bytes representing the PEM chain
 .TP
 .B Returns
 A list of 0 or more bytes chunks representing each certificate
@@ -1556,7 +1545,7 @@ A list of 0 or more bytes chunks representing each certificate
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod verify_tlsa_record(derkey: bytes, domain: str, port: int, protocol: str, tlsatype: str, nameserver: str = \(aq\(aq) -> bool
+.B classmethod  verify_tlsa_record(derkey:  bytes, domain:  str, port:  int, protocol:  str, tlsatype:  str, nameserver:  str  =  \(aq\(aq) -> bool
 Check the TLSA records for the port/protocol/domain and DER key in the DNS.
 .sp
 Output the info needed to fix things when missing records are found.
@@ -1565,17 +1554,17 @@ Output the info needed to fix things when missing records are found.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBderkey\fP \-\- The bytes representation the public key in DER format
+\fBderkey\fP – The bytes representation the public key in DER format
 .IP \(bu 2
-\fBdomain\fP \-\- The service domain name (like \fBmail.example.com\fP)
+\fBdomain\fP – The service domain name (like \fBmail.example.com\fP)
 .IP \(bu 2
-\fBport\fP \-\- The service port (like \fB443\fP)
+\fBport\fP – The service port (like \fB443\fP)
 .IP \(bu 2
-\fBprotocol\fP \-\- The service protocol (like \fBtcp\fP)
+\fBprotocol\fP – The service protocol (like \fBtcp\fP)
 .IP \(bu 2
-\fBtlsatype\fP \-\- The TLSA type (like \fB312\fP)
+\fBtlsatype\fP – The TLSA type (like \fB312\fP)
 .IP \(bu 2
-\fBnameserver\fP \-\- The DNS server IP to use instead of system resolver (optional)
+\fBnameserver\fP – The DNS server IP to use instead of system resolver (optional)
 .UNINDENT
 .TP
 .B Returns

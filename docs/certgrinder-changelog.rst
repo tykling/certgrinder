@@ -12,7 +12,14 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 v0.18.0 (unreleased)
 --------------------
 
-- No changes
+This version drops support for Python 3.7 and only supports cryptograpy version 38 or greater.
+
+Changed
+~~~~~~~
+- Update a bunch of development dependencies (linters, test tools, pre-commit config)
+- Update dependency cryptography==3.4.7 to cryptography==38.0.3 (and change imports accordingly)
+- Update dependency dnspython from 2.1.0 to dnspython==2.2.1 (and change tests a bit)
+- Drop support for Python 3.7 (some dependencies no longer support it)
 
 
 v0.17.2 (27-nov-2021)

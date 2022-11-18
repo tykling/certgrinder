@@ -29,7 +29,12 @@ def pebble_server_build(tmp_path_factory):
     print("Begginning setup")
     print("Getting pebble sources...")
     proc = subprocess.run(
-        args=[shutil.which("git"), "clone", "https://github.com/letsencrypt/pebble/", pebblepath],
+        args=[
+            shutil.which("git"),
+            "clone",
+            "https://github.com/letsencrypt/pebble/",
+            pebblepath,
+        ],
         cwd=pebblepath,
     )
     assert proc.returncode == 0

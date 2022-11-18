@@ -26,7 +26,7 @@ import dns.resolver  # type: ignore
 import yaml
 from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend, openssl
-from cryptography.hazmat.backends.openssl import x509
+from cryptography.x509 import ocsp
 from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinder.%s" % __name__)
@@ -259,7 +259,8 @@ class Certgrinder:
             )
         elif keytype == "ecdsa":
             return primitives.asymmetric.ec.generate_private_key(
-                primitives.asymmetric.ec.SECP384R1(), backend=default_backend()
+                primitives.asymmetric.ec.SECP384R1(),
+                backend=default_backend(),
             )
         elif keytype == "ed25519":
             return primitives.asymmetric.ed25519.Ed25519PrivateKey.generate()
@@ -332,7 +333,7 @@ class Certgrinder:
             openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey
         ],
         domains: typing.List[str],
-    ) -> x509._CertificateSigningRequest:
+    ) -> cryptography.x509.CertificateSigningRequest:
         """Generate and return a new CSR based on the public key and list of domains.
 
         Only set CN since everything else is removed by LetsEncrypt in the certificate anyway.
@@ -370,12 +371,16 @@ class Certgrinder:
                 # TODO: should SubjectAltName be critical?
                 critical=False,
             )
-            .sign(keypair, primitives.hashes.SHA256(), default_backend())
+            .sign(
+                keypair,
+                primitives.hashes.SHA256(),
+                default_backend(),
+            )
         )
         return csr
 
     @staticmethod
-    def save_csr(csr: x509._CertificateSigningRequest, path: str) -> None:
+    def save_csr(csr: cryptography.x509.CertificateSigningRequest, path: str) -> None:
         """Save the PEM version of the CSR to the path.
 
         chmods the file 644 after writing.
@@ -502,7 +507,7 @@ class Certgrinder:
 
     @staticmethod
     def check_certificate_subject(
-        certificate: cryptography.x509.Certificate, subject: str
+        certificate: cryptography.x509.Certificate, subject: cryptography.x509.Name
     ) -> bool:
         """Make sure the certificate has the specified subject.
 
@@ -551,14 +556,14 @@ class Certgrinder:
         public_key: typing.Optional[
             typing.Union[openssl.rsa._RSAPublicKey, openssl.ed25519.Ed25519PublicKey]
         ] = None,
-        subject: str = "",
+        subject: typing.Optional[cryptography.x509.Name] = None,
     ) -> bool:
         """Perform a few sanity checks of the certificate.
 
         - Check that the issuer is valid
         - Check that the certificate expiry is not exceeded
-        - Check that the public key is correct
-        - Check that the subject is correct
+        - Check that the public key is correct (if provided)
+        - Check that the subject is correct (if provided)
         - Check that the SubjectAltName data is correct
 
         Args:
@@ -792,7 +797,7 @@ class Certgrinder:
             return None
 
     def parse_certificate_chain(
-        self, certificate_chain: bytes, csr: x509._CertificateSigningRequest
+        self, certificate_chain: bytes, csr: cryptography.x509.CertificateSigningRequest
     ) -> typing.Optional[typing.List[cryptography.x509.Certificate]]:
         """Split a PEM chain into a list of certificates.
 
@@ -848,7 +853,7 @@ class Certgrinder:
 
     def get_certificate(
         self,
-        csr: typing.Optional[x509._CertificateSigningRequest] = None,
+        csr: typing.Optional[cryptography.x509.CertificateSigningRequest] = None,
         stdout: typing.Optional[bytes] = None,
     ) -> bool:
         """Get a new certificate for self.domainset.
@@ -1004,7 +1009,7 @@ class Certgrinder:
     @staticmethod
     def load_ocsp_response(
         path: str,
-    ) -> cryptography.hazmat.backends.openssl.ocsp._OCSPResponse:
+    ) -> ocsp.OCSPResponse:
         """Reads OCSP response in DER format from the path and returns the object.
 
         Args:
@@ -1015,7 +1020,7 @@ class Certgrinder:
         """
         with open(path, "rb") as f:
             ocsp_response_data = f.read()
-        return cryptography.x509.ocsp.load_der_ocsp_response(ocsp_response_data)
+        return ocsp.load_der_ocsp_response(ocsp_response_data)
 
     def get_ocsp(
         self,
@@ -1151,24 +1156,24 @@ class Certgrinder:
     @staticmethod
     def parse_certgrinderd_ocsp_output(
         certgrinderd_stdout: bytes,
-    ) -> typing.Optional[cryptography.hazmat.backends.openssl.ocsp._OCSPResponse]:
+    ) -> typing.Optional[ocsp.OCSPResponse]:
         """Parse a DER encoded binary OCSP response as returned by Certgrinderd.
 
         Args:
             certgrinderd_output: The bytes representing the OCSP response in DER format
 
         Returns:
-            cryptography.hazmat.backends.openssl.ocsp._OCSPResponse
+            cryptography.x509.ocsp.OCSPResponse
         """
         try:
-            return cryptography.x509.ocsp.load_der_ocsp_response(certgrinderd_stdout)
+            return ocsp.load_der_ocsp_response(certgrinderd_stdout)
         except ValueError:
             logger.error("Unable to parse OCSP response")
             return False
 
     @staticmethod
     def save_ocsp_response(
-        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
+        ocsp_response: ocsp.OCSPResponse,
         path: str,
     ) -> None:
         """Save the OCSP response to disk in DER format.
@@ -1386,16 +1391,16 @@ class Certgrinder:
                 f"Empty answer returned by {nameserverstr}. No TLSA records found in DNS for: {record}"
             )
             return None
-        except dns.exception.SyntaxError:
+        except ValueError:
             logger.error(
-                f"Error parsing DNS server IP '{nameserver}'. Only IP addresses are supported."
+                f"Error parsing DNS server '{nameserver}'. Only IP addresses and https URLs are supported."
             )
             sys.exit(1)
         except dns.exception.Timeout:
             logger.error(f"Timeout while waiting for {nameserverstr}. Error.")
             sys.exit(1)
         except Exception as E:
-            logger.error(f"Exception received during DNS lookup: {E}")
+            logger.error(f"Exception {type(E)} received during DNS lookup: {E}")
             return None
 
         # loop over the responses

@@ -7,13 +7,14 @@ import datetime
 import logging
 from collections import namedtuple
 
-import cryptography.x509
+import cryptography
 import pytest
 import requests
 from certgrinderd.certgrinderd import Certgrinderd, main
-from cryptography.hazmat import primitives
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.backends.openssl import x509
+
+# from cryptography.hazmat import primitives
+# from cryptography.hazmat.backends import cryptography.hazmat.backends.default_backend
+# from cryptography.hazmat.backends.openssl import x509
 
 
 def test_parse_csr(known_csr):
@@ -21,8 +22,8 @@ def test_parse_csr(known_csr):
     certgrinderd = Certgrinderd()
     csr = certgrinderd.parse_csr(known_csr)
     assert isinstance(
-        csr, x509._CertificateSigningRequest
-    ), "CSR should be a x509._CertificateSigningRequest, but is not"
+        csr, cryptography.x509.CertificateSigningRequest
+    ), "CSR should be a cryptography.x509.CertificateSigningRequest, but is not"
 
 
 def test_parse_broken_csr(known_csr):
@@ -830,15 +831,16 @@ def test_verify_signature_ec(caplog):
     """Test the verify_signature() method with an EC key."""
     caplog.set_level(logging.DEBUG)
     certgrinderd = Certgrinderd({"log-level": "DEBUG"})
-    private_key = primitives.asymmetric.ec.generate_private_key(
-        primitives.asymmetric.ec.SECP384R1(), default_backend()
+    private_key = cryptography.hazmat.primitives.asymmetric.ec.generate_private_key(
+        cryptography.hazmat.primitives.asymmetric.ec.SECP384R1(),
+        cryptography.hazmat.backends.default_backend(),
     )
     assert (
         certgrinderd.verify_signature(
             pubkey=private_key.public_key(),
             signature=private_key.sign(
                 b"hello world",
-                primitives.asymmetric.ec.ECDSA(
+                cryptography.hazmat.primitives.asymmetric.ec.ECDSA(
                     cryptography.hazmat.primitives.hashes.SHA256()
                 ),
             ),
@@ -853,15 +855,16 @@ def test_verify_signature_ec(caplog):
 def test_verify_signature_invalid(caplog):
     """Test the verify_signature() method with an invalid signature."""
     certgrinderd = Certgrinderd({"log-level": "DEBUG"})
-    private_key = primitives.asymmetric.ec.generate_private_key(
-        primitives.asymmetric.ec.SECP384R1(), default_backend()
+    private_key = cryptography.hazmat.primitives.asymmetric.ec.generate_private_key(
+        cryptography.hazmat.primitives.asymmetric.ec.SECP384R1(),
+        cryptography.hazmat.backends.default_backend(),
     )
     assert (
         certgrinderd.verify_signature(
             pubkey=private_key.public_key(),
             signature=private_key.sign(
                 b"hello world",
-                primitives.asymmetric.ec.ECDSA(
+                cryptography.hazmat.primitives.asymmetric.ec.ECDSA(
                     cryptography.hazmat.primitives.hashes.SHA256()
                 ),
             ),
@@ -876,15 +879,16 @@ def test_verify_signature_invalid(caplog):
 def test_verify_signature_unsupported_keytype(caplog):
     """Test the verify_signature() method with an unsupported keytype."""
     certgrinderd = Certgrinderd({"log-level": "DEBUG"})
-    private_key = primitives.asymmetric.ec.generate_private_key(
-        primitives.asymmetric.ec.SECP384R1(), default_backend()
+    private_key = cryptography.hazmat.primitives.asymmetric.ec.generate_private_key(
+        cryptography.hazmat.primitives.asymmetric.ec.SECP384R1(),
+        cryptography.hazmat.backends.default_backend(),
     )
     assert (
         certgrinderd.verify_signature(
             pubkey=True,
             signature=private_key.sign(
                 b"hello world",
-                primitives.asymmetric.ec.ECDSA(
+                cryptography.hazmat.primitives.asymmetric.ec.ECDSA(
                     cryptography.hazmat.primitives.hashes.SHA256()
                 ),
             ),

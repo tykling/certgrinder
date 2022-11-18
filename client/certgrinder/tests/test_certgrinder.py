@@ -161,7 +161,9 @@ def test_get_certificate(
     assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
 
     # initialise a TLS context with the pebble minica.pem to download certs
-    tls_context = ssl.create_default_context(cafile=str(pebble_server_build / "test/certs/pebble.minica.pem"))
+    tls_context = ssl.create_default_context(
+        cafile=str(pebble_server_build / "test/certs/pebble.minica.pem")
+    )
 
     # download issuer cert
     with urllib.request.urlopen(
@@ -913,11 +915,6 @@ def mock_tlsa_query_noanswer(*args, **kwargs):
     raise dns.resolver.NoAnswer
 
 
-def mock_tlsa_query_syntaxerror(*args, **kwargs):
-    """Mock a SyntaxError response."""
-    raise dns.exception.SyntaxError
-
-
 def mock_tlsa_query_timeout(*args, **kwargs):
     """Mock a Timeout response."""
     raise dns.exception.Timeout
@@ -925,7 +922,7 @@ def mock_tlsa_query_timeout(*args, **kwargs):
 
 def mock_tlsa_query_exception(*args, **kwargs):
     """Mock an unknown exception."""
-    raise ValueError("Some other exception")
+    raise Exception("Some other exception")
 
 
 def test_lookup_tlsa_record_exceptions(caplog, monkeypatch, tmpdir_factory):
@@ -956,7 +953,6 @@ def test_lookup_tlsa_record_exceptions(caplog, monkeypatch, tmpdir_factory):
     ), "Expected output not found for NoAnswer"
     caplog.clear()
 
-    monkeypatch.setattr(dns.resolver.Resolver, "query", mock_tlsa_query_syntaxerror)
     with pytest.raises(SystemExit):
         certgrinder.lookup_tlsa_record(
             domain="smtp.example.com",
@@ -965,9 +961,9 @@ def test_lookup_tlsa_record_exceptions(caplog, monkeypatch, tmpdir_factory):
             nameserver="ns.example.com",
         )
     assert (
-        "Error parsing DNS server IP 'ns.example.com'. Only IP addresses are supported."
+        "Error parsing DNS server 'ns.example.com'. Only IP addresses and https URLs are supported."
         in caplog.text
-    ), "Expected output not found for SyntaxError"
+    ), "Expected output not found for ValueError"
     caplog.clear()
 
     monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_timeout)
@@ -983,7 +979,7 @@ def test_lookup_tlsa_record_exceptions(caplog, monkeypatch, tmpdir_factory):
     monkeypatch.setattr(dns.resolver, "query", mock_tlsa_query_exception)
     certgrinder.lookup_tlsa_record(domain="smtp.example.com", port=587, protocol="tcp")
     assert (
-        "Exception received during DNS lookup" in caplog.text
+        "Exception <class 'Exception'> received during DNS lookup" in caplog.text
     ), "Expected output not found for other exception"
 
 

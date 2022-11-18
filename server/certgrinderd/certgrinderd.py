@@ -19,7 +19,7 @@ import requests
 import yaml
 from cryptography.hazmat import primitives
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.backends.openssl import x509
+from cryptography.x509 import ocsp
 from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinderd.%s" % __name__)
@@ -127,7 +127,7 @@ class Certgrinderd:
     # CSR methods
 
     @staticmethod
-    def parse_csr(csrstring: str = "") -> x509._CertificateSigningRequest:
+    def parse_csr(csrstring: str = "") -> cryptography.x509.CertificateSigningRequest:
         """Parse CSR with cryptography.x509.load_pem_x509_csr(), return CSR object.
 
         Takes the CSR data from ``sys.stdin`` if the ``csrstring`` argument is empty.
@@ -193,7 +193,7 @@ class Certgrinderd:
         os.remove(csrpath)
 
     @staticmethod
-    def save_csr(csr: x509._CertificateSigningRequest, path: str) -> None:
+    def save_csr(csr: cryptography.x509.CertificateSigningRequest, path: str) -> None:
         """Save the CSR object to the path in PEM format.
 
         Args:
@@ -207,7 +207,7 @@ class Certgrinderd:
             f.write(csr.public_bytes(primitives.serialization.Encoding.PEM))
 
     @staticmethod
-    def check_csr(csr: x509._CertificateSigningRequest) -> bool:
+    def check_csr(csr: cryptography.x509.CertificateSigningRequest) -> bool:
         """Check that this CSR is valid, all things considered.
 
         First check that the CSR has exactly one ``CommonName``, and that that CN is
@@ -584,7 +584,7 @@ class Certgrinderd:
         cls,
         certificate: cryptography.x509.Certificate,
         issuer: cryptography.x509.Certificate,
-    ) -> cryptography.hazmat.backends.openssl.ocsp._OCSPRequest:
+    ) -> ocsp.OCSPRequest:
         """Create and return an OCSP request based on the cert+issuer.
 
         Args:
@@ -595,14 +595,12 @@ class Certgrinderd:
             The OCSP request
         """
         # create OCSP request
-        builder = cryptography.x509.ocsp.OCSPRequestBuilder()
+        builder = ocsp.OCSPRequestBuilder()
         builder = builder.add_certificate(certificate, issuer, primitives.hashes.SHA1())
         ocsp_request_object = builder.build()
         return ocsp_request_object
 
-    def get_ocsp_response(
-        self, certpath: typing.Optional[str]
-    ) -> cryptography.hazmat.backends.openssl.ocsp._OCSPResponse:
+    def get_ocsp_response(self, certpath: typing.Optional[str]) -> ocsp.OCSPResponse:
         """Parse certificate, get and return OCSP response.
 
         Args:
@@ -668,9 +666,7 @@ class Certgrinderd:
                 continue
 
             # parse the OCSP response from the HTTP response body
-            ocsp_response_object = cryptography.x509.ocsp.load_der_ocsp_response(
-                r.content
-            )
+            ocsp_response_object = ocsp.load_der_ocsp_response(r.content)
 
             logger.debug(
                 f"Received response with HTTP status code {r.status_code} and OCSP response status {ocsp_response_object.response_status}"
@@ -697,8 +693,8 @@ class Certgrinderd:
     @classmethod
     def check_ocsp_response(
         cls,
-        ocsp_request: cryptography.hazmat.backends.openssl.ocsp._OCSPRequest,
-        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
+        ocsp_request: ocsp.OCSPRequest,
+        ocsp_response: ocsp.OCSPResponse,
         certificate: cryptography.x509.Certificate,
         issuer: cryptography.x509.Certificate,
     ) -> bool:
@@ -718,10 +714,7 @@ class Certgrinderd:
         logger.debug("Checking validity of OCSP response")
 
         # Check OCSP response status
-        if (
-            ocsp_response.response_status
-            != cryptography.x509.ocsp.OCSPResponseStatus.SUCCESSFUL
-        ):
+        if ocsp_response.response_status != ocsp.OCSPResponseStatus.SUCCESSFUL:
             logger.error(
                 f"OCSP response status is not SUCCESSFUL, it is {ocsp_response.response_status}"
             )
@@ -739,10 +732,7 @@ class Certgrinderd:
             logger.error("Check signature failed")
             return False
 
-        if (
-            ocsp_response.certificate_status
-            == cryptography.x509.ocsp.OCSPCertStatus.UNKNOWN
-        ):
+        if ocsp_response.certificate_status == ocsp.OCSPCertStatus.UNKNOWN:
             logger.error("OCSP response is valid, but certificate status is UNKNOWN")
             return False
 
@@ -752,8 +742,8 @@ class Certgrinderd:
 
     @staticmethod
     def check_ocsp_response_issuer(
-        ocsp_request: cryptography.hazmat.backends.openssl.ocsp._OCSPRequest,
-        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
+        ocsp_request: ocsp.OCSPRequest,
+        ocsp_response: ocsp.OCSPResponse,
     ) -> bool:
         """Check that the response matches the request.
 
@@ -792,7 +782,7 @@ class Certgrinderd:
 
     @staticmethod
     def check_ocsp_response_timing(
-        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
+        ocsp_response: ocsp.OCSPResponse,
     ) -> bool:
         """Check the timestamps of the OCSP response.
 
@@ -829,7 +819,7 @@ class Certgrinderd:
     @classmethod
     def check_ocsp_response_signature(
         cls,
-        ocsp_response: cryptography.hazmat.backends.openssl.ocsp._OCSPResponse,
+        ocsp_response: ocsp.OCSPResponse,
         issuers: typing.List[cryptography.x509.Certificate],
     ) -> bool:
         """Check the signature of the OCSP response.
@@ -957,7 +947,7 @@ class Certgrinderd:
         ],
         signature: bytes,
         payload: bytes,
-        hashalgo: cryptography.hazmat.primitives.hashes.HashAlgorithm,
+        hashalgo: primitives.hashes.HashAlgorithm,
     ) -> bool:
         """Verify a signature on a payload using the provided public key and hash algorithm.
 
@@ -980,7 +970,10 @@ class Certgrinderd:
                     padding=primitives.asymmetric.padding.PKCS1v15(),
                     algorithm=hashalgo,
                 )
-            elif isinstance(pubkey, primitives.asymmetric.ec.EllipticCurvePublicKey):
+            elif isinstance(
+                pubkey,
+                primitives.asymmetric.ec.EllipticCurvePublicKey,
+            ):
                 pubkey.verify(
                     signature=signature,
                     data=payload,

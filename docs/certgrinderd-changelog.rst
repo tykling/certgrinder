@@ -12,7 +12,10 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 v0.18.0 (unreleased)
 --------------------
 
-- No changes
+- Update a bunch of development dependencies (linters, test tools, pre-commit config)
+- Update dependency certbot==1.21.0 to certbot==1.32.0
+- Update dependency requests==2.26.0 to requests==2.28.1
+- Drop support for Python 3.7 (some dependencies no longer support it)
 
 
 v0.17.2 (27-nov-2021)

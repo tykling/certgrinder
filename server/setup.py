@@ -30,7 +30,7 @@ setuptools.setup(
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.7",
-    install_requires=["certbot", "PyYAML", "requests", "pid"],
+    python_requires=">=3.8",
+    install_requires=["certbot", "cryptography>38", "PyYAML", "requests", "pid"],
     include_package_data=True,
 )
