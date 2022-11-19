@@ -68,6 +68,7 @@ doas
 domainset
 domainsetlist
 dsa
+Dockerfile
 ecdsa
 elif
 executables
