@@ -167,7 +167,7 @@ class Certgrinderd:
         """
         # get the CSR from stdin or file
         if csrpath:
-            with open(csrpath, "r") as f:
+            with open(csrpath) as f:
                 csrstring = f.read()
         else:
             csrstring = ""
@@ -1261,7 +1261,7 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
 
     # read and parse the config file
     if hasattr(args, "config-file"):
-        with open(getattr(args, "config-file"), "r") as f:
+        with open(getattr(args, "config-file")) as f:
             try:
                 config = yaml.load(f, Loader=yaml.SafeLoader)
             except Exception:

@@ -9,22 +9,25 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-v0.18.0 (unreleased)
---------------------
+v0.18.0-rc1 (02-oct-2023)
+-------------------------
 
-This version drops support for Python 3.7 and only supports cryptography version 38 or greater.
+This version drops support for Python 3.7, adds support for Python 3.11, and only supports cryptography version 41 or greater.
 It also includes a Dockerfile and images can be found at https://hub.docker.com/r/certgrinder/certgrinder
 
 Added
 ~~~~~
 - Added Dockerfile - images can be found at https://hub.docker.com/r/certgrinder/certgrinder
+- Introduce Python 3.11 support
 
 Changed
 ~~~~~~~
+- Switch to pyproject.toml
 - Update a bunch of development dependencies (linters, test tools, pre-commit config)
-- Update dependency cryptography==3.4.7 to cryptography==38.0.3 (and change imports accordingly)
-- Update dependency dnspython from 2.1.0 to dnspython==2.2.1 (and change tests a bit)
+- Update dependency cryptography==3.4.7 to cryptography==41.0.4 (and change imports accordingly)
+- Update dependency dnspython from 2.1.0 to dnspython==2.4.2 (and change tests a bit)
 - Drop support for Python 3.7 (some dependencies no longer support it)
+- Added pyupgrade to pre-commit-config.yaml and fixed a few small things
 
 
 v0.17.2 (27-nov-2021)

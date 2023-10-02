@@ -1428,7 +1428,7 @@ class Certgrinder:
         # loop over the responses
         result = []
         for reply in dnsresponse:
-            replytype = "%s %s %s" % (reply.usage, reply.selector, reply.mtype)
+            replytype = f"{reply.usage} {reply.selector} {reply.mtype}"
             logger.debug("Found TLSA record type %s" % replytype)
             if not tlsatype or tlsastr == replytype:
                 # add this record to the result to be returned
@@ -2223,7 +2223,7 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
 
     # read and parse the config file
     if hasattr(args, "config-file"):
-        with open(getattr(args, "config-file"), "r") as f:
+        with open(getattr(args, "config-file")) as f:
             try:
                 config = yaml.load(f, Loader=yaml.SafeLoader)
             except Exception:

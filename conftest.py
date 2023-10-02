@@ -57,7 +57,7 @@ def pebble_server_build(tmp_path_factory):
 
     print("Patching pebble config file...")
     pebbleconfig = pebblepath / "test/config/pebble-config.json"
-    with open(pebbleconfig, "r") as f:
+    with open(pebbleconfig) as f:
         conf = json.loads(f.read())
     conf["pebble"].update({"ocspResponderURL": "http://127.0.0.1:8080"})
     with open(pebbleconfig, "w") as f:
