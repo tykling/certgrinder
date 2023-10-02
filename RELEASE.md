@@ -12,11 +12,11 @@ Then tag the new release:
 
 Upload new release to pypi:
     cd client
-    python setup.py sdist
-    twine upload dist/*
+    python -m build
+    twine upload dist/certgrinder*
     cd ../server
-    python setup.py sdist
-    twine upload dist/*
+    python -m build
+    twine upload dist/certgrinderd*
 
 Back to development:
 - Update both changelogs
