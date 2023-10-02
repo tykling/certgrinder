@@ -1,3 +1,4 @@
+---
 name: "Certgrinder CI Tests"
 
 on:
@@ -11,7 +12,7 @@ jobs:
     runs-on: "ubuntu-latest"
     strategy:
       matrix:
-        python: ["3.7", "3.8", "3.9", "3.10"]
+        python: ["3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: "actions/checkout@v2"
       - name: "Install dependencies"
@@ -28,3 +29,4 @@ jobs:
         uses: "codecov/codecov-action@v2"
         with:
          fail_ci_if_error: true
+...
