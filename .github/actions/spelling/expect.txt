@@ -86,6 +86,7 @@ func
 getattr
 gibfest
 github
+google
 grok
 hasattr
 hashalgo
@@ -93,12 +94,14 @@ hashlib
 hazmat
 hexdigest
 hexlify
+homepage
 hostname
 hpkp
 html
 http
 idna
 img
+importlib
 isfile
 isinstance
 issuerbytes
@@ -157,11 +160,13 @@ pubin
 pubkey
 publickey
 pycqa
+pydocstyle
 pypi
 pytest
 pyyaml
 randint
 README
+readme
 readthedocs
 refactor
 replytype
@@ -171,6 +176,7 @@ rsa
 rst
 rtd
 sbin
+scm
 sdist
 SECP
 selfsigned
