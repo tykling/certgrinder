@@ -207,7 +207,7 @@ class Certgrinder:
     @staticmethod
     def load_keypair(
         path: str,
-    ) -> typing.Union[openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey]:
+    ) -> typing.Union[openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey]:
         """Load keypair bytes from disk, load key and return the object.
 
         Fixes keypair permissions to 640 if they are not 640.
@@ -240,7 +240,7 @@ class Certgrinder:
     ) -> typing.Union[
         openssl.rsa._RSAPrivateKey,
         openssl.ec._EllipticCurvePrivateKey,
-        openssl.ed25519.Ed25519PrivateKey,
+        primitives.asymmetric.ed25519.Ed25519PrivateKey,
     ]:
         """Generate and returns a private key.
 
@@ -270,7 +270,7 @@ class Certgrinder:
     @staticmethod
     def save_keypair(
         keypair: typing.Union[
-            openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey
+            openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
         ],
         path: str,
     ) -> None:
@@ -288,7 +288,7 @@ class Certgrinder:
         """
         if isinstance(keypair, openssl.rsa._RSAPrivateKey):
             keyformat = primitives.serialization.PrivateFormat.TraditionalOpenSSL
-        elif isinstance(keypair, openssl.ed25519.Ed25519PrivateKey):
+        elif isinstance(keypair, primitives.asymmetric.ed25519.Ed25519PrivateKey):
             keyformat = primitives.serialization.PrivateFormat.PKCS8
         elif isinstance(keypair, openssl.ec._EllipticCurvePrivateKey):
             keyformat = primitives.serialization.PrivateFormat.PKCS8
@@ -308,7 +308,7 @@ class Certgrinder:
     @staticmethod
     def get_der_pubkey(
         keypair: typing.Union[
-            openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey
+            openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
         ]
     ) -> bytes:
         """Return the DER formatted publickey.
@@ -330,7 +330,7 @@ class Certgrinder:
     @staticmethod
     def generate_csr(
         keypair: typing.Union[
-            openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey
+            openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
         ],
         domains: typing.List[str],
     ) -> cryptography.x509.CertificateSigningRequest:
@@ -482,7 +482,7 @@ class Certgrinder:
     def check_certificate_public_key(
         certificate: cryptography.x509.Certificate,
         public_key: typing.Union[
-            openssl.rsa._RSAPublicKey, openssl.ed25519.Ed25519PublicKey
+            openssl.rsa._RSAPublicKey, primitives.asymmetric.ed25519.Ed25519PublicKey
         ],
     ) -> bool:
         """Make sure certificate has the specified public key.
@@ -554,7 +554,7 @@ class Certgrinder:
         threshold_days: int,
         san_names: typing.List[str],
         public_key: typing.Optional[
-            typing.Union[openssl.rsa._RSAPublicKey, openssl.ed25519.Ed25519PublicKey]
+            typing.Union[openssl.rsa._RSAPublicKey, primitives.asymmetric.ed25519.Ed25519PublicKey]
         ] = None,
         subject: typing.Optional[cryptography.x509.Name] = None,
     ) -> bool:
@@ -625,7 +625,7 @@ class Certgrinder:
     def save_concat_certkey(
         cls,
         keypair: typing.Union[
-            openssl.rsa._RSAPrivateKey, openssl.ed25519.Ed25519PrivateKey
+            openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
         ],
         certificate: cryptography.x509.Certificate,
         issuers: typing.List[cryptography.x509.Certificate],
@@ -931,7 +931,7 @@ class Certgrinder:
         self,
         certificate: typing.Optional[cryptography.x509.Certificate] = None,
         public_key: typing.Optional[
-            typing.Union[openssl.rsa._RSAPublicKey, openssl.ed25519.Ed25519PublicKey]
+            typing.Union[openssl.rsa._RSAPublicKey, primitives.asymmetric.ed25519.Ed25519PublicKey]
         ] = None,
     ) -> bool:
         """Check certificate validity and returns True or False.

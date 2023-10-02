@@ -513,7 +513,7 @@ def test_create_and_chmod_keypair(tmpdir_factory, caplog):
     with pytest.raises(ValueError):
         keypair = certgrinder.generate_private_key("foo")
     keypair = certgrinder.generate_private_key("ed25519")
-    assert isinstance(keypair, openssl.ed25519.Ed25519PrivateKey)
+    assert isinstance(keypair, primitives.asymmetric.ed25519.Ed25519PrivateKey)
     path = os.path.join(tmpdir_factory.mktemp("certificates"), "test.key")
     with pytest.raises(ValueError):
         certgrinder.save_keypair(keypair="notakey", path=path)
