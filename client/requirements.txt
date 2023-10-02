@@ -1,4 +1,4 @@
 PyYAML==6.0
 pid==3.0.4
-dnspython==2.2.1
+dnspython==2.4.2
 cryptography==41.0.4
