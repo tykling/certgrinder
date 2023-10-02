@@ -20,6 +20,7 @@ import tempfile
 import time
 import typing
 from pprint import pprint
+from importlib.metadata import PackageNotFoundError, version
 
 import cryptography.x509
 import dns.resolver  # type: ignore
@@ -30,7 +31,20 @@ from cryptography.x509 import ocsp
 from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinder.%s" % __name__)
-__version__ = "0.18.0-dev"
+
+# get version number from package metadata if possible
+__version__: str = "0.0.0"
+"""The value of this variable is taken from the Python package registry, and if that fails from the ``_version.py`` file written by ``setuptools_scm``."""
+
+try:
+    __version__ = version("certgrinder")
+except PackageNotFoundError:
+    # package is not installed, get version from file
+    try:
+        from _version import version as __version__  # type: ignore
+    except ImportError:
+        # this must be a git checkout with no _version.py file, version unknown
+        pass
 
 
 class Certgrinder:
