@@ -19,7 +19,7 @@ import dns.resolver
 import pytest
 from cryptography import x509
 from cryptography.hazmat import primitives
-from cryptography.hazmat.backends import default_backend, openssl
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import ExtensionOID, NameOID
 

@@ -19,8 +19,8 @@ import sys
 import tempfile
 import time
 import typing
-from pprint import pprint
 from importlib.metadata import PackageNotFoundError, version
+from pprint import pprint
 
 import cryptography.x509
 import dns.resolver  # type: ignore
@@ -221,7 +221,9 @@ class Certgrinder:
     @staticmethod
     def load_keypair(
         path: str,
-    ) -> typing.Union[openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey]:
+    ) -> typing.Union[
+        openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
+    ]:
         """Load keypair bytes from disk, load key and return the object.
 
         Fixes keypair permissions to 640 if they are not 640.
@@ -568,7 +570,10 @@ class Certgrinder:
         threshold_days: int,
         san_names: typing.List[str],
         public_key: typing.Optional[
-            typing.Union[openssl.rsa._RSAPublicKey, primitives.asymmetric.ed25519.Ed25519PublicKey]
+            typing.Union[
+                openssl.rsa._RSAPublicKey,
+                primitives.asymmetric.ed25519.Ed25519PublicKey,
+            ]
         ] = None,
         subject: typing.Optional[cryptography.x509.Name] = None,
     ) -> bool:
@@ -945,7 +950,10 @@ class Certgrinder:
         self,
         certificate: typing.Optional[cryptography.x509.Certificate] = None,
         public_key: typing.Optional[
-            typing.Union[openssl.rsa._RSAPublicKey, primitives.asymmetric.ed25519.Ed25519PublicKey]
+            typing.Union[
+                openssl.rsa._RSAPublicKey,
+                primitives.asymmetric.ed25519.Ed25519PublicKey,
+            ]
         ] = None,
     ) -> bool:
         """Check certificate validity and returns True or False.

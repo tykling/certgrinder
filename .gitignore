@@ -11,6 +11,7 @@ _build/
 .tox/
 *.pem
 .coverage
+.coverage.*
 coverage.xml
 htmlcov/
 _version.py
