@@ -12,7 +12,15 @@ To get a certificate the Certgrinder client calls the Certgrinder server (typica
 
 Certgrinder support both ``RSA`` and ``ECDSA`` keys and certificates, and defaults to getting both kinds.
 
-## Advantages
+## Pip Installation
+Certgrinder and Certgrinderd can be installed from PyPi from https://pypi.org/project/certgrinder/ and https://pypi.org/project/certgrinderd/ respectively.
+
+Read more on ReadTheDocs: https://certgrinder.readthedocs.io/en/latest/
+
+## Docker Image
+There is a Docker image for the client at https://hub.docker.com/r/certgrinder/certgrinder
+
+## Features
 - The approach with a central host serving all challenges simplifies getting certificates for stuff like loadbalanced or anycast services, where it can be impossible to predict which cluster node the LetsEncrypt challenge checker will hit when using ``HTTP-01``.
 
 - Using ``DNS-01`` with a separate delegated zone dedicated to serve the challenges is safer than opening up dynamic updates of your primary zone(s) with your provider.
