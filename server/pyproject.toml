@@ -48,6 +48,9 @@ root = ".."
 package-dir = {"certgrinderd" = "certgrinderd"}
 packages = ["certgrinderd"]
 
+[tool.setuptools.exclude-package-data]
+certgrinder = ["*tests*"]
+
 [tool.pydocstyle]
 convention = "google"
 match = "server/certgrinderd/"
