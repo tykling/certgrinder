@@ -16,6 +16,7 @@ Fixed
 ~~~~~
 
 - Add missing development dependency `build` to dev extras in `pyproject.toml`
+- Stop including unit tests in built packages. Tests are still included in the source `.tar.gz` distribution.
 
 
 v0.18.0 (02-oct-2023)
