@@ -44,12 +44,8 @@ documentation = "https://certgrinder.readthedocs.org/"
 [tool.setuptools_scm]
 root = ".."
 
-[tool.setuptools]
-package-dir = {"certgrinderd" = "certgrinderd"}
-packages = ["certgrinderd"]
-
-[tool.setuptools.exclude-package-data]
-certgrinder = ["*tests*"]
+[tool.setuptools.packages.find]
+exclude = ["man*"]
 
 [tool.pydocstyle]
 convention = "google"
