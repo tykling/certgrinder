@@ -9,10 +9,13 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-v0.19.0 (unreleased)
---------------------
+(unreleased)
+------------
 
-No changes yet.
+Fixed
+~~~~~
+
+- Add missing development dependency `build` to dev extras in `pyproject.toml`
 
 
 v0.18.0 (02-oct-2023)
