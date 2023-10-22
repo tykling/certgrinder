@@ -13,6 +13,7 @@ import sys
 import tempfile
 import typing
 from datetime import datetime, timedelta
+from pprint import pprint
 
 import cryptography.x509
 import requests
@@ -1040,7 +1041,7 @@ def get_parser() -> argparse.ArgumentParser:
     # "show" command
     show_parser = subparsers.add_parser(
         "show",
-        help='Use the "show" command to show configuration, CSR info, or certificate info.',
+        help='Use the "show" command to show configuration and ACME account info.',
     )
     show_subparsers = show_parser.add_subparsers(
         help="Specify what to show using one of the available show sub-commands",
@@ -1048,24 +1049,16 @@ def get_parser() -> argparse.ArgumentParser:
         required=True,
     )
 
-    # "show certificate" subcommand
-    show_certificate_parser = show_subparsers.add_parser(
-        "certificate",
-        help="Tell certgrinder to output information about the provided certificate.",
-    )
-    show_certificate_parser.set_defaults(method="show_certificate_command")
-
-    # "show csr" subcommand
-    show_csr_parser = show_subparsers.add_parser(
-        "csr", help="Tell certgrinder to output information about the provided CSR."
-    )
-    show_csr_parser.set_defaults(method="show_csr_command")
-
     # "show configuration" subcommand
-    show_configuration_parser = show_subparsers.add_parser(
-        "configuration", help="Tell certgrinder to output the current configuration"
+    show_subparsers.add_parser(
+        "configuration", help="Tell certgrinderd to output the current configuration"
     )
-    show_configuration_parser.set_defaults(method="show_configuration_command")
+
+    # "show acmeaccount" subcommand
+    show_acmeaccount_parser = show_subparsers.add_parser(
+        "acmeaccount", help="Tell certgrinderd to output the ACME account URI (for example for use in CAA records)"
+    )
+    show_acmeaccount_parser.set_defaults(method="show_acmeaccount_command")
 
     # "help" command
     subparsers.add_parser("help", help='The "help" command just outputs the usage help')
@@ -1291,6 +1284,12 @@ def main(mockargs: typing.Optional[typing.List[str]] = None) -> None:
 
     # instantiate Certgrinderd class
     certgrinderd = Certgrinderd(userconfig=config)
+
+    # if the command is "show configuration" just output certgrinder.conf and exit now
+    if args.command == "show" and args.subcommand == "configuration":
+        logger.info("Current certgrinderd configuration:")
+        pprint(certgrinderd.conf)
+        sys.exit(0)
 
     # all good
     try:

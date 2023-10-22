@@ -12,11 +12,6 @@ import pytest
 import requests
 from certgrinderd.certgrinderd import Certgrinderd, main
 
-# from cryptography.hazmat import primitives
-# from cryptography.hazmat.backends import cryptography.hazmat.backends.default_backend
-# from cryptography.hazmat.backends.openssl import x509
-
-
 def test_parse_csr(known_csr):
     """Test the parse_csr() method with a valid CSR."""
     certgrinderd = Certgrinderd()
@@ -927,3 +922,11 @@ def test_help(capsys):
     assert E.type == SystemExit
     captured = capsys.readouterr()
     assert "See the manpage certgrinderd(8)" in captured.out
+
+def test_show_configuration(capsys):
+    """Test the 'show configuration' sub-command."""
+    with pytest.raises(SystemExit) as E:
+        main(["show", "configuration"])
+    assert E.type == SystemExit
+    captured = capsys.readouterr()
+    assert "Current certgrinderd configuration:"
