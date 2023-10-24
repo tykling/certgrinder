@@ -24,6 +24,7 @@ Fixed
 Changed
 ~~~~~~~
 - Make `certgrinderd` get the version from `setuptools_scm`
+- Switch default branch name from `master` to `main`
 
 
 v0.18.1 (11-oct-2023)
