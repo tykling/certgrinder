@@ -327,6 +327,65 @@ def test_get_certificate(
         assert "OCSP response not found" not in caplog.text
         assert "was produced_at more than" not in caplog.text
 
+        # we only need to test CAA once
+        if certgrinderd_configfile[0] == "dns":
+            certpath = str(tmpdir_factory.mktemp("certificates"))
+            # make sure the "show caa" subcommand works,
+            # this requires pebble running with a registered account,
+            # so it is placed here instead of a seperate test
+            caplog.clear()
+            mockargs = [
+                "--path",
+                certpath,
+                "--domain-list",
+                "example.com,www.example.com",
+                "--domain-list",
+                "*.example.org",
+                "--certgrinderd",
+                f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]} --acme-server-url https://127.0.0.1:14000/dir",
+                "--debug",
+            ]
+            with pytest.raises(SystemExit) as E:
+                main(mockargs + ["show", "caa"])
+            assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+            captured = capsys.readouterr()
+            assert (
+                'example.com IN CAA 128 issue "letsencrypt.org; validationmethods=dns-01,http-01; accounturi=https://127.0.0.1:14000/my-account/1"'
+                in captured.out
+            )
+            assert 'example.com IN CAA 128 issuewild ";"' in captured.out
+            assert (
+                'www.example.com IN CAA 128 issue "letsencrypt.org; validationmethods=dns-01,http-01; accounturi=https://127.0.0.1:14000/my-account/1"'
+                in captured.out
+            )
+            assert 'www.example.com IN CAA 128 issuewild ";"' in captured.out
+            assert (
+                'example.org IN CAA 128 issuewild "letsencrypt.org; validationmethods=dns-01; accounturi=https://127.0.0.1:14000/my-account/1"'
+                in captured.out
+            )
+            assert 'example.org IN CAA 128 issue ";"' in captured.out
+
+            # make sure the --caa-validation-methods arg works
+            mockargs = [
+                "--path",
+                certpath,
+                "--domain-list",
+                "example.com",
+                "--certgrinderd",
+                f"server/certgrinderd/certgrinderd.py --config-file {certgrinderd_configfile[1]} --acme-server-url https://127.0.0.1:14000/dir",
+                "--caa-validation-methods",
+                "dns-01",
+                "--debug",
+            ]
+            with pytest.raises(SystemExit) as E:
+                main(mockargs + ["show", "caa"])
+            assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
+            captured = capsys.readouterr()
+            assert (
+                'example.com IN CAA 128 issue "letsencrypt.org; validationmethods=dns-01; accounturi=https://127.0.0.1:14000/my-account/1"'
+                in captured.out
+            )
+
 
 def test_show_spki(caplog, tmpdir_factory):
     """Test the 'show spki' subcommand."""
@@ -1232,7 +1291,7 @@ def test_help(capsys):
         main(["help"])
     assert E.type == SystemExit
     captured = capsys.readouterr()
-    assert "See the manpage or ReadTheDocs for more" in captured.out
+    assert "ReadTheDocs" in captured.out
 
 
 def test_show_configuration(capsys, tmpdir_factory):
@@ -1574,3 +1633,31 @@ ALSO_NOT_A_PEM
         )
 
     certgrinder.load_certificates(path)
+
+
+def test_certgrinderd_show_acmeaccount_command(
+    certgrinderd_env, certgrinderd_configfile
+):
+    """Test calling certgrinderd with the 'show acmeaccount' subcommand."""
+    if certgrinderd_configfile[0] != "dns":
+        # we only need to test this once
+        return
+
+    p = subprocess.Popen(
+        [
+            "server/certgrinderd/certgrinderd.py",
+            "--debug",
+            "--config-file",
+            certgrinderd_configfile[1],
+            "show",
+            "acmeaccount",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    certgrinderd_stdout, certgrinderd_stderr = p.communicate()
+    assert p.returncode == 1
+    assert (
+        "Could not find an existing account for server https://acme-v02.api.letsencrypt.org/directory"
+        in certgrinderd_stderr.decode()
+    )

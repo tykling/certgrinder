@@ -12,6 +12,7 @@ import pytest
 import requests
 from certgrinderd.certgrinderd import Certgrinderd, main
 
+
 def test_parse_csr(known_csr):
     """Test the parse_csr() method with a valid CSR."""
     certgrinderd = Certgrinderd()
@@ -923,10 +924,33 @@ def test_help(capsys):
     captured = capsys.readouterr()
     assert "See the manpage certgrinderd(8)" in captured.out
 
-def test_show_configuration(capsys):
+
+def test_show_configuration(caplog):
     """Test the 'show configuration' sub-command."""
+    caplog.set_level(logging.DEBUG)
     with pytest.raises(SystemExit) as E:
         main(["show", "configuration"])
     assert E.type == SystemExit
+    assert "Current certgrinderd configuration:" in caplog.text
+
+
+def test_show_acmeaccount(capsys, certgrinderd_configfile):
+    """Test the 'show acmeaccount' sub-command without calling certbot."""
+    if certgrinderd_configfile[0] != "dns":
+        # we only need to test this once
+        return
+
+    with pytest.raises(SystemExit) as E:
+        main(
+            [
+                "--config-file",
+                str(certgrinderd_configfile[1]),
+                "--certbot-command",
+                "echo",
+                "show",
+                "acmeaccount",
+            ]
+        )
+    assert E.type == SystemExit
     captured = capsys.readouterr()
-    assert "Current certgrinderd configuration:"
+    assert "show_account --non-interactive --email " in captured.out

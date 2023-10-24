@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "CERTGRINDER" "8" "Oct 02, 2023" "" "Certgrinder"
+.TH "CERTGRINDER" "8" "Oct 24, 2023" "" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .sp
@@ -380,6 +380,7 @@ usage: certgrinder
        [\-h]
        [\-a]
        [\-\-certgrinderd CERTGRINDERD]
+       [\-\-caa\-validation\-methods CAA\-VALIDATION\-METHODS]
        [\-\-cert\-renew\-threshold\-days CERT\-RENEW\-THRESHOLD\-DAYS]
        [\-c CONFIG\-FILE]
        [\-d]
@@ -426,6 +427,9 @@ Use alternate chain. For production this means using the short chain with 1 inte
 .TP
 .B \-\-certgrinderd
 The command to reach the certgrinderd server, will get the input (CSR or cert chain) on stdin. Usually something like \(aqssh \fI\%certgrinderd@server\fP \-T\(aq
+.TP
+.B \-\-caa\-validation\-methods
+The ACME validation methods to include when outputting CAA records. Default: dns\-01,http\-01
 .TP
 .B \-\-cert\-renew\-threshold\-days
 A certificate is renewed when it has less than this many days of lifetime left. Default: \fI30\fP
@@ -691,7 +695,7 @@ Use the \(dqshow\(dq command to show certificates, TLSA records, SPKI pins or co
 .ft C
 certgrinder show
 [\-h]
-{certificate,configuration,paths,ocsp,spki,tlsa}
+{certificate,configuration,paths,ocsp,spki,tlsa,caa}
 \&...
 .ft P
 .fi
@@ -701,7 +705,7 @@ certgrinder show
 .INDENT 0.0
 .TP
 .B subcommand
-Possible choices: certificate, configuration, paths, ocsp, spki, tlsa
+Possible choices: certificate, configuration, paths, ocsp, spki, tlsa, caa
 .sp
 Specify what to show using one of the available show sub\-commands
 .UNINDENT
@@ -800,6 +804,20 @@ The port of the service, for example 443
 .TP
 .B tlsa\-protocol
 The protocol of the service, for example tcp
+.UNINDENT
+.SS caa
+.sp
+Use the \(aqshow caa\(aq sub\-command to tell certgrinder to output a CAA record suitable for the specified domainset(s).
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinder show caa
+[\-h]
+.ft P
+.fi
+.UNINDENT
 .UNINDENT
 .SS version
 .sp
@@ -1384,7 +1402,7 @@ It starts out by sleeping for a random period and then checks certificates and r
 .UNINDENT
 .INDENT 7.0
 .TP
-.B run_certgrinderd(stdin: bytes, command: List[str], certgrinderd_stdout: bytes | None = None, certgrinderd_stderr: bytes | None = None) -> bytes | None
+.B run_certgrinderd(stdin: bytes, command: List[str], certgrinderd_stdout: bytes = b\(aq\(aq, certgrinderd_stderr: bytes = b\(aq\(aq) -> bytes
 Run the configured \fBself.conf[\(dqcertgrinderd\(dq]\fP command.
 .sp
 The stdin argument will be passed to stdin of the command. A CSR is needed for
@@ -1526,6 +1544,16 @@ Save the OCSP response to disk in DER format.
 .IP \(bu 2
 \fBpath\fP \-\- The path to save in
 .UNINDENT
+.TP
+.B Returns
+None
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B show_caa() -> None
+The \fBshow caa\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
+.INDENT 7.0
 .TP
 .B Returns
 None

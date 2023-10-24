@@ -10,11 +10,23 @@ All notable changes to ``certgrinder`` will be documented in this file.
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 (unreleased)
-------------
+~~~~~~~~~~~~
+
+Added
+~~~~~
+- `show caa` command to print suggested CAA records including method and ACME account pinning. The ACME account URI is retrieved using the new certgrinderd `show acmeaccount` command.
+- New command-line argument `--caa-validation-methods` which defaults to `dns-01,http-01`. This can be used to control which validation methods are included in the CAA records output by the `show caa` command.
 
 Fixed
 ~~~~~
+- Tox docs build: Switch from `whitelist_external` to `allowlist_external`
+- Tox docs build: Switch from requirements files to using the `docs` extra from `pyproject.toml`
 
+v0.18.1 (11-oct-2023)
+---------------------
+
+Fixed
+~~~~~
 - Add missing development dependency `build` to dev extras in `pyproject.toml`
 - Stop including unit tests in built packages. Tests are still included in the source `.tar.gz` distribution.
 

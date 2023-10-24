@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "CERTGRINDERD" "8" "Oct 02, 2023" "" "Certgrinder"
+.TH "CERTGRINDERD" "8" "Oct 24, 2023" "" "Certgrinder"
 .SH NAME
 certgrinderd \- Manpage for certgrinderd
 .sp
@@ -416,7 +416,7 @@ certgrinderd get ocsp
 .UNINDENT
 .SS show
 .sp
-Use the \(dqshow\(dq command to show configuration, CSR info, or certificate info.
+Use the \(dqshow\(dq command to show configuration and ACME account info.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -424,7 +424,7 @@ Use the \(dqshow\(dq command to show configuration, CSR info, or certificate inf
 .ft C
 certgrinderd show
 [\-h]
-{certificate,csr,configuration}
+{configuration,acmeaccount}
 \&...
 .ft P
 .fi
@@ -434,48 +434,34 @@ certgrinderd show
 .INDENT 0.0
 .TP
 .B subcommand
-Possible choices: certificate, csr, configuration
+Possible choices: configuration, acmeaccount
 .sp
 Specify what to show using one of the available show sub\-commands
 .UNINDENT
 .SS Sub\-commands
-.SS certificate
-.sp
-Tell certgrinder to output information about the provided certificate.
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-certgrinderd show certificate
-[\-h]
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.SS csr
-.sp
-Tell certgrinder to output information about the provided CSR.
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-certgrinderd show csr
-[\-h]
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
 .SS configuration
 .sp
-Tell certgrinder to output the current configuration
+Tell certgrinderd to output the current configuration
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
 certgrinderd show configuration
+[\-h]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS acmeaccount
+.sp
+Tell certgrinderd to output the ACME account URI (for example for use in CAA records)
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+certgrinderd show acmeaccount
 [\-h]
 .ft P
 .fi
@@ -639,7 +625,7 @@ The OCSP request
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_certbot_command(challengetype: str, csrpath: str, fullchainpath: str, certpath: str, chainpath: str) -> List[str]
+.B get_certbot_command(challengetype: str, csrpath: str, fullchainpath: str, certpath: str, chainpath: str, subcommand: str = \(aqcertonly\(aq) -> List[str]
 Put the certbot command together.
 .sp
 Start with \fBself.conf[\(dqcertbot\-command\(dq]\fP and append all the needed options.
@@ -841,6 +827,14 @@ Save the CSR object to the path in PEM format.
 .B Returns
 None
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B show_acmeaccount_command() -> None
+Reply to the \(aqshow acmeaccount\(aq command to stdout.
+.sp
+Args: None
+Returns: None
 .UNINDENT
 .INDENT 7.0
 .TP

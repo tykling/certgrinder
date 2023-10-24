@@ -12,6 +12,19 @@ This project adheres to `Semantic Versioning <http://semver.org/>`__.
 (unreleased)
 ------------
 
+Added
+~~~~~
+- `show acmeaccount` command which runs `certbot show_account` and returns the output, including the ACME account URI for use in CAA records.
+
+Fixed
+~~~~~
+- Tox docs build: Switch from `whitelist_external` to `allowlist_external`
+- Tox docs build: Switch from requirements files to using the `docs` extra from `pyproject.toml`
+
+
+v0.18.1 (11-oct-2023)
+---------------------
+
 Fixed
 ~~~~~
 

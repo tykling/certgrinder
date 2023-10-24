@@ -57,6 +57,7 @@ class Certgrinder:
         """Define the default config."""
         self.conf: typing.Dict[str, typing.Union[str, int, bool, typing.List[str]]] = {
             "alternate-chain": False,
+            "caa-validation-methods": "dns-01,http-01",
             "certgrinderd": "certgrinderd",
             "cert-renew-threshold-days": 30,
             "domain-list": [],
@@ -710,9 +711,9 @@ class Certgrinder:
         self,
         stdin: bytes,
         command: typing.List[str],
-        certgrinderd_stdout: typing.Optional[bytes] = None,
-        certgrinderd_stderr: typing.Optional[bytes] = None,
-    ) -> typing.Optional[bytes]:
+        certgrinderd_stdout: bytes = b"",
+        certgrinderd_stderr: bytes = b"",
+    ) -> bytes:
         """Run the configured ``self.conf["certgrinderd"]`` command.
 
         The stdin argument will be passed to stdin of the command. A CSR is needed for
@@ -738,9 +739,12 @@ class Certgrinder:
                 stderr=subprocess.PIPE,
             )
 
-            # send stdin and save stdout (the certificate chain/OCSP response) +
+            # send stdin and save stdout (the certificate chain/OCSP response/other output) +
             # stderr (the certgrinderd logging)
             certgrinderd_stdout, certgrinderd_stderr = p.communicate(input=stdin)
+        logger.debug(
+            f"certgrinderd command returned {len(certgrinderd_stdout)} bytes stdout and {len(certgrinderd_stderr)} bytes stderr output"
+        )
 
         # log certgrinderd_stderr (which contains all the certgrinderd logging) at the level it was logged to, as possible
         if isinstance(certgrinderd_stderr, bytes):
@@ -1611,6 +1615,39 @@ class Certgrinder:
                 f"Done checking DNS for TLSA records for {domain} port {self.conf['tlsa-port']} protocol {self.conf['tlsa-protocol']}"
             )
 
+    # CAA METHODS
+
+    def show_caa(self) -> None:
+        """The ``show caa`` subcommand method, called for each domainset by ``self.grind()``.
+
+        Returns:
+            None
+        """
+        # get acmeaccount from certgrinderd
+        stdout = self.run_certgrinderd(stdin=b"", command=["show", "acmeaccount"])
+        url: str = ""
+        for line in stdout.decode().split("\n"):
+            if line[:15] == "  Account URL: ":
+                url = line[15:]
+                break
+        else:
+            logger.error("certgrinderd did not return an acmeaccount")
+            sys.exit(1)
+
+        # output CAA records
+        for domain in self.domainset:
+            if domain[0] == "*":
+                # wildcard certificates only support dns-01
+                print(
+                    f'{domain} IN CAA 128 issuewild "letsencrypt.org; validationmethods=dns-01; accounturi={url}"'
+                )
+                print(f'{domain} IN CAA 128 issue ";"')
+            else:
+                print(
+                    f'{domain} IN CAA 128 issue "letsencrypt.org; validationmethods={self.conf["caa-validation-methods"]}; accounturi={url}"'
+                )
+                print(f'{domain} IN CAA 128 issuewild ";"')
+
     # MAIN METHODS
 
     def periodic(self) -> bool:
@@ -1820,6 +1857,9 @@ class Certgrinder:
             kcounter = 0
             assert isinstance(self.conf["key-type-list"], list)
             for keytype in self.conf["key-type-list"]:
+                if kcounter == 1 and args.method in ["show_caa"]:
+                    # we dont need to see CAA records once per keytype
+                    break
                 kcounter += 1
                 # loop over domains
                 dcounter = 0
@@ -1995,6 +2035,13 @@ def get_parser() -> argparse.ArgumentParser:
         "tlsa-protocol", help="The protocol of the service, for example tcp"
     )
 
+    # "show caa" subcommand
+    show_caa_parser = show_subparsers.add_parser(
+        "caa",
+        help="Use the 'show caa' sub-command to tell certgrinder to output a CAA record suitable for the specified domainset(s).",
+    )
+    show_caa_parser.set_defaults(method="show_caa")
+
     # "version" command
     subparsers.add_parser(
         "version", help='The "version" command just outputs the version of Certgrinder'
@@ -2013,6 +2060,13 @@ def get_parser() -> argparse.ArgumentParser:
         "--certgrinderd",
         dest="certgrinderd",
         help="The command to reach the certgrinderd server, will get the input (CSR or cert chain) on stdin. Usually something like 'ssh certgrinderd@server -T'",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--caa-validation-methods",
+        required=False,
+        help="The ACME validation methods to include when outputting CAA records. Default: dns-01,http-01",
+        dest="caa-validation-methods",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(

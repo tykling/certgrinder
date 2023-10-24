@@ -311,6 +311,7 @@ class Certgrinderd:
         fullchainpath: str,
         certpath: str,
         chainpath: str,
+        subcommand: str = "certonly",
     ) -> typing.List[str]:
         """Put the certbot command together.
 
@@ -329,27 +330,31 @@ class Certgrinderd:
             The certbot command as a list
         """
         command: typing.List[str] = str(self.conf["certbot-command"]).split(" ") + [
-            "certonly",
+            subcommand,
             "--non-interactive",
-            "--quiet",
-            "--authenticator",
-            "manual",
-            "--preferred-challenges",
-            challengetype,
-            "--manual-auth-hook",
-            str(self.conf["auth-hook"]),
-            "--manual-cleanup-hook",
-            str(self.conf["cleanup-hook"]),
-            "--csr",
-            csrpath,
-            "--fullchain-path",
-            fullchainpath,
-            "--cert-path",
-            certpath,
-            "--chain-path",
-            chainpath,
-            "--agree-tos",
         ]
+
+        if subcommand == "certonly":
+            command += [
+                "--quiet",
+                "--authenticator",
+                "manual",
+                "--preferred-challenges",
+                challengetype,
+                "--manual-auth-hook",
+                str(self.conf["auth-hook"]),
+                "--manual-cleanup-hook",
+                str(self.conf["cleanup-hook"]),
+                "--csr",
+                csrpath,
+                "--fullchain-path",
+                fullchainpath,
+                "--cert-path",
+                certpath,
+                "--chain-path",
+                chainpath,
+                "--agree-tos",
+            ]
 
         if self.conf["acme-email"]:
             command.append("--email")
@@ -380,6 +385,7 @@ class Certgrinderd:
             assert isinstance(self.conf["preferred-chain"], str)
             command.append(self.conf["preferred-chain"].replace("_", " "))
 
+        logger.debug(f"Returning certbot command: {command}")
         return command
 
     def get_certificate(self, csrpath: str) -> None:
@@ -1003,6 +1009,39 @@ class Certgrinderd:
         logger.debug("Responding to ping_command() with 'pong'")
         print("pong")
 
+    def show_acmeaccount_command(self) -> None:
+        """Reply to the 'show acmeaccount' command to stdout.
+
+        Args: None
+        Returns: None
+        """
+        command = self.get_certbot_command(
+            subcommand="show_account",
+            challengetype="dns",
+            csrpath="/dev/null",
+            fullchainpath="/dev/null",
+            certpath="/dev/null",
+            chainpath="/dev/null",
+        )
+        logger.debug(f"running certbot command: {command}")
+        p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        certbot_stdout, certbot_stderr = p.communicate()
+        logger.debug(
+            f"certbot command returned exit code {p.returncode}, with {len(certbot_stdout)} bytes stdout and {len(certbot_stderr)} bytes stderr output"
+        )
+
+        if p.returncode == 0:
+            for line in certbot_stdout.strip().decode("utf-8").split("\n"):
+                print(line)
+            sys.exit(0)
+        else:
+            logger.error("certbot command returned non-zero exit code")
+            logger.error("certbot stderr:")
+            for line in certbot_stderr.strip().decode("utf-8").split("\n"):
+                logger.error(line)
+            sys.exit(1)
+
 
 def get_parser() -> argparse.ArgumentParser:
     """Create and return the argparse object."""
@@ -1056,7 +1095,8 @@ def get_parser() -> argparse.ArgumentParser:
 
     # "show acmeaccount" subcommand
     show_acmeaccount_parser = show_subparsers.add_parser(
-        "acmeaccount", help="Tell certgrinderd to output the ACME account URI (for example for use in CAA records)"
+        "acmeaccount",
+        help="Tell certgrinderd to output the ACME account URI (for example for use in CAA records)",
     )
     show_acmeaccount_parser.set_defaults(method="show_acmeaccount_command")
 
