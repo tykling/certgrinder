@@ -13,6 +13,7 @@ import sys
 import tempfile
 import typing
 from datetime import datetime, timedelta
+from importlib.metadata import PackageNotFoundError, version
 from pprint import pprint
 
 import cryptography.x509
