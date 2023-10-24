@@ -21,6 +21,10 @@ Fixed
 - Tox docs build: Switch from `whitelist_external` to `allowlist_external`
 - Tox docs build: Switch from requirements files to using the `docs` extra from `pyproject.toml`
 
+Changed
+~~~~~~~
+- Make `certgrinderd` get the version from `setuptools_scm`
+
 
 v0.18.1 (11-oct-2023)
 ---------------------

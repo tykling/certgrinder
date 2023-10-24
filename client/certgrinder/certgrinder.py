@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Certgrinder v0.18.0-dev module.
+"""Certgrinder module.
 
 See https://certgrinder.readthedocs.io/en/latest/certgrinder.html
 and https://github.com/tykling/certgrinder for more.

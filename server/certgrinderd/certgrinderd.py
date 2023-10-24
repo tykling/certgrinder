@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Certgrinderd v0.18.0-dev module.
+"""Certgrinderd module.
 
 See https://certgrinder.readthedocs.io/en/latest/certgrinderd.html
 and https://github.com/tykling/certgrinder for more.
@@ -24,7 +24,19 @@ from cryptography.x509 import ocsp
 from pid import PidFile  # type: ignore
 
 logger = logging.getLogger("certgrinderd.%s" % __name__)
-__version__ = "0.18.0-dev"
+
+# get version number from package metadata if possible
+__version__: str = "0.0.0"
+"""The value of this variable is taken from the Python package registry, and if that fails from the ``_version.py`` file written by ``setuptools_scm``."""
+
+try:
+    __version__ = version("certgrinderd")
+except PackageNotFoundError:
+    # package is not installed, get version from file
+    try:
+        from _version import version as __version__  # type: ignore
+    except ImportError:
+        pass
 
 
 class Certgrinderd:
