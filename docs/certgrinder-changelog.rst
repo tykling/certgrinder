@@ -9,8 +9,8 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-(unreleased)
-~~~~~~~~~~~~
+v0.19.0 (19-nov-2023)
+---------------------
 
 Added
 ~~~~~
@@ -25,6 +25,7 @@ Fixed
 Changed
 ~~~~~~~
 - Switch default branch name from `master` to `main`
+- Update dependencies
 
 
 v0.18.1 (11-oct-2023)
