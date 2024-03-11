@@ -9,6 +9,14 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+v0.19.1 (11-mar-2024)
+---------------------
+
+Changed
+~~~~~~~
+- Update dependencies
+
+
 v0.19.0 (19-nov-2023)
 ---------------------
 
