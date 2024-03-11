@@ -497,7 +497,9 @@ class Certgrinder:
         Returns:
             True if remaining certificate lifetime is >= threshold_days, False if not
         """
-        expiredelta = certificate.not_valid_after - datetime.datetime.now()
+        expiredelta = certificate.not_valid_after_utc - datetime.datetime.now(  # type: ignore
+            datetime.timezone.utc
+        )
         if expiredelta.days < threshold_days:
             return False
         else:
@@ -1041,8 +1043,8 @@ class Certgrinder:
         logger.info(
             f"Certificate SAN: {san.value.get_values_for_type(cryptography.x509.DNSName)}"
         )
-        logger.info(f"Certificate not valid before: {certificate.not_valid_before}")
-        logger.info(f"Certificate not valid after: {certificate.not_valid_after}")
+        logger.info(f"Certificate not valid before: {certificate.not_valid_before_utc}")  # type: ignore
+        logger.info(f"Certificate not valid after: {certificate.not_valid_after_utc}")  # type: ignore
 
     # OCSP METHODS
 
@@ -1158,7 +1160,7 @@ class Certgrinder:
 
         # consider the response produced_at (rather than next_update)
         validity = ocsp_response.next_update - ocsp_response.produced_at
-        passed = datetime.datetime.utcnow() - ocsp_response.produced_at
+        passed = datetime.datetime.now() - ocsp_response.produced_at
         percent = (passed / validity) * 100
         logger.debug(f"{percent} percent of OCSP response validity period has passed")
 

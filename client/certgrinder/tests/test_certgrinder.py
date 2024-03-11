@@ -222,7 +222,7 @@ def test_get_certificate(
                     subject = [f"/{x.rfc4514_string()}" for x in certificate.subject]
                     with open(ocsp_ca_index_file, "a+") as f:
                         f.write(
-                            f"V	{certificate.not_valid_after.strftime('%y%m%d%H%M%SZ')}		{hex(certificate.serial_number).upper()[2:]}	unknown	{''.join(subject)}\n"
+                            f"V	{certificate.not_valid_after_utc.strftime('%y%m%d%H%M%SZ')}		{hex(certificate.serial_number).upper()[2:]}	unknown	{''.join(subject)}\n"
                         )
                     print(f"wrote cert info to CA index file {ocsp_ca_index_file}")
 
