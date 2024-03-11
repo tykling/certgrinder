@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "CERTGRINDER" "8" "Oct 24, 2023" "" "Certgrinder"
+.TH "CERTGRINDER" "8" "Mar 11, 2024" "" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .sp
@@ -369,7 +369,7 @@ Shown above is the \fBshow tlsa\fP subcommand in action. The value supplied shou
 The \fBversion\fP command is just a shortcut for \fB\-v\fP which shows the Certgrinder version and exits.
 .SH COMMAND LINE USAGE
 .sp
-Certgrinder version 0.18.2.dev10+gd5ab58a.d20231024. See the manpage or ReadTheDocs for more info.
+Certgrinder version 0.19.1.dev17+g7df107b.d20240311. See the manpage or ReadTheDocs for more info.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -845,7 +845,7 @@ Define the default config.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B check_certificate(certificate: Certificate | None = None, public_key: _RSAPublicKey | Ed25519PublicKey | None = None) -> bool
+.B check_certificate(certificate: Certificate | None = None, public_key: RSAPublicKey | Ed25519PublicKey | EllipticCurvePublicKey | None = None) -> bool
 Check certificate validity and returns True or False.
 .sp
 This method is called by self.grind() once per domainset when the \(dqcheck certificate\(dq
@@ -903,7 +903,7 @@ True if the certificate issuer CN is not in invalid_ca_cn_list
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static check_certificate_public_key(certificate: Certificate, public_key: _RSAPublicKey | Ed25519PublicKey) -> bool
+.B static check_certificate_public_key(certificate: Certificate, public_key: RSAPublicKey | Ed25519PublicKey | EllipticCurvePublicKey) -> bool
 Make sure certificate has the specified public key.
 .INDENT 7.0
 .TP
@@ -957,7 +957,7 @@ True if the subject matches the cert, False if not
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod check_certificate_validity(certificate: Certificate, invalid_ca_cn_list: List[str], threshold_days: int, san_names: List[str], public_key: _RSAPublicKey | Ed25519PublicKey | None = None, subject: Name | None = None) -> bool
+.B classmethod check_certificate_validity(certificate: Certificate, invalid_ca_cn_list: List[str], threshold_days: int, san_names: List[str], public_key: RSAPublicKey | Ed25519PublicKey | EllipticCurvePublicKey | None = None, subject: Name | None = None) -> bool
 Perform a few sanity checks of the certificate.
 .INDENT 7.0
 .IP \(bu 2
@@ -1045,7 +1045,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static generate_csr(keypair: _RSAPrivateKey | Ed25519PrivateKey, domains: List[str]) -> CertificateSigningRequest
+.B static generate_csr(keypair: RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey, domains: List[str]) -> CertificateSigningRequest
 Generate and return a new CSR based on the public key and list of domains.
 .sp
 Only set CN since everything else is removed by LetsEncrypt in the certificate anyway.
@@ -1066,7 +1066,7 @@ The CSR object
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static generate_private_key(keytype: str) -> _RSAPrivateKey | _EllipticCurvePrivateKey | Ed25519PrivateKey
+.B static generate_private_key(keytype: str) -> RSAPrivateKey | EllipticCurvePrivateKey | Ed25519PrivateKey
 Generate and returns a private key.
 .INDENT 7.0
 .TP
@@ -1162,7 +1162,7 @@ False something goes wrong, True if all is well
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static get_der_pubkey(keypair: _RSAPrivateKey | Ed25519PrivateKey) -> bytes
+.B static get_der_pubkey(keypair: RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey) -> bytes
 Return the DER formatted publickey.
 .INDENT 7.0
 .TP
@@ -1252,7 +1252,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static load_keypair(path: str) -> _RSAPrivateKey | Ed25519PrivateKey
+.B static load_keypair(path: str) -> RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey
 Load keypair bytes from disk, load key and return the object.
 .sp
 Fixes keypair permissions to 640 if they are not 640.
@@ -1470,7 +1470,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod save_concat_certkey(keypair: _RSAPrivateKey | Ed25519PrivateKey, certificate: Certificate, issuers: List[Certificate], path: str) -> None
+.B classmethod save_concat_certkey(keypair: RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey, certificate: Certificate, issuers: List[Certificate], path: str) -> None
 Create a single file with the private key, the cert and the issuer(s), in that order.
 .INDENT 7.0
 .TP
@@ -1512,7 +1512,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_keypair(keypair: _RSAPrivateKey | Ed25519PrivateKey, path: str) -> None
+.B static save_keypair(keypair: RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey, path: str) -> None
 Save keypair to disk.
 .INDENT 7.0
 .TP

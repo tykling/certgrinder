@@ -26,7 +26,7 @@ import cryptography.x509
 import dns.resolver  # type: ignore
 import yaml
 from cryptography.hazmat import primitives
-from cryptography.hazmat.backends import default_backend, openssl
+from cryptography.hazmat.backends import default_backend
 from cryptography.x509 import ocsp
 from pid import PidFile  # type: ignore
 
@@ -223,7 +223,9 @@ class Certgrinder:
     def load_keypair(
         path: str,
     ) -> typing.Union[
-        primitives.asymmetric.rsa.RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
+        primitives.asymmetric.rsa.RSAPrivateKey,
+        primitives.asymmetric.ed25519.Ed25519PrivateKey,
+        primitives.asymmetric.ec.EllipticCurvePrivateKey,
     ]:
         """Load keypair bytes from disk, load key and return the object.
 
@@ -247,7 +249,7 @@ class Certgrinder:
             keypair_bytes = f.read()
 
         # parse and return keypair
-        return primitives.serialization.load_pem_private_key(
+        return primitives.serialization.load_pem_private_key(  # type: ignore
             keypair_bytes, password=None, backend=default_backend()
         )
 
@@ -287,7 +289,9 @@ class Certgrinder:
     @staticmethod
     def save_keypair(
         keypair: typing.Union[
-            primitives.asymmetric.rsa.RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
+            primitives.asymmetric.rsa.RSAPrivateKey,
+            primitives.asymmetric.ed25519.Ed25519PrivateKey,
+            primitives.asymmetric.ec.EllipticCurvePrivateKey,
         ],
         path: str,
     ) -> None:
@@ -314,7 +318,7 @@ class Certgrinder:
 
         with open(path, "wb") as f:
             f.write(
-                keypair.private_bytes(
+                keypair.private_bytes(  # type: ignore
                     encoding=primitives.serialization.Encoding.PEM,
                     format=keyformat,
                     encryption_algorithm=primitives.serialization.NoEncryption(),
@@ -325,7 +329,9 @@ class Certgrinder:
     @staticmethod
     def get_der_pubkey(
         keypair: typing.Union[
-            primitives.asymmetric.rsa.RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
+            primitives.asymmetric.rsa.RSAPrivateKey,
+            primitives.asymmetric.ed25519.Ed25519PrivateKey,
+            primitives.asymmetric.ec.EllipticCurvePrivateKey,
         ]
     ) -> bytes:
         """Return the DER formatted publickey.
@@ -347,7 +353,9 @@ class Certgrinder:
     @staticmethod
     def generate_csr(
         keypair: typing.Union[
-            primitives.asymmetric.rsa.RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
+            primitives.asymmetric.rsa.RSAPrivateKey,
+            primitives.asymmetric.ed25519.Ed25519PrivateKey,
+            primitives.asymmetric.ec.EllipticCurvePrivateKey,
         ],
         domains: typing.List[str],
     ) -> cryptography.x509.CertificateSigningRequest:
@@ -499,7 +507,9 @@ class Certgrinder:
     def check_certificate_public_key(
         certificate: cryptography.x509.Certificate,
         public_key: typing.Union[
-            primitives.asymmetric.rsa.RSAPublicKey, primitives.asymmetric.ed25519.Ed25519PublicKey
+            primitives.asymmetric.rsa.RSAPublicKey,
+            primitives.asymmetric.ed25519.Ed25519PublicKey,
+            primitives.asymmetric.ec.EllipticCurvePublicKey,
         ],
     ) -> bool:
         """Make sure certificate has the specified public key.
@@ -574,6 +584,7 @@ class Certgrinder:
             typing.Union[
                 primitives.asymmetric.rsa.RSAPublicKey,
                 primitives.asymmetric.ed25519.Ed25519PublicKey,
+                primitives.asymmetric.ec.EllipticCurvePublicKey,
             ]
         ] = None,
         subject: typing.Optional[cryptography.x509.Name] = None,
@@ -645,7 +656,9 @@ class Certgrinder:
     def save_concat_certkey(
         cls,
         keypair: typing.Union[
-            primitives.asymmetric.rsa.RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
+            primitives.asymmetric.rsa.RSAPrivateKey,
+            primitives.asymmetric.ed25519.Ed25519PrivateKey,
+            primitives.asymmetric.ec.EllipticCurvePrivateKey,
         ],
         certificate: cryptography.x509.Certificate,
         issuers: typing.List[cryptography.x509.Certificate],
@@ -957,6 +970,7 @@ class Certgrinder:
             typing.Union[
                 primitives.asymmetric.rsa.RSAPublicKey,
                 primitives.asymmetric.ed25519.Ed25519PublicKey,
+                primitives.asymmetric.ec.EllipticCurvePublicKey,
             ]
         ] = None,
     ) -> bool:
