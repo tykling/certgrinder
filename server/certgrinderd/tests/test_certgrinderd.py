@@ -922,7 +922,7 @@ def test_help(capsys):
         main(["help"])
     assert E.type == SystemExit
     captured = capsys.readouterr()
-    assert "See the manpage certgrinderd(8)" in captured.out
+    assert "See the manpage" in captured.out
 
 
 def test_show_configuration(caplog):

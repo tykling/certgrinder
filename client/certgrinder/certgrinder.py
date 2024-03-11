@@ -223,7 +223,7 @@ class Certgrinder:
     def load_keypair(
         path: str,
     ) -> typing.Union[
-        openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
+        primitives.asymmetric.rsa.RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
     ]:
         """Load keypair bytes from disk, load key and return the object.
 
@@ -255,8 +255,8 @@ class Certgrinder:
     def generate_private_key(
         keytype: str,
     ) -> typing.Union[
-        openssl.rsa._RSAPrivateKey,
-        openssl.ec._EllipticCurvePrivateKey,
+        primitives.asymmetric.rsa.RSAPrivateKey,
+        primitives.asymmetric.ec.EllipticCurvePrivateKey,
         primitives.asymmetric.ed25519.Ed25519PrivateKey,
     ]:
         """Generate and returns a private key.
@@ -287,7 +287,7 @@ class Certgrinder:
     @staticmethod
     def save_keypair(
         keypair: typing.Union[
-            openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
+            primitives.asymmetric.rsa.RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
         ],
         path: str,
     ) -> None:
@@ -303,11 +303,11 @@ class Certgrinder:
         Raises:
             ValueError: For unsupported keytypes
         """
-        if isinstance(keypair, openssl.rsa._RSAPrivateKey):
+        if isinstance(keypair, primitives.asymmetric.rsa.RSAPrivateKey):
             keyformat = primitives.serialization.PrivateFormat.TraditionalOpenSSL
         elif isinstance(keypair, primitives.asymmetric.ed25519.Ed25519PrivateKey):
             keyformat = primitives.serialization.PrivateFormat.PKCS8
-        elif isinstance(keypair, openssl.ec._EllipticCurvePrivateKey):
+        elif isinstance(keypair, primitives.asymmetric.ec.EllipticCurvePrivateKey):
             keyformat = primitives.serialization.PrivateFormat.PKCS8
         else:
             raise ValueError(f"Unsupported keytype: {type(keypair)}")
@@ -325,7 +325,7 @@ class Certgrinder:
     @staticmethod
     def get_der_pubkey(
         keypair: typing.Union[
-            openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
+            primitives.asymmetric.rsa.RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
         ]
     ) -> bytes:
         """Return the DER formatted publickey.
@@ -347,7 +347,7 @@ class Certgrinder:
     @staticmethod
     def generate_csr(
         keypair: typing.Union[
-            openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
+            primitives.asymmetric.rsa.RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
         ],
         domains: typing.List[str],
     ) -> cryptography.x509.CertificateSigningRequest:
@@ -499,7 +499,7 @@ class Certgrinder:
     def check_certificate_public_key(
         certificate: cryptography.x509.Certificate,
         public_key: typing.Union[
-            openssl.rsa._RSAPublicKey, primitives.asymmetric.ed25519.Ed25519PublicKey
+            primitives.asymmetric.rsa.RSAPublicKey, primitives.asymmetric.ed25519.Ed25519PublicKey
         ],
     ) -> bool:
         """Make sure certificate has the specified public key.
@@ -572,7 +572,7 @@ class Certgrinder:
         san_names: typing.List[str],
         public_key: typing.Optional[
             typing.Union[
-                openssl.rsa._RSAPublicKey,
+                primitives.asymmetric.rsa.RSAPublicKey,
                 primitives.asymmetric.ed25519.Ed25519PublicKey,
             ]
         ] = None,
@@ -645,7 +645,7 @@ class Certgrinder:
     def save_concat_certkey(
         cls,
         keypair: typing.Union[
-            openssl.rsa._RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
+            primitives.asymmetric.rsa.RSAPrivateKey, primitives.asymmetric.ed25519.Ed25519PrivateKey
         ],
         certificate: cryptography.x509.Certificate,
         issuers: typing.List[cryptography.x509.Certificate],
@@ -955,7 +955,7 @@ class Certgrinder:
         certificate: typing.Optional[cryptography.x509.Certificate] = None,
         public_key: typing.Optional[
             typing.Union[
-                openssl.rsa._RSAPublicKey,
+                primitives.asymmetric.rsa.RSAPublicKey,
                 primitives.asymmetric.ed25519.Ed25519PublicKey,
             ]
         ] = None,
