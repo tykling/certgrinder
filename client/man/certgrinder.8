@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "CERTGRINDER" "8" "Mar 11, 2024" "" "Certgrinder"
+.TH "CERTGRINDER" "8" "Jun 10, 2024" "" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .sp
@@ -58,15 +58,6 @@ This is an alphabetical list of the configurable options:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
-.TP
-.B \fIalternate\-chain\fP
-Instruct certgrinder to request the alternate chain for signing.
-.sp
-For production this means using the short chain with 1 intermediate signed by \fBISRG Root X1\fP instead of using the default long chain with 2 intermediates signed by \fBDST Root CA X3\fP\&.
-.sp
-For staging it means using \fBFake LE Root X2\fP (1 intermediate) instead of the usual \fBFake LE Root X1\fP (2 intermediates).
-.sp
-Default: \fBFalse\fP
 .TP
 .B \fIcertgrinderd\fP
 The command to run as \fBcertgrinderd\fP\&. Usually this will be something like \fBssh certgrinderd@certgrinder.example.com \-T\fP, possibly also with a \fB\-\-config\-file\fP for \fBcertgrinderd\fP if needed.
@@ -326,7 +317,7 @@ The \fBshow ocsp\fP subcommand loops over the configured domainsets and shows in
 The \fBshow paths\fP subcommand loops over the configured domainsets and outputs the paths used for keys, certificates and OCSP responses.
 .SS show spki command
 .sp
-The \fBshow spki\fP subcommand outputs pin\-sha256 spki pins for the public keys. The \fBHPKP\fP standard \fI\%https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning\fP defined the \fBpin\-sha256\fP format for public key pins. While the \fBHPKP\fP standard didn\(aqt get much traction the pinning format is used in various places now, so \fBcertgrinder\fP can generate them.
+The \fBshow spki\fP subcommand outputs pin\-sha256 spki pins for the public keys. The \fBHPKP\fP standard \X'tty: link https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning'\fI\%https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning\fP\X'tty: link' defined the \fBpin\-sha256\fP format for public key pins. While the \fBHPKP\fP standard didn\(aqt get much traction the pinning format is used in various places now, so \fBcertgrinder\fP can generate them.
 .sp
 The operation is pretty simple:
 .INDENT 0.0
@@ -369,7 +360,7 @@ Shown above is the \fBshow tlsa\fP subcommand in action. The value supplied shou
 The \fBversion\fP command is just a shortcut for \fB\-v\fP which shows the Certgrinder version and exits.
 .SH COMMAND LINE USAGE
 .sp
-Certgrinder version 0.19.1.dev17+g7df107b.d20240311. See the manpage or ReadTheDocs for more info.
+Certgrinder version 0.19.2.dev21+g11d5629. See the manpage or ReadTheDocs for more info.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -378,7 +369,6 @@ Certgrinder version 0.19.1.dev17+g7df107b.d20240311. See the manpage or ReadTheD
 .ft C
 usage: certgrinder
        [\-h]
-       [\-a]
        [\-\-certgrinderd CERTGRINDERD]
        [\-\-caa\-validation\-methods CAA\-VALIDATION\-METHODS]
        [\-\-cert\-renew\-threshold\-days CERT\-RENEW\-THRESHOLD\-DAYS]
@@ -422,11 +412,8 @@ Command (required)
 .SS Named Arguments
 .INDENT 0.0
 .TP
-.B \-a, \-\-alternate\-chain
-Use alternate chain. For production this means using the short chain with 1 intermediate signed by \(aqISRG Root X1\(aq instead of using the long chain with 2 intermediates signed by \(aqDST Root CA X3\(aq. For staging it means using \(aqFake LE Root X2\(aq (1 intermediate) instead of the usual \(aqFake LE Root X1\(aq (2 intermediates).
-.TP
 .B \-\-certgrinderd
-The command to reach the certgrinderd server, will get the input (CSR or cert chain) on stdin. Usually something like \(aqssh \fI\%certgrinderd@server\fP \-T\(aq
+The command to reach the certgrinderd server, will get the input (CSR or cert chain) on stdin. Usually something like \(aqssh \X'tty: link mailto:certgrinderd@server'\fI\%certgrinderd@server\fP\X'tty: link' \-T\(aq
 .TP
 .B \-\-caa\-validation\-methods
 The ACME validation methods to include when outputting CAA records. Default: dns\-01,http\-01
@@ -489,7 +476,7 @@ Path to an executable like sudo to be used to run each of the executables in the
 Quiet mode. No output at all if there is nothing to do, and no errors are encountered. Equal to setting \-\-log\-level=WARNING.
 .TP
 .B \-s, \-\-staging
-Staging mode. Sets \-\-acme\-server\-url \fI\%https://acme\-staging\-v02.api.letsencrypt.org/directory\fP and \-\-invalid\-ca\-cn\-list empty. Use this while playing around to avoid hitting rate limits!
+Staging mode. Sets \-\-acme\-server\-url \X'tty: link https://acme-staging-v02.api.letsencrypt.org/directory'\fI\%https://acme\-staging\-v02.api.letsencrypt.org/directory\fP\X'tty: link' and \-\-invalid\-ca\-cn\-list empty. Use this while playing around to avoid hitting rate limits!
 .TP
 .B \-\-syslog\-facility
 The syslog facility to use. Set this and syslog\-socket to enable logging to syslog.

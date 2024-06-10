@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "CERTGRINDERD" "8" "Mar 11, 2024" "" "Certgrinder"
+.TH "CERTGRINDERD" "8" "Jun 10, 2024" "" "Certgrinder"
 .SH NAME
 certgrinderd \- Manpage for certgrinderd
 .sp
@@ -244,7 +244,7 @@ Both scripts must be able to handle the challenge type(s) you use. The same scri
 When the server has been configured with hooks you can test from a client using just SSH and a manually generated CSR, with something like: \fBcat mail4.example.com.csr | ssh certgrinderd@certgrinder.example.org \-T \-\- \-\-staging get certificate\fP where \fB\-T\fP is to prevent SSH from allocating a TTY on the server, \fB\-\-\fP is to mark the end of the SSH args, and \fB\-\-staging\fP is to make \fBcertgrinderd\fP use the LetsEncrypt staging servers. If all goes well it should output some logging and a certificate chain.
 .SH COMMAND LINE USAGE
 .sp
-certgrinderd version 0.19.1.dev17+g7df107b.d20240311. See the manpage certgrinderd(8) or ReadTheDocs for more info.
+certgrinderd version 0.19.2.dev21+g11d5629. See the manpage certgrinderd(8) or ReadTheDocs for more info.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -340,13 +340,13 @@ Logging level. One of DEBUG, INFO, WARNING, ERROR, CRITICAL. Defaults to INFO.
 The directory to store the PID file in
 .TP
 .B \-\-preferred\-chain
-The preferred chain to use. Adds \-\-preferred\-chain to the Certbot command. Use to pick preferred signing chain when alternatives are available. Replace spaces with underscores in the chain name, so DST_Root_CA_X3 or ISRG_Root_X1 for prod or Fake_LE_Root_X1 or Fake_LE_Root_X2 for staging.
+The preferred chain to use. Adds \-\-preferred\-chain to the Certbot command. Use to pick preferred signing chain when alternatives are available. Replace spaces with underscores in the chain name, so ISRG_Root_X1 for prod or Fake_LE_Root_X2 for staging.
 .TP
 .B \-\-skip\-acme\-server\-cert\-verify
 Do not verify the ACME servers certificate
 .TP
 .B \-s, \-\-staging
-Staging mode. Equal to setting \-\-acme\-server\-url \fI\%https://acme\-staging\-v02.api.letsencrypt.org/directory\fP
+Staging mode. Equal to setting \-\-acme\-server\-url \X'tty: link https://acme-staging-v02.api.letsencrypt.org/directory'\fI\%https://acme\-staging\-v02.api.letsencrypt.org/directory\fP\X'tty: link'
 .TP
 .B \-\-syslog\-facility
 The facility to use for syslog messages
@@ -679,7 +679,7 @@ This method is called when the \fIget certificate\fP subcommand is used.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBNone\fP \-\- 
+\fBNone\fP
 .TP
 .B Returns
 None
@@ -694,7 +694,7 @@ It simply prints the DER formatted OCSP response to stdout if we get one.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBNone\fP \-\- 
+\fBNone\fP
 .TP
 .B Returns
 None
@@ -784,7 +784,7 @@ Finally the CSR is deleted.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBNone\fP \-\- 
+\fBNone\fP
 .TP
 .B Returns
 None
