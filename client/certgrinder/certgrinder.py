@@ -56,7 +56,6 @@ class Certgrinder:
     def __init__(self) -> None:
         """Define the default config."""
         self.conf: typing.Dict[str, typing.Union[str, int, bool, typing.List[str]]] = {
-            "alternate-chain": False,
             "caa-validation-methods": "dns-01,http-01",
             "certgrinderd": "certgrinderd",
             "cert-renew-threshold-days": 30,
@@ -190,28 +189,14 @@ class Certgrinder:
                 "acme-server-url"
             ] = "https://acme-staging-v02.api.letsencrypt.org/directory"
             self.conf["invalid-ca-cn-list"] = []
-            # set preferred-chain based on the value of alternate-chain
-            if self.conf["alternate-chain"]:
-                # one intermediate
-                self.conf["preferred-chain"] = "Fake_LE_Root_X2"
-            else:
-                # two intermediates
-                self.conf["preferred-chain"] = "Fake_LE_Root_X1"
-        else:
-            # set preferred-chain based on the value of alternate-chain
-            if self.conf["alternate-chain"]:
-                # the alternate chain has one intermediate
-                self.conf["preferred-chain"] = "ISRG_Root_X1"
-            else:
-                # the default chain has two intermediates
-                self.conf["preferred-chain"] = "DST_Root_CA_X3"
-
-        if self.conf["preferred-chain"] in ["DST_Root_CA_X3", "Fake_LE_Root_X1"]:
-            # two intermediates
-            self.conf["expected-chain-length"] = 3
-        else:
             # one intermediate
-            self.conf["expected-chain-length"] = 2
+            self.conf["preferred-chain"] = "Fake_LE_Root_X2"
+        else:
+            # the current LE chain has one intermediate
+            self.conf["preferred-chain"] = "ISRG_Root_X1"
+
+        # one intermediate
+        self.conf["expected-chain-length"] = 2
 
         logger.debug(
             f"Certgrinder {__version__} configured OK - running with config: {self.conf}"
@@ -2064,14 +2049,6 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     # optional arguments
-    parser.add_argument(
-        "-a",
-        "--alternate-chain",
-        dest="alternate-chain",
-        action="store_true",
-        help="Use alternate chain. For production this means using the short chain with 1 intermediate signed by 'ISRG Root X1' instead of using the long chain with 2 intermediates signed by 'DST Root CA X3'. For staging it means using 'Fake LE Root X2' (1 intermediate) instead of the usual 'Fake LE Root X1' (2 intermediates).",
-        default=argparse.SUPPRESS,
-    )
     parser.add_argument(
         "--certgrinderd",
         dest="certgrinderd",

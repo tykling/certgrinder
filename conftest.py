@@ -65,8 +65,9 @@ def pebble_server_build(tmp_path_factory):
     return pebblepath
 
 
-# run pebble server with 1 and 2 intermediates
-@pytest.fixture(scope="session", params=["1", "2"])
+# run pebble server with 1 intermediate only
+# (this fixture used to run with 1 or 2 intermediates when LE had cross signing with longer chain)
+@pytest.fixture(scope="session", params=["1"])
 def pebble_server_run(request, pebble_server_build):
     """Run pebble server with primary or alternate chain as needed."""
     pebbleconfig = pebble_server_build / "test/config/pebble-config.json"

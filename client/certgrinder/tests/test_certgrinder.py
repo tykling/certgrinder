@@ -132,10 +132,6 @@ def test_get_certificate(
         "--debug",
     ]
 
-    if pebble_server_run == "1":
-        # we are only expecting one intermediate, use alternate chain
-        mockargs.append("--alternate-chain")
-
     if certgrinderd_configfile[0] == "dns":
         # include a couple of post renew hook for one of the cert operations
         mockargs += ["--post-renew-hooks", "true", "--post-renew-hooks", "false"]
@@ -743,7 +739,6 @@ def test_parse_certificate_chain_not_pem(
             "path": str(tmpdir_factory.mktemp("certificates")),
             "domain-list": ["example.com,www.example.com"],
             "certgrinderd": "true",
-            "alternate-chain": True,
         }
     )
     csr = x509.load_pem_x509_csr(known_csr.encode("ascii"), default_backend())
@@ -794,7 +789,6 @@ def test_get_certificate_method(caplog, tmpdir_factory, known_csr, signed_certif
             "domain-list": ["example.com,www.example.com"],
             "certgrinderd": "true",
             "log-level": "DEBUG",
-            "alternate-chain": True,
         }
     )
     certgrinder.load_domainset(
@@ -1589,22 +1583,6 @@ def test_post_renew_hooks_dir_without_runner(tmpdir_factory, caplog):
     assert "Got exit code 1 when running post_renew_hook" in caplog.text
 
 
-def test_configure_staging_alternate_chain(tmpdir_factory):
-    """Test the configure() method with --staging and --alternate-chain."""
-    certgrinder = Certgrinder()
-    certgrinder.configure(
-        userconfig={
-            "path": str(tmpdir_factory.mktemp("certificates")),
-            "domain-list": ["example.com"],
-            "certgrinderd": "true",
-            "log-level": "DEBUG",
-            "staging": True,
-            "alternate-chain": True,
-        }
-    )
-    assert certgrinder.conf["preferred-chain"] == "Fake_LE_Root_X2"
-
-
 def test_load_certificates_broken_input(tmpdir_factory):
     """Test the load_certificates() method with some broken input."""
     certgrinder = Certgrinder()
@@ -1615,7 +1593,6 @@ def test_load_certificates_broken_input(tmpdir_factory):
             "certgrinderd": "true",
             "log-level": "DEBUG",
             "staging": True,
-            "alternate-chain": True,
         }
     )
     certgrinder.load_domainset(

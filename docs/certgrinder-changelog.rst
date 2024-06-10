@@ -9,6 +9,15 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+Unreleased
+----------
+
+Changed
+~~~~~~~
+- Update dependencies
+- Remove the ``--alternate-chain`` option (which made Certgrinder expect only one intermediate), since LetsEncrypt now uses the shorter chain as default (since June 6th 2024).
+
+
 v0.19.1 (11-mar-2024)
 ---------------------
 
