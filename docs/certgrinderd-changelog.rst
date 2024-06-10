@@ -9,6 +9,15 @@ All notable changes to ``certgrinderd`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+Unreleased
+----------
+
+Changed
+~~~~~~~
+- Update dependencies
+- Change default for ``--preferred-chain`` from ``DST_Root_CA_X3`` to ``ISRG_Root_X1`` to match the new LE signing chain starting June 6th 2024.
+
+
 v0.19.1 (11-mar-2024)
 ---------------------
 

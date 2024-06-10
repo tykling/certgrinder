@@ -77,7 +77,7 @@ class Certgrinderd:
             "debug": False,
             "log-level": "INFO",
             "pid-dir": "/tmp",
-            "preferred-chain": "DST_Root_CA_X3",
+            "preferred-chain": "ISRG_Root_X1",
             "skip-acme-server-cert-verify": False,
             "syslog-facility": None,
             "syslog-socket": None,
@@ -129,13 +129,8 @@ class Certgrinderd:
             f"certgrinderd {__version__} running, log-level is {self.conf['log-level']}"
         )
 
-        if self.conf["preferred-chain"] in ["DST_Root_CA_X3", "Fake_LE_Root_X1"]:
-            # two intermediates
-            self.conf["expected-chain-length"] = 3
-        else:
-            # one intermediate
-            self.conf["expected-chain-length"] = 2
-
+        # one intermediate
+        self.conf["expected-chain-length"] = 2
         logger.debug("Running with config: %s" % self.conf)
 
     # CSR methods
@@ -1226,7 +1221,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--preferred-chain",
         dest="preferred-chain",
-        help="The preferred chain to use. Adds --preferred-chain to the Certbot command. Use to pick preferred signing chain when alternatives are available. Replace spaces with underscores in the chain name, so DST_Root_CA_X3 or ISRG_Root_X1 for prod or Fake_LE_Root_X1 or Fake_LE_Root_X2 for staging.",
+        help="The preferred chain to use. Adds --preferred-chain to the Certbot command. Use to pick preferred signing chain when alternatives are available. Replace spaces with underscores in the chain name, so ISRG_Root_X1 for prod or Fake_LE_Root_X2 for staging.",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(

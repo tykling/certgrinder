@@ -33,7 +33,5 @@ There is a Docker image for the client at https://hub.docker.com/r/certgrinder/c
 
 - Certgrinder supports fetching OCSP responses via the Certgrinder server. Having Certgrinder fetch the OCSP response makes it possible to configure OCSP stapling without relying on the various TLS servers own OCSP-fetching implementation. It also means that OCSP stapling can be done on servers behind strict firewalls or with no Internet connection, as the communication with CA is done via the Certgrinder server.
 
-- Certgrinder supports alternate chain selection and understands the longer chain used by LetsEncrypt since May 2021.
-
 ## Terminology
 The central host with the LetsEncrypt signing stack is called the "Certgrinder server". The individual servers (the ones that need the certificates) are called "Certgrinder clients". These match the two Python packages ``certgrinderd`` and ``certgrinder``, respectively.
