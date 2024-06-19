@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.8.1
-FROM python:3.12.4-alpine3.20 AS builder
+FROM python:3.12.4-alpine3.20 AS client-build
 # install dependenciess for building package
 RUN apk update
 RUN apk add \
@@ -14,8 +14,6 @@ USER nonroot
 WORKDIR /home/nonroot
 # copy source
 COPY --chown=nonroot:nonroot . .
-
-FROM builder AS client-build
 # install certgrinder client
 RUN pip install ./client
 # switch back to root for initial cleanup
