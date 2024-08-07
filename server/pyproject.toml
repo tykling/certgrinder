@@ -16,7 +16,7 @@ classifiers = [
 
 dependencies = [
     "requests == 2.32.3",
-    "PyYAML == 6.0.1",
+    "PyYAML == 6.0.2",
     "cryptography == 42.0.8",
     "pid == 3.0.4",
     "certbot == 2.11.0",
