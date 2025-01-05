@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import typing
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from importlib.metadata import PackageNotFoundError, version
 from pprint import pprint
 
@@ -622,7 +622,7 @@ class Certgrinderd:
             certpath: The path of the certificate chain to get OCSP response for (optional)
 
         Returns:
-            The OCSPRequest object
+            The OCSPResponse object
         """
         assert isinstance(self.conf["expected-chain-length"], int)
         chain = self.parse_certificate_chain(certpath)
@@ -692,10 +692,12 @@ class Certgrinderd:
                 logger.debug(
                     f"Certificate status: {ocsp_response_object.certificate_status}"
                 )
-                logger.debug(f"This update: {ocsp_response_object.this_update}")
-                logger.debug(f"Produced at: {ocsp_response_object.produced_at}")
-                logger.debug(f"Next update: {ocsp_response_object.next_update}")
-                logger.debug(f"Revocation time: {ocsp_response_object.revocation_time}")
+                logger.debug(f"This update: {ocsp_response_object.this_update_utc}")
+                logger.debug(f"Produced at: {ocsp_response_object.produced_at_utc}")
+                logger.debug(f"Next update: {ocsp_response_object.next_update_utc}")
+                logger.debug(
+                    f"Revocation time: {ocsp_response_object.revocation_time_utc}"
+                )
                 logger.debug(
                     f"Revocation reason: {ocsp_response_object.revocation_reason}"
                 )
@@ -807,24 +809,28 @@ class Certgrinderd:
         Returns:
             Boolean - True if all is well, False if a problem was found
         """
-        # check that this_update is in the past
-        if ocsp_response.this_update > datetime.utcnow() + timedelta(minutes=5):
+        # check that this_update_utc is in the past
+        if ocsp_response.this_update_utc > datetime.now(timezone.utc) + timedelta(
+            minutes=5
+        ):
             logger.error(
-                f"The this_update parameter of the OCSP response is in the future: {ocsp_response.this_update}"
+                f"The this_update_utc parameter of the OCSP response is in the future: {ocsp_response.this_update_utc}"
             )
             return False
 
-        # check that we have a next_update attribute
-        if not ocsp_response.next_update:
+        # check that we have a next_update_utc attribute
+        if not ocsp_response.next_update_utc:
             logger.error(
                 "OCSP response has no nextUpdate attribute. This violates RFC5019 2.2.4."
             )
             return False
 
-        # check that next_update is in the future
-        if ocsp_response.next_update < datetime.utcnow() - timedelta(minutes=5):
+        # check that next_update_utc is in the future
+        if ocsp_response.next_update_utc < datetime.now(timezone.utc) - timedelta(
+            minutes=5
+        ):
             logger.error(
-                f"The next_update parameter of the OCSP response is in the past: {ocsp_response.this_update}"
+                f"The next_update_utc parameter of the OCSP response is in the past: {ocsp_response.next_update_utc}"
             )
             return False
 

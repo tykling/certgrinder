@@ -242,8 +242,8 @@ def test_check_ocsp_response_wrong_serial(
         issuer=signed_certificate,
         algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
         cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-        this_update=datetime.datetime.utcnow(),
-        next_update=datetime.datetime.utcnow(),
+        this_update=datetime.datetime.now(datetime.timezone.utc),
+        next_update=datetime.datetime.now(datetime.timezone.utc),
         revocation_time=None,
         revocation_reason=None,
     ).responder_id(
@@ -282,8 +282,8 @@ def test_check_ocsp_response_wrong_hash_algo(
         issuer=signed_certificate,
         algorithm=cryptography.hazmat.primitives.hashes.SHA256(),  # use the wrong algo here
         cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-        this_update=datetime.datetime.utcnow(),
-        next_update=datetime.datetime.utcnow(),
+        this_update=datetime.datetime.now(datetime.timezone.utc),
+        next_update=datetime.datetime.now(datetime.timezone.utc),
         revocation_time=None,
         revocation_reason=None,
     ).responder_id(
@@ -322,8 +322,8 @@ def test_check_ocsp_response_wrong_issuer_key(
         issuer=selfsigned_certificate,
         algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
         cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-        this_update=datetime.datetime.utcnow(),
-        next_update=datetime.datetime.utcnow(),
+        this_update=datetime.datetime.now(datetime.timezone.utc),
+        next_update=datetime.datetime.now(datetime.timezone.utc),
         revocation_time=None,
         revocation_reason=None,
     ).responder_id(
@@ -362,8 +362,9 @@ def test_check_ocsp_response_this_update_in_future(
         issuer=selfsigned_certificate,
         algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
         cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-        this_update=datetime.datetime.utcnow() + datetime.timedelta(days=1),
-        next_update=datetime.datetime.utcnow(),
+        this_update=datetime.datetime.now(datetime.timezone.utc)
+        + datetime.timedelta(days=1),
+        next_update=datetime.datetime.now(datetime.timezone.utc),
         revocation_time=None,
         revocation_reason=None,
     ).responder_id(
@@ -385,7 +386,8 @@ def test_check_ocsp_response_this_update_in_future(
         is False
     ), "check_ocsp_response() did not return False with a response with thisUpdate in the future"
     assert (
-        "The this_update parameter of the OCSP response is in the future" in caplog.text
+        "The this_update_utc parameter of the OCSP response is in the future"
+        in caplog.text
     )
 
 
@@ -400,7 +402,7 @@ def test_check_ocsp_response_no_next_update(
         issuer=selfsigned_certificate,
         algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
         cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-        this_update=datetime.datetime.utcnow(),
+        this_update=datetime.datetime.now(datetime.timezone.utc),
         next_update=None,
         revocation_time=None,
         revocation_reason=None,
@@ -439,8 +441,9 @@ def test_check_ocsp_response_next_update_in_past(
         issuer=selfsigned_certificate,
         algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
         cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-        this_update=datetime.datetime.utcnow(),
-        next_update=datetime.datetime.utcnow() - datetime.timedelta(days=1),
+        this_update=datetime.datetime.now(datetime.timezone.utc),
+        next_update=datetime.datetime.now(datetime.timezone.utc)
+        - datetime.timedelta(days=1),
         revocation_time=None,
         revocation_reason=None,
     ).responder_id(
@@ -462,7 +465,8 @@ def test_check_ocsp_response_next_update_in_past(
         is False
     ), "check_ocsp_response() did not return False with a response with nextUpdate in the past"
     assert (
-        "The next_update parameter of the OCSP response is in the past" in caplog.text
+        "The next_update_utc parameter of the OCSP response is in the past"
+        in caplog.text
     )
 
 
@@ -483,8 +487,8 @@ def test_check_ocsp_response_delegated_signer(
             issuer=selfsigned_certificate,
             algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
             cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-            this_update=datetime.datetime.utcnow(),
-            next_update=datetime.datetime.utcnow(),
+            this_update=datetime.datetime.now(datetime.timezone.utc),
+            next_update=datetime.datetime.now(datetime.timezone.utc),
             revocation_time=None,
             revocation_reason=None,
         )
@@ -531,8 +535,8 @@ def test_check_ocsp_response_delegated_signer_cert_missing(
             issuer=selfsigned_certificate,
             algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
             cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-            this_update=datetime.datetime.utcnow(),
-            next_update=datetime.datetime.utcnow(),
+            this_update=datetime.datetime.now(datetime.timezone.utc),
+            next_update=datetime.datetime.now(datetime.timezone.utc),
             revocation_time=None,
             revocation_reason=None,
         )
@@ -574,8 +578,8 @@ def test_check_ocsp_response_delegated_signer_not_signed_by_issuer(
             issuer=selfsigned_certificate,
             algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
             cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-            this_update=datetime.datetime.utcnow(),
-            next_update=datetime.datetime.utcnow(),
+            this_update=datetime.datetime.now(datetime.timezone.utc),
+            next_update=datetime.datetime.now(datetime.timezone.utc),
             revocation_time=None,
             revocation_reason=None,
         )
@@ -628,8 +632,8 @@ def test_check_ocsp_response_delegated_signer_invalid_signature(
             issuer=selfsigned_certificate,
             algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
             cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-            this_update=datetime.datetime.utcnow(),
-            next_update=datetime.datetime.utcnow(),
+            this_update=datetime.datetime.now(datetime.timezone.utc),
+            next_update=datetime.datetime.now(datetime.timezone.utc),
             revocation_time=None,
             revocation_reason=None,
         )
@@ -672,8 +676,8 @@ def test_check_ocsp_response_delegated_signer_no_extendedkeyusage(
             issuer=selfsigned_certificate,
             algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
             cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-            this_update=datetime.datetime.utcnow(),
-            next_update=datetime.datetime.utcnow(),
+            this_update=datetime.datetime.now(datetime.timezone.utc),
+            next_update=datetime.datetime.now(datetime.timezone.utc),
             revocation_time=None,
             revocation_reason=None,
         )
@@ -719,8 +723,8 @@ def test_check_ocsp_response_delegated_signer_no_ocsp_perm(
             issuer=selfsigned_certificate,
             algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
             cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-            this_update=datetime.datetime.utcnow(),
-            next_update=datetime.datetime.utcnow(),
+            this_update=datetime.datetime.now(datetime.timezone.utc),
+            next_update=datetime.datetime.now(datetime.timezone.utc),
             revocation_time=None,
             revocation_reason=None,
         )
@@ -762,8 +766,9 @@ def test_check_ocsp_response_verify_signature_fail(
         issuer=selfsigned_certificate,
         algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
         cert_status=cryptography.x509.ocsp.OCSPCertStatus.GOOD,
-        this_update=datetime.datetime.utcnow(),
-        next_update=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        this_update=datetime.datetime.now(datetime.timezone.utc),
+        next_update=datetime.datetime.now(datetime.timezone.utc)
+        + datetime.timedelta(days=1),
         revocation_time=None,
         revocation_reason=None,
     ).responder_id(
@@ -798,8 +803,9 @@ def test_check_ocsp_response_unknown_cert(
         issuer=selfsigned_certificate,
         algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
         cert_status=cryptography.x509.ocsp.OCSPCertStatus.UNKNOWN,
-        this_update=datetime.datetime.utcnow(),
-        next_update=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        this_update=datetime.datetime.now(datetime.timezone.utc),
+        next_update=datetime.datetime.now(datetime.timezone.utc)
+        + datetime.timedelta(days=1),
         revocation_time=None,
         revocation_reason=None,
     ).responder_id(

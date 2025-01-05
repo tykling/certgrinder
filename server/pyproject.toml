@@ -27,7 +27,7 @@ dynamic = ["version"]
 license = {text = "BSD 3-Clause License"}
 name = "certgrinderd"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 [project.scripts]
 certgrinderd = "certgrinderd.certgrinderd:main"

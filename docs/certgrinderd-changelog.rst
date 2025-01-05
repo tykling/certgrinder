@@ -9,6 +9,16 @@ All notable changes to ``certgrinderd`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+Unreleased
+----------
+
+Changed
+~~~~~~~
+- Update dependencies
+- Switch to using ``*_utc`` versions of ``produced_at``, ``next_update`` and other datetime related fields, since cryptography is deprecating the non-tz aware fields.
+- Drop support for python 3.8 and 3.9, since some deps are now 3.10+ only.
+
+
 v0.19.2 (13-jun-2024)
 ---------------------
 

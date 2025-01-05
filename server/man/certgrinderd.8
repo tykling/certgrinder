@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "CERTGRINDERD" "8" "Jun 13, 2024" "" "Certgrinder"
+.TH "CERTGRINDERD" "8" "Jan 05, 2025" "" "Certgrinder"
 .SH NAME
 certgrinderd \- Manpage for certgrinderd
 .sp
@@ -47,12 +47,10 @@ Create a dedicated user to run the Certgrinder server, usually the username is j
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 certgrinderd ALL=(ALL) NOPASSWD: /usr/local/bin/certbot
 Defaults env_keep += \(dqACMEZONE WEBROOT\(dq
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .SH INSTALL CERTGRINDERD
@@ -202,11 +200,9 @@ Something like this works:
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 from=\(dq2001:DB8::15\(dq,environment=\(dqCERTGRINDERD_DOMAINSETS=example.com,www.example.com;example.net\(dq,command=\(dq/path/to/certgrinderd $SSH_ORIGINAL_COMMAND\(dq,restrict ssh\-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOegnR+qnK2FEoaSrVwHgCIxjFkVEbW4VO31/Hd2mAwk ansible\-generated on webproxy2.example.com
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .sp
@@ -244,13 +240,12 @@ Both scripts must be able to handle the challenge type(s) you use. The same scri
 When the server has been configured with hooks you can test from a client using just SSH and a manually generated CSR, with something like: \fBcat mail4.example.com.csr | ssh certgrinderd@certgrinder.example.org \-T \-\- \-\-staging get certificate\fP where \fB\-T\fP is to prevent SSH from allocating a TTY on the server, \fB\-\-\fP is to mark the end of the SSH args, and \fB\-\-staging\fP is to make \fBcertgrinderd\fP use the LetsEncrypt staging servers. If all goes well it should output some logging and a certificate chain.
 .SH COMMAND LINE USAGE
 .sp
-certgrinderd version 0.19.2.dev21+g11d5629. See the manpage certgrinderd(8) or ReadTheDocs for more info.
+certgrinderd version 0.19.3.dev21+g93b04c2.d20250105. See the manpage certgrinderd(8) or ReadTheDocs for more info.
 
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 usage: certgrinderd
        [\-h]
        [\-\-acme\-email ACME\-EMAIL]
@@ -277,8 +272,7 @@ usage: certgrinderd
        [\-w WEB\-ROOT]
        {get,show,help,ping}
        ...
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .SS Positional Arguments
@@ -367,14 +361,12 @@ Use the \(dqget\(dq command to get certificates or OCSP responses
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 certgrinderd get
 [\-h]
 {certificate,ocsp}
 \&...
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .SS Positional Arguments
@@ -392,12 +384,10 @@ Get a new certificate. Requires a CSR.
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 certgrinderd get certificate
 [\-h]
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .SS ocsp
@@ -406,12 +396,10 @@ Get an OCSP response for the provided certificate.
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 certgrinderd get ocsp
 [\-h]
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .SS show
@@ -420,14 +408,12 @@ Use the \(dqshow\(dq command to show configuration and ACME account info.
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 certgrinderd show
 [\-h]
 {configuration,acmeaccount}
 \&...
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .SS Positional Arguments
@@ -445,12 +431,10 @@ Tell certgrinderd to output the current configuration
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 certgrinderd show configuration
 [\-h]
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .SS acmeaccount
@@ -459,12 +443,10 @@ Tell certgrinderd to output the ACME account URI (for example for use in CAA rec
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 certgrinderd show acmeaccount
 [\-h]
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .SS help
@@ -473,12 +455,10 @@ The \(dqhelp\(dq command just outputs the usage help
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 certgrinderd help
 [\-h]
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .SS ping
@@ -487,12 +467,10 @@ The \(dqping\(dq command is used by the certgrinder client to verify connectivit
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 certgrinderd ping
 [\-h]
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .SH CLASS METHODS
@@ -710,7 +688,7 @@ Parse certificate, get and return OCSP response.
 \fBcertpath\fP \-\- The path of the certificate chain to get OCSP response for (optional)
 .TP
 .B Returns
-The OCSPRequest object
+The OCSPResponse object
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
