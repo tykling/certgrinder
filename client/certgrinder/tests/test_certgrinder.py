@@ -310,7 +310,7 @@ def test_get_certificate(
         ), "Exit code not 1 as expected with expired ocsp response"
         assert "OCSP response not found" not in caplog.text
         assert (
-            "of the time between produced_at and next_update has passed, the limit is 0%"
+            "of the time between produced_at_utc and next_update_utc has passed, the limit is 0%"
             in caplog.text
         )
         caplog.clear()
@@ -321,7 +321,7 @@ def test_get_certificate(
         assert E.type == SystemExit, f"Exit was not as expected, it was {E.type}"
         assert E.value.code == 0, "Exit code not 0 as expected with OK ocsp response"
         assert "OCSP response not found" not in caplog.text
-        assert "was produced_at more than" not in caplog.text
+        assert "was produced_at_utc more than" not in caplog.text
 
         # we only need to test CAA once
         if certgrinderd_configfile[0] == "dns":

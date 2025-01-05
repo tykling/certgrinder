@@ -1143,15 +1143,17 @@ class Certgrinder:
         # parse the OCSP response
         ocsp_response = self.load_ocsp_response(self.ocsp_response_path)
 
-        # consider the response produced_at (rather than next_update)
-        validity = ocsp_response.next_update - ocsp_response.produced_at
-        passed = datetime.datetime.now() - ocsp_response.produced_at
+        # consider the response produced_at_utc (rather than next_update_utc)
+        validity = ocsp_response.next_update_utc - ocsp_response.produced_at_utc
+        passed = (
+            datetime.datetime.now(datetime.timezone.utc) - ocsp_response.produced_at_utc
+        )
         percent = (passed / validity) * 100
         logger.debug(f"{percent} percent of OCSP response validity period has passed")
 
         if percent > self.conf["ocsp-renew-threshold-percent"]:
             logger.debug(
-                f"OCSP response is too old for keytype {self.keytype} for domainset: {self.domainset} ({round(percent,2)}% of the time between produced_at and next_update has passed, the limit is {self.conf['ocsp-renew-threshold-percent']}%), returning False"
+                f"OCSP response is too old for keytype {self.keytype} for domainset: {self.domainset} ({round(percent,2)}% of the time between produced_at_utc and next_update_utc has passed, the limit is {self.conf['ocsp-renew-threshold-percent']}%), returning False"
             )
             self.error = True
             return False
@@ -1174,10 +1176,10 @@ class Certgrinder:
             f"- Showing OCSP response for keytype {self.keytype} domain set: {self.domainset}"
         )
         logger.info(f"Certificate status: {ocsp_response.certificate_status}")
-        logger.info(f"This update: {ocsp_response.this_update}")
-        logger.info(f"Produced at: {ocsp_response.produced_at}")
-        logger.info(f"Next update: {ocsp_response.next_update}")
-        logger.info(f"Revocation time: {ocsp_response.revocation_time}")
+        logger.info(f"This update: {ocsp_response.this_update_utc}")
+        logger.info(f"Produced at: {ocsp_response.produced_at_utc}")
+        logger.info(f"Next update: {ocsp_response.next_update_utc}")
+        logger.info(f"Revocation time: {ocsp_response.revocation_time_utc}")
         logger.info(f"Revocation reason: {ocsp_response.revocation_reason}")
 
     @staticmethod
@@ -2139,7 +2141,7 @@ def get_parser() -> argparse.ArgumentParser:
         type=int,
         choices=range(0, 101),
         metavar="OCSP-RENEW-THRESHOLD-PERCENT",
-        help="An integer between 0 and 100 specifying the amount of time in percent between ``produced_at`` and ``next_update`` which must have passed before an OCSP response is considered too old. Defaults to 50.",
+        help="An integer between 0 and 100 specifying the amount of time in percent between ``produced_at_utc`` and ``next_update_utc`` which must have passed before an OCSP response is considered too old. Defaults to 50.",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(

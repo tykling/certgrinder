@@ -648,8 +648,10 @@ def selfsigned_certificate(known_private_key_2):
         .issuer_name(issuer)
         .public_key(known_private_key_2.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=10))
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(
+            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=10)
+        )
         .add_extension(
             x509.SubjectAlternativeName(
                 [x509.DNSName("example.com"), x509.DNSName("www.example.com")]
@@ -682,8 +684,10 @@ def signed_certificate(known_private_key, known_private_key_2):
         .issuer_name(issuer)
         .public_key(known_private_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(
+            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=90)
+        )
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName("example.com")]), critical=False
         )
@@ -717,8 +721,10 @@ def delegated_signer_certificate_not_signed_by_issuer(
         .issuer_name(issuer)
         .public_key(known_private_key_3.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(
+            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=90)
+        )
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
             critical=True,
@@ -755,8 +761,10 @@ def delegated_signer_certificate(known_private_key_3, known_private_key_2):
         .issuer_name(issuer)
         .public_key(known_private_key_3.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(
+            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=90)
+        )
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
             critical=True,
@@ -793,8 +801,10 @@ def delegated_signer_certificate_no_eku(known_private_key_3, known_private_key_2
         .issuer_name(issuer)
         .public_key(known_private_key_3.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(
+            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=90)
+        )
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
             critical=True,
@@ -827,8 +837,10 @@ def delegated_signer_certificate_no_ocsp_perm(known_private_key_3, known_private
         .issuer_name(issuer)
         .public_key(known_private_key_3.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(
+            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=90)
+        )
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
             critical=True,
