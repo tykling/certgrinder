@@ -19,7 +19,7 @@ dependencies = [
     "PyYAML == 6.0.1",
     "cryptography == 44.0.0",
     "pid == 3.0.4",
-    "certbot == 2.11.0",
+    "certbot == 3.0.1",
 ]
 
 description = "The server part of the Certgrinder project"
