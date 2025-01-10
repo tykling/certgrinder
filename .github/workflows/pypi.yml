@@ -37,10 +37,5 @@ jobs:
       - name: "Publish certgrinder package to PyPI"
         uses: "pypa/gh-action-pypi-publish@release/v1"
         with:
-          packages-dir: "client/dist/"
-
-      - name: "Publish certgrinderd package to PyPI"
-        uses: "pypa/gh-action-pypi-publish@release/v1"
-        with:
-          packages-dir: "server/dist/"
+          packages-dir: "${{ matrix.workdir }}/dist/"
 ...
