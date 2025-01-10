@@ -9,6 +9,14 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+v0.20.0-beta2 (10-jan-2025)
+---------------------------
+
+Added
+~~~~~
+- New github action to publish to PyPi using trusted publisher
+
+
 v0.20.0-beta1 (10-jan-2025)
 ---------------------------
 
