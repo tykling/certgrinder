@@ -1047,7 +1047,12 @@ class Certgrinder:
         """
         with open(path, "rb") as f:
             ocsp_response_data = f.read()
-        return ocsp.load_der_ocsp_response(ocsp_response_data)
+        try:
+            return ocsp.load_der_ocsp_response(ocsp_response_data)
+        except ValueError:
+            # try loading without trailing char, see more at
+            # https://github.com/tykling/certgrinder/issues/759
+            return ocsp.load_der_ocsp_response(ocsp_response_data[:-1])
 
     def get_ocsp(
         self,

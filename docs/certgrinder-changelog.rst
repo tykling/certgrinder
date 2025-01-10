@@ -9,6 +9,16 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+
+Unreleased
+----------
+
+Fixed
+~~~~~
+
+- Workaround LetsEncrypt OCSP responder bug causing ``ValueError: error parsing asn1 value: ParseError { kind: ExtraData }`` when loading some OCSP responses. Details at https://github.com/tykling/certgrinder/issues/759
+
+
 v0.20.0-beta2 (10-jan-2025)
 ---------------------------
 
