@@ -9,8 +9,8 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-Unreleased
-----------
+v0.20.1 (10-jan-2025)
+---------------------
 
 Changed
 ~~~~~~~
