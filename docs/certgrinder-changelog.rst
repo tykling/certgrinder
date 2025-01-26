@@ -9,6 +9,14 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+Unreleased
+----------
+
+Changed
+~~~~~~~
+
+- Downgrade cryptography dependency and pin to 42.0.8 for now, pending upgrade of the FreeBSD ``security/py-cryptography`` port.
+
 
 v0.20.0 (10-jan-2025)
 ---------------------

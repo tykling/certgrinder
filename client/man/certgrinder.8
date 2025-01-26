@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "CERTGRINDER" "8" "Jan 10, 2025" "" "Certgrinder"
+.TH "CERTGRINDER" "8" "Jan 26, 2025" "" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .sp
@@ -350,7 +350,7 @@ Shown above is the \fBshow tlsa\fP subcommand in action. The value supplied shou
 The \fBversion\fP command is just a shortcut for \fB\-v\fP which shows the Certgrinder version and exits.
 .SH COMMAND LINE USAGE
 .sp
-Certgrinder version 0.19.3.dev21+g93b04c2.d20250105. See the manpage or ReadTheDocs for more info.
+Certgrinder version 0.20.1.dev0+g86b074d.d20250126. See the manpage or ReadTheDocs for more info.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -440,7 +440,7 @@ Run periodic command without delay. Equal to setting \-\-periodic\-sleep\-minute
 .B \-o, \-\-ocsp\-renew\-threshold\-percent
 Possible choices: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100
 .sp
-An integer between 0 and 100 specifying the amount of time in percent between \fBproduced_at_utc\fP and \fBnext_update_utc\fP which must have passed before an OCSP response is considered too old. Defaults to 50.
+An integer between 0 and 100 specifying the amount of time in percent between \fBproduced_at\fP and \fBnext_update\fP which must have passed before an OCSP response is considered too old. Defaults to 50.
 .TP
 .B \-\-path
 Tell certgrinder to use the specified directory for keys, CSRs and certificates. The directory must exist and be writeable by the user running certgrinder.
