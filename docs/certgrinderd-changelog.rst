@@ -9,8 +9,31 @@ All notable changes to ``certgrinderd`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-Unreleased
-----------
+v0.20.1 (10-jan-2025)
+---------------------
+
+Changed
+~~~~~~~
+
+- Downgrade cryptography dependency and pin to 42.0.8 for now, pending upgrade of the FreeBSD ``security/py-cryptography`` port.
+
+
+v0.20.0 (10-jan-2025)
+---------------------
+
+- No changes since beta2
+
+
+v0.20.0-beta2 (10-jan-2025)
+---------------------------
+
+Added
+~~~~~
+- New github action to publish to PyPi using trusted publisher
+
+
+v0.20.0-beta1 (10-jan-2025)
+---------------------------
 
 Changed
 ~~~~~~~

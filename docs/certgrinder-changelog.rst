@@ -9,13 +9,40 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-Unreleased
-----------
+v0.20.1 (10-jan-2025)
+---------------------
+
+Changed
+~~~~~~~
+
+- Downgrade cryptography dependency and pin to 42.0.8 for now, pending upgrade of the FreeBSD ``security/py-cryptography`` port.
+
+
+v0.20.0 (10-jan-2025)
+---------------------
+
+Fixed
+~~~~~
+
+- Workaround LetsEncrypt OCSP responder bug causing ``ValueError: error parsing asn1 value: ParseError { kind: ExtraData }`` when loading some OCSP responses. Details at https://github.com/tykling/certgrinder/issues/759
+
+
+v0.20.0-beta2 (10-jan-2025)
+---------------------------
+
+Added
+~~~~~
+- New github action to publish to PyPi using trusted publisher
+
+
+v0.20.0-beta1 (10-jan-2025)
+---------------------------
 
 Changed
 ~~~~~~~
 - Update dependencies
 - Switch to using ``*_utc`` versions of ``produced_at``, ``next_update`` and other datetime related fields, since cryptography is deprecating the non-tz aware fields.
+- Drop support for python 3.8 and 3.9, since some deps are now 3.10+ only.
 
 
 v0.19.2 (13-jun-2024)

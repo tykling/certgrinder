@@ -10,14 +10,5 @@ Then tag the new release:
     <enter something like "Release v0.4.0">
     git push origin v0.4.0
 
-Upload new release to pypi:
-    cd client
-    python -m build
-    twine upload dist/certgrinder*
-    cd ../server
-    python -m build
-    twine upload dist/certgrinderd*
-
 Back to development:
 - Update both changelogs
-
