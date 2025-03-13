@@ -17,7 +17,7 @@ classifiers = [
 dependencies = [
     "dnspython == 2.7.0",
     "PyYAML == 6.0.1",
-    "cryptography == 42.0.8",
+    "cryptography == 44.0.2",
     "pid == 3.0.4",
 ]
 
