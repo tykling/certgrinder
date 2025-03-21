@@ -17,8 +17,9 @@ classifiers = [
 dependencies = [
     "dnspython == 2.7.0",
     "PyYAML == 6.0.1",
-    "cryptography == 42.0.8",
+    "cryptography == 44.0.2",
     "pid == 3.0.4",
+    "pydantic-settings==2.8.1",
 ]
 
 description = "The client part of the Certgrinder project"
@@ -64,3 +65,20 @@ ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"*/tests/*.py" = [
+    "S101", # asserts allowed in tests...
+    "ARG", # Unused function args -> fixtures nevertheless are functionally relevant...
+    "FBT", # Don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
+    "PLR2004", # Magic value used in comparison, ...
+    "ANN001", # Missing type annotation for function argument ...
+    "ANN201", # Missing return type annotation for public function ...
+    "S113", # Probable use of requests call without timeout
+    "E501", # Line too long
+    "S603", # subprocess.run
+    "S607", # subprocess partial path
+    "S103", # permissive file modes
+    "T201", # print
+    "ANN401", # Any annotations
+]

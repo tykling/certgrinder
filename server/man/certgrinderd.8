@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "CERTGRINDERD" "8" "Mar 13, 2025" "" "Certgrinder"
+.TH "CERTGRINDERD" "8" "Mar 21, 2025" "" "Certgrinder"
 .SH NAME
 certgrinderd \- Manpage for certgrinderd
 .sp
@@ -240,7 +240,7 @@ Both scripts must be able to handle the challenge type(s) you use. The same scri
 When the server has been configured with hooks you can test from a client using just SSH and a manually generated CSR, with something like: \fBcat mail4.example.com.csr | ssh certgrinderd@certgrinder.example.org \-T \-\- \-\-staging get certificate\fP where \fB\-T\fP is to prevent SSH from allocating a TTY on the server, \fB\-\-\fP is to mark the end of the SSH args, and \fB\-\-staging\fP is to make \fBcertgrinderd\fP use the LetsEncrypt staging servers. If all goes well it should output some logging and a certificate chain.
 .SH COMMAND LINE USAGE
 .sp
-certgrinderd version 0.20.1.dev0+g86b074d.d20250126. See the manpage certgrinderd(8) or ReadTheDocs for more info.
+certgrinderd version {__version__}. See the manpage certgrinderd(8) or ReadTheDocs for more info.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -476,11 +476,11 @@ certgrinderd ping
 .SH CLASS METHODS
 .INDENT 0.0
 .TP
-.B class certgrinderd.Certgrinderd(userconfig: Dict[str, str | bool | None] | None = None)
+.B class certgrinderd.Certgrinderd(userconfig: dict[str, str | bool | Path | None] | None = None)
 The Certgrinderd server class.
 .INDENT 7.0
 .TP
-.B __init__(userconfig: Dict[str, str | bool | None] | None = None) -> None
+.B __init__(userconfig: dict[str, str | bool | Path | None] | None = None) -> None
 Merge userconfig with defaults and configure logging.
 .INDENT 7.0
 .TP
@@ -512,10 +512,11 @@ True if the CSR is OK, False otherwise
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod check_ocsp_response(ocsp_request: OCSPRequest, ocsp_response: OCSPResponse, certificate: Certificate, issuer: Certificate) -> bool
+.B classmethod check_ocsp_response(ocsp_request: OCSPRequest, ocsp_response: OCSPResponse, issuer: Certificate) -> bool
 Check that the OCSP response is valid for the OCSP request and cert/issuer.
 .sp
-Return True if the OCSP response is good, regardless of the certificate revocation status. Implements all the checks in RFC2560 3.2.
+Return True if the OCSP response is good, regardless of the certificate revocation status. Implements
+all the checks in RFC2560 3.2.
 .INDENT 7.0
 .TP
 .B Parameters
@@ -554,7 +555,7 @@ Boolean \- True if all is well, False if a problem was found
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod check_ocsp_response_signature(ocsp_response: OCSPResponse, issuers: List[Certificate]) -> bool
+.B classmethod check_ocsp_response_signature(ocsp_response: OCSPResponse, issuers: list[Certificate]) -> bool
 Check the signature of the OCSP response.
 .INDENT 7.0
 .TP
@@ -603,10 +604,10 @@ The OCSP request
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_certbot_command(challengetype: str, csrpath: str, fullchainpath: str, certpath: str, chainpath: str, subcommand: str = \(aqcertonly\(aq) -> List[str]
+.B get_certbot_command(challengetype: str, csrpath: Path, fullchainpath: Path, certpath: Path, chainpath: Path, subcommand: str = \(aqcertonly\(aq) -> list[str]
 Put the certbot command together.
 .sp
-Start with \fBself.conf[\(dqcertbot\-command\(dq]\fP and append all the needed options.
+Start with \fBself.conf.certbot_command\fP and append all the needed options.
 .sp
 Optionally add \fB\-\-email\fP and a bunch of certbot settings as needed.
 .INDENT 7.0
@@ -616,13 +617,15 @@ Optionally add \fB\-\-email\fP and a bunch of certbot settings as needed.
 .IP \(bu 2
 \fBchallengetype\fP \-\- The type of challenge, \fBdns\fP or \fBhttp\fP
 .IP \(bu 2
-\fBcsrpath\fP \-\- The path to the CSR
+\fBcsrpath\fP (\fIPath\fP) \-\- The path to the CSR
 .IP \(bu 2
-\fBfullchainpath\fP \-\- The path to save the certificate+issuer
+\fBfullchainpath\fP (\fIPath\fP) \-\- The path to save the certificate+issuer
 .IP \(bu 2
-\fBcertpath\fP \-\- The path to save the certificate (without issuer)
+\fBcertpath\fP (\fIPath\fP) \-\- The path to save the certificate (without issuer)
 .IP \(bu 2
-\fBchainpath\fP \-\- The path to save the issuer (without certificate)
+\fBchainpath\fP (\fIPath\fP) \-\- The path to save the issuer (without certificate)
+.IP \(bu 2
+\fBsubcommand\fP (\fIstr\fP) \-\- The subcommand to run, defaults to \(dqcertonly\(dq
 .UNINDENT
 .TP
 .B Returns
@@ -631,20 +634,20 @@ The certbot command as a list
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_certificate(csrpath: str) -> None
+.B get_certificate(csrpath: Path) -> None
 Get a cert using \fBDNS\-01\fP or \fBHTTP\-01\fP by calling \fBself.run_certbot()\fP for each.
 .sp
-If \fBself.conf[\(dqacme\-zone\(dq]\fP is set then \fBDNS\-01\fP is attempted. Return if it
+If \fBself.conf.acme_zone\fP is set then \fBDNS\-01\fP is attempted. Return if it
 results in a new certificate.
 .sp
-If \fBself.conf[\(dqweb\-root\(dq]\fP is set then \fBHTTP\-01\fP is attempted. Return if it
+If \fBself.conf.web_root\fP is set then \fBHTTP\-01\fP is attempted. Return if it
 results in a new certificate.
 .sp
 If there is still no certificate log an error and return anyway.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcsrpath\fP \-\- The path to the CSR
+\fBcsrpath\fP (\fIPath\fP) \-\- The path to the CSR
 .TP
 .B Returns
 None
@@ -680,12 +683,12 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_ocsp_response(certpath: str | None) -> OCSPResponse
+.B get_ocsp_response(certpath: Path | None) -> OCSPResponse
 Parse certificate, get and return OCSP response.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcertpath\fP \-\- The path of the certificate chain to get OCSP response for (optional)
+\fBcertpath\fP (\fIPath\fP) \-\- The path of the certificate chain to get OCSP response for (optional)
 .TP
 .B Returns
 The OCSPRequest object
@@ -706,17 +709,17 @@ A cryptography.x509.Certificate object.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod parse_certificate_chain(certpath: str | None, expected_length: int | None = None) -> List[Certificate]
+.B classmethod parse_certificate_chain(certpath: Path | None, expected_length: int | None = None) -> list[Certificate]
 Parse certificate chain from path or stdin.
 .INDENT 7.0
 .TP
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBcertpath\fP \-\- The path of the certificate chain to parse (optional),
+\fBcertpath\fP (\fIPath\fP) \-\- The path of the certificate chain to parse (optional),
 chainbytes are taken from stdin if not provided.
 .IP \(bu 2
-\fBexpected_length\fP \-\- The number of certificates to expect. Optional.
+\fBexpected_length\fP (\fIint\fP\fI | \fP\fINone\fP) \-\- The number of certificates to expect. Optional.
 .UNINDENT
 .TP
 .B Returns
@@ -749,10 +752,10 @@ Returns: None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B process_csr(csrpath: str = \(aq\(aq) -> None
+.B process_csr(csrpath: Path | None = None) -> None
 Load the CSR, use it to get a certificate, and cleanup.
 .sp
-Calls \fBself.parse_csr()\fP followed by \fBself.check_csr()\fP, and then exists if any
+Calls \fBself.parse_csr()\fP followed by \fBself.check_csr()\fP, and then exits if any
 problems are found with the CSR.
 .sp
 Then \fBself.get_certificate()\fP is called, which in turn calls Certbot, which writes
@@ -762,7 +765,7 @@ Finally the CSR is deleted.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBNone\fP
+\fBcsrpath\fP (\fIPath\fP) \-\- The path to the CSR. Optional. Pass None to use stdin.
 .TP
 .B Returns
 None
@@ -770,7 +773,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B run_certbot(command: List[str], env: Dict[str, str], fullchainpath: str) -> bool
+.B run_certbot(command: list[str], env: dict[str, str], fullchainpath: Path) -> bool
 Call certbot, check exitcode, output cert, return bool success.
 .INDENT 7.0
 .TP
@@ -781,7 +784,7 @@ Call certbot, check exitcode, output cert, return bool success.
 .IP \(bu 2
 \fBenv\fP \-\- A dictionary of the environment to pass to subprocess.run()
 .IP \(bu 2
-\fBfullchainpath\fP \-\- The path to read the certificate+chain from after Certbot runs
+\fBfullchainpath\fP (\fIPath\fP) \-\- The path to read the certificate+chain from after Certbot runs
 .UNINDENT
 .TP
 .B Returns
@@ -790,7 +793,7 @@ True if Certbot command exitcode was 0, False otherwise
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_csr(csr: CertificateSigningRequest, path: str) -> None
+.B static save_csr(csr: CertificateSigningRequest, path: Path) -> None
 Save the CSR object to the path in PEM format.
 .INDENT 7.0
 .TP
@@ -799,7 +802,7 @@ Save the CSR object to the path in PEM format.
 .IP \(bu 2
 \fBcsr\fP \-\- The CSR object
 .IP \(bu 2
-\fBpath\fP \-\- The path to save it in
+\fBpath\fP (\fIPath\fP) \-\- The path to save it in
 .UNINDENT
 .TP
 .B Returns
@@ -816,7 +819,7 @@ Returns: None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static split_pem_chain(pem_chain_bytes: bytes) -> List[bytes]
+.B static split_pem_chain(pem_chain_bytes: bytes) -> list[bytes]
 Split a PEM chain into a list of bytes of the individual PEM certificates.
 .INDENT 7.0
 .TP

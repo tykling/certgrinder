@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "CERTGRINDER" "8" "Mar 13, 2025" "" "Certgrinder"
+.TH "CERTGRINDER" "8" "Mar 21, 2025" "" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .sp
@@ -778,7 +778,7 @@ The Certgrinder client class.
 .INDENT 7.0
 .TP
 .B __init__() -> None
-Define the default config.
+Initialise the Certgrinder object.
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -822,7 +822,7 @@ True if remaining certificate lifetime is >= threshold_days, False if not
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static check_certificate_issuer(certificate: Certificate, invalid_ca_cn_list: List[str]) -> bool
+.B static check_certificate_issuer(certificate: Certificate, invalid_ca_cn_list: list[str]) -> bool
 Check the issuer of the certificate.
 .INDENT 7.0
 .TP
@@ -858,7 +858,7 @@ True if the public key matches, False if not
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static check_certificate_san_names(certificate: Certificate, san_names: List[str]) -> bool
+.B static check_certificate_san_names(certificate: Certificate, san_names: list[str]) -> bool
 Make sure the certificate has the provided list of names as SAN.
 .INDENT 7.0
 .TP
@@ -894,7 +894,7 @@ True if the subject matches the cert, False if not
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod check_certificate_validity(certificate: Certificate, invalid_ca_cn_list: List[str], threshold_days: int, san_names: List[str], public_key: RSAPublicKey | Ed25519PublicKey | EllipticCurvePublicKey | None = None, subject: Name | None = None) -> bool
+.B classmethod check_certificate_validity(certificate: Certificate, invalid_ca_cn_list: list[str], threshold_days: int, san_names: list[str], public_key: RSAPublicKey | Ed25519PublicKey | EllipticCurvePublicKey | None = None, subject: Name | None = None) -> bool
 Perform a few sanity checks of the certificate.
 .INDENT 7.0
 .IP \(bu 2
@@ -921,7 +921,9 @@ Check that the SubjectAltName data is correct
 .IP \(bu 2
 \fBsan_names\fP \-\- A list of domain names to expect in SubjectAltName of the certificate.
 .IP \(bu 2
-\fBkeypair\fP \-\- The keypair the certificate is for.
+\fBpublic_key\fP \-\- The pubkey the certificate is for.
+.IP \(bu 2
+\fBsubject\fP \-\- The expected subject of the certificate
 .UNINDENT
 .TP
 .B Returns
@@ -966,7 +968,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B configure(userconfig: Dict[str, str | int | bool | List[str]]) -> None
+.B configure(userconfig: Mapping[str, str | int | bool | list[str] | Path]) -> None
 Merge and check configuration and configure logging.
 .sp
 Merge the supplied userconfig dict with the default config,
@@ -982,7 +984,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static generate_csr(keypair: RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey, domains: List[str]) -> CertificateSigningRequest
+.B static generate_csr(keypair: RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey, domains: list[str]) -> CertificateSigningRequest
 Generate and return a new CSR based on the public key and list of domains.
 .sp
 Only set CN since everything else is removed by LetsEncrypt in the certificate anyway.
@@ -1024,7 +1026,7 @@ Generate and return a pin\-sha256 spki hpkp style pin for the provided public ke
 .INDENT 7.0
 .TP
 .B OpenSSL equivalent command is:
-openssl x509 \-in example.com.crt \-pubkey \-noout | openssl pkey \-pubin \-outform der | openssl dgst \-sha256 \-binary | openssl base64
+openssl x509 \-in example.com.crt \-pubkey \-noout | openssl pkey             \-pubin \-outform der | openssl dgst \-sha256 \-binary | openssl base64
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -1061,10 +1063,10 @@ String of the TLSA data
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_certgrinderd_command(subcommand: List[str]) -> List[str]
+.B get_certgrinderd_command(subcommand: list[str]) -> list[str]
 Return the certgrinderd command to run.
 .sp
-Adds \fB\-\-log\-level\fP with the current \fBself.conf[\(dqlog\-level\(dq]\fP\&.
+Adds \fB\-\-log\-level\fP with the current \fBself.conf.log_level\fP\&.
 Also adds \-\-acme\-server\-url if configured, and \-\-preferred\-chain.
 .INDENT 7.0
 .TP
@@ -1125,7 +1127,7 @@ representation of the hostname for the filename, leaving 25 bytes for metadata.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBdomainset\fP \-\- The list of hostnames
+\fBhostname\fP \-\- The hostname to use
 .TP
 .B Returns
 The string to use in filenames
@@ -1133,7 +1135,7 @@ The string to use in filenames
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_ocsp(certificate: Certificate | None = None, issuers: List[Certificate] = [], stdout: bytes | None = None) -> bool
+.B get_ocsp(certificate: Certificate | None = None, issuers: list[Certificate] | None = None, stdout: bytes | None = None) -> bool
 The \fBget ocsp\fP subcommand method, called for each domainset by \fBself.grind()\fP\&.
 .INDENT 7.0
 .TP
@@ -1154,11 +1156,11 @@ None
 .INDENT 7.0
 .TP
 .B grind(args: Namespace) -> None
-Loop over enabled keytypes and domainsets in \fBself.conf[\(dqdomain\-list\(dq]\fP and call args.method for each.
+Loop over enabled keytypes and domainsets in \fBself.conf.domain_list\fP and call args.method for each.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B load_certificates(path: str) -> List[Certificate]
+.B load_certificates(path: Path) -> list[Certificate]
 Reads PEM certificate data from the path, parses the certificate(s), and returns them in a list.
 .INDENT 7.0
 .TP
@@ -1171,7 +1173,7 @@ A list of cryptography.x509.Certificate objects
 .UNINDENT
 .INDENT 7.0
 .TP
-.B load_domainset(domainset: List[str], keytype: str) -> None
+.B load_domainset(domainset: list[str], keytype: str) -> None
 Prepare paths and create/load private key.
 .INDENT 7.0
 .TP
@@ -1189,7 +1191,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static load_keypair(path: str) -> RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey
+.B static load_keypair(path: Path) -> RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey
 Load keypair bytes from disk, load key and return the object.
 .sp
 Fixes keypair permissions to 640 if they are not 640.
@@ -1204,7 +1206,7 @@ The keypair object
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static load_ocsp_response(path: str) -> OCSPResponse
+.B static load_ocsp_response(path: Path) -> OCSPResponse
 Reads OCSP response in DER format from the path and returns the object.
 .INDENT 7.0
 .TP
@@ -1217,7 +1219,7 @@ The OCSP response object
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static lookup_tlsa_record(domain: str, port: int, protocol: str, tlsatype: str | None = None, nameserver: str = \(aq\(aq) -> List[str] | None
+.B static lookup_tlsa_record(domain: str, port: int, protocol: str, tlsatype: str | None = None, nameserver: str = \(aq\(aq) -> list[str] | None
 Lookup TLSA records in DNS for the configured domain, port, and protocol.
 .sp
 Loop over any responses and look for the requested tlsatype.
@@ -1258,7 +1260,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod output_tlsa_record(derkey: bytes, domain: str, port: int, protocol: str, tlsatype: str, warning: bool = False) -> None
+.B classmethod output_tlsa_record(*, derkey: bytes, domain: str, port: int, protocol: str, tlsatype: str, warning: bool = False) -> None
 Output the TLSA record for the given DER key, domain, port, protocol and tlsatype.
 .sp
 Call \fBself.generate_tlsa()\fP and output the result formatted as a DNS record
@@ -1291,7 +1293,7 @@ Parse a DER encoded binary OCSP response as returned by Certgrinderd.
 .INDENT 7.0
 .TP
 .B Parameters
-\fBcertgrinderd_output\fP \-\- The bytes representing the OCSP response in DER format
+\fBcertgrinderd_stdout\fP \-\- The bytes representing the OCSP response in DER format
 .TP
 .B Returns
 cryptography.x509.ocsp.OCSPResponse
@@ -1312,7 +1314,7 @@ The parsed cryptography.x509.Certificate object or None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B parse_certificate_chain(certificate_chain: bytes, csr: CertificateSigningRequest) -> List[Certificate] | None
+.B parse_certificate_chain(certificate_chain: bytes, csr: CertificateSigningRequest) -> list[Certificate] | None
 Split a PEM chain into a list of certificates.
 .INDENT 7.0
 .TP
@@ -1339,8 +1341,8 @@ It starts out by sleeping for a random period and then checks certificates and r
 .UNINDENT
 .INDENT 7.0
 .TP
-.B run_certgrinderd(stdin: bytes, command: List[str], certgrinderd_stdout: bytes = b\(aq\(aq, certgrinderd_stderr: bytes = b\(aq\(aq) -> bytes
-Run the configured \fBself.conf[\(dqcertgrinderd\(dq]\fP command.
+.B run_certgrinderd(stdin: bytes, command: list[str], certgrinderd_stdout: bytes = b\(aq\(aq, certgrinderd_stderr: bytes = b\(aq\(aq) -> bytes
+Run the configured \fBself.conf.certgrinderd\fP command.
 .sp
 The stdin argument will be passed to stdin of the command. A CSR is needed for
 the \(dqget certificate\(dq certgrinderd command, and a certificate chain is needed for
@@ -1365,7 +1367,7 @@ The bytes representing the stdout from the subprocess call
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static run_post_renew_hook(hook: List[str]) -> bool
+.B static run_post_renew_hook(hook: Sequence[Path | str]) -> bool
 Run a specific post renew hook.
 .INDENT 7.0
 .TP
@@ -1387,7 +1389,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_certificate(certificate: Certificate, path: str, issuers: List[Certificate] = []) -> None
+.B static save_certificate(certificate: Certificate, path: Path, issuers: list[Certificate] | None = None) -> None
 Save the PEM certificate to the path, optionally with an issuer chain.
 .INDENT 7.0
 .TP
@@ -1398,7 +1400,7 @@ Save the PEM certificate to the path, optionally with an issuer chain.
 .IP \(bu 2
 \fBpath\fP \-\- The path to save the certificate in
 .IP \(bu 2
-\fBissuer\fP \-\- The list of issuer certificates to write after the certificate (if any)
+\fBissuers\fP \-\- The list of issuer certificates to write after the certificate (if any)
 .UNINDENT
 .TP
 .B Returns
@@ -1407,7 +1409,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod save_concat_certkey(keypair: RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey, certificate: Certificate, issuers: List[Certificate], path: str) -> None
+.B classmethod save_concat_certkey(keypair: RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey, certificate: Certificate, issuers: list[Certificate], path: Path) -> None
 Create a single file with the private key, the cert and the issuer(s), in that order.
 .INDENT 7.0
 .TP
@@ -1429,7 +1431,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_csr(csr: CertificateSigningRequest, path: str) -> None
+.B static save_csr(csr: CertificateSigningRequest, path: Path) -> None
 Save the PEM version of the CSR to the path.
 .sp
 chmods the file 644 after writing.
@@ -1449,7 +1451,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_keypair(keypair: RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey, path: str) -> None
+.B static save_keypair(keypair: RSAPrivateKey | Ed25519PrivateKey | EllipticCurvePrivateKey, path: Path) -> None
 Save keypair to disk.
 .INDENT 7.0
 .TP
@@ -1465,12 +1467,12 @@ Save keypair to disk.
 None
 .TP
 .B Raises
-\fBValueError\fP \-\- For unsupported keytypes
+\fBTypeError\fP \-\- For unsupported keytypes
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static save_ocsp_response(ocsp_response: OCSPResponse, path: str) -> None
+.B static save_ocsp_response(ocsp_response: OCSPResponse, path: Path) -> None
 Save the OCSP response to disk in DER format.
 .INDENT 7.0
 .TP
@@ -1550,7 +1552,7 @@ None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static split_pem_chain(pem_chain_bytes: bytes) -> List[bytes]
+.B static split_pem_chain(pem_chain_bytes: bytes) -> list[bytes]
 Split a PEM chain into a list of bytes of the individual PEM certificates.
 .INDENT 7.0
 .TP

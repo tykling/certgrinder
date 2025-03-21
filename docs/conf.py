@@ -2,6 +2,7 @@
 
 More info at https://www.sphinx-doc.org/en/master/usage/configuration.html
 """
+
 import os
 import sys
 

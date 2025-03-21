@@ -9,6 +9,24 @@ All notable changes to ``certgrinderd`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+Unreleased
+----------
+
+Added
+~~~~~
+- Introducing ``pydantic_settings`` means that Certgrinderd now supports environment variables for all settings. Environment vars for Certgrinderd should be prefixed with ``certgrinderd_`` and are case insensitive, so ``CERTGRINDER_ACME_EMAIL`` is valid.
+
+Changed
+~~~~~~~
+- Introduce ``pydantic_settings`` instead of using a dict for settings. A side effect of this change is that settings now use underscores ``_`` instead of dashes ``-``, so ``post_renew_hooks`` instead of ``post-renew-hooks``. NOTE: This is intended as an internal change only, it does not affect the names of settings in config files or command-line switches.
+- Update dependencies
+- Switch to using ``*_utc`` versions of ``produced_at``, ``next_update`` and other datetime related fields, since cryptography is deprecating the non-tz aware fields.
+- Remove a bunch of linters, replace them with ruff.
+- Improved static typing
+- Many small fixes to make ruff happy
+- Embrace pathlib.Path for all path handling
+
+
 v0.20.1 (10-jan-2025)
 ---------------------
 

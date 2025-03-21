@@ -1,4 +1,7 @@
 """pytest configuration file for Certgrinder project."""
+
+from pathlib import Path
+
 import datetime
 import json
 import pathlib
@@ -6,7 +9,7 @@ import shutil
 import subprocess
 import sys
 import time
-
+from typing import Iterator
 import pytest
 import requests
 import yaml
@@ -16,16 +19,16 @@ from cryptography.hazmat.backends import default_backend
 
 
 @pytest.fixture(scope="session")
-def pebble_server_build(tmp_path_factory):
+def pebble_server_build(tmp_path_factory) -> Path:
     """Get the pebble sources, and build the binary, and run it."""
     pebblepath = tmp_path_factory.mktemp("pebble")
     print("Making sure we have Go and Git...")
-    assert (
-        shutil.which("go") is not None
-    ), "Go is required to run the testsuite (for building Pebble)"
-    assert (
-        shutil.which("git") is not None
-    ), "Git is required to run the testsuite (for getting Pebble sources)"
+    assert shutil.which("go") is not None, (
+        "Go is required to run the testsuite (for building Pebble)"
+    )
+    assert shutil.which("git") is not None, (
+        "Git is required to run the testsuite (for getting Pebble sources)"
+    )
     print("Begginning setup")
     print("Getting pebble sources...")
     proc = subprocess.run(
@@ -68,7 +71,7 @@ def pebble_server_build(tmp_path_factory):
 # run pebble server with 1 intermediate only
 # (this fixture used to run with 1 or 2 intermediates when LE had cross signing with longer chain)
 @pytest.fixture(scope="session", params=["1"])
-def pebble_server_run(request, pebble_server_build):
+def pebble_server_run(request, pebble_server_build) -> Iterator[str]:
     """Run pebble server with primary or alternate chain as needed."""
     pebbleconfig = pebble_server_build / "test/config/pebble-config.json"
     print("Running pebble server...")
@@ -96,7 +99,7 @@ def pebble_server_run(request, pebble_server_build):
 
 
 @pytest.fixture(scope="function")
-def pebble_issuer(tmp_path_factory, pebble_server_build):
+def pebble_issuer(tmp_path_factory, pebble_server_build) -> tuple[Path, Path]:
     """Download issuer cert and key from pebble and write it to a temp file."""
     certpath = tmp_path_factory.mktemp("pebble") / "pebble-issuer.crt"
     r = requests.get(
@@ -119,7 +122,7 @@ def pebble_issuer(tmp_path_factory, pebble_server_build):
 
 
 @pytest.fixture(scope="function")
-def ocsp_ca_index_file(tmp_path_factory):
+def ocsp_ca_index_file(tmp_path_factory) -> Path:
     """Return path to the CA index file to use for testing."""
     indexpath = tmp_path_factory.mktemp("pebble") / "pebble-ocsp-index.ca"
     print(f"Path to CA index for this test session is {indexpath}")
@@ -129,7 +132,7 @@ def ocsp_ca_index_file(tmp_path_factory):
 
 
 @pytest.fixture
-def certgrinderd_broken_yaml_configfile(tmp_path_factory):
+def certgrinderd_broken_yaml_configfile(tmp_path_factory) -> Path:
     """Write a certgrinderd.yml file with invalid yml."""
     confpath = tmp_path_factory.mktemp("conf") / "certgrinderd.yml"
     # write file to disk
@@ -151,11 +154,11 @@ def certgrinder_broken_yaml_configfile(tmp_path_factory):
 
 
 @pytest.fixture(params=["dns", "http", ""])
-def certgrinderd_configfile(request, tmp_path_factory):
+def certgrinderd_configfile(request, tmp_path_factory) -> tuple[str, Path]:
     """Write a certgrinderd.yml config file."""
     confpath = tmp_path_factory.mktemp("conf") / "certgrinderd.yml"
     conf = {
-        "acme-email": "certgrindertest@invalid",
+        "acme-email": "certgrindertest@tyknet.dk",
         "auth-hook": "echo 'authhook faked OK!'",
         "cleanup-hook": "echo 'cleanuphook faked OK!'",
         "certbot-command": str(pathlib.Path(sys.executable).parent / "certbot"),
@@ -164,6 +167,7 @@ def certgrinderd_configfile(request, tmp_path_factory):
         "certbot-logs-dir": str(tmp_path_factory.mktemp("certbot") / "logsdir"),
         "skip-acme-server-cert-verify": True,
         "temp-dir": str(tmp_path_factory.mktemp("certgrinderd")),
+        # "acme-server-url": "https://127.0.0.1:14000/dir",
     }
     # add auth type
     if request.param == "dns":
@@ -445,7 +449,7 @@ fVyZ90NCIrfV9bMfFwVpCU7u99xhrGqh8At20grr6OWkQ6uUwrXOtpq/qUVU
 
 
 @pytest.fixture
-def known_csr():
+def known_csr() -> str:
     """A PEM formatted CSR for example.com,www.example.com."""
     pem_csr = """
 -----BEGIN CERTIFICATE REQUEST-----
@@ -480,7 +484,7 @@ L37QA7qQ9foiMk/wJdtkYNss1xD7dW+biQ==
 
 
 @pytest.fixture
-def csr_with_two_cn():
+def csr_with_two_cn() -> str:
     """An invalid PEM formatted CSR for example.com,www.example.com with two CommonName attributes."""
     two_cn_csr = """
 -----BEGIN CERTIFICATE REQUEST-----
@@ -634,7 +638,7 @@ def no_certgrinderd_env(monkeypatch):
 
 
 @pytest.fixture
-def selfsigned_certificate(known_private_key_2):
+def selfsigned_certificate(known_private_key_2) -> x509.Certificate:
     """Return a selfsigned certificate, only valid for 10 days."""
     subject = issuer = x509.Name(
         [

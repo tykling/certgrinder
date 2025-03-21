@@ -9,12 +9,12 @@ repos:
     rev: 'v1.15.0'
     hooks:
     - id: "mypy"
-      additional_dependencies: ["types-cryptography", "types-requests", "types-PyYAML"]
+      additional_dependencies: ["types-cryptography", "types-requests", "types-PyYAML", "pydantic-settings", "pytest", "dnspython"]
       name: "mypy (client/certgrinder)"
       args: ["--strict"]
       files: ^client/
     - id: "mypy"
-      additional_dependencies: ["types-cryptography", "types-requests", "types-PyYAML"]
+      additional_dependencies: ["types-cryptography", "types-requests", "types-PyYAML", "pydantic-settings", "pytest"]
       name: "mypy (server/certgrinderd)"
       args: ["--strict"]
       files: ^server/
