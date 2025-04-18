@@ -20,7 +20,7 @@ dependencies = [
     "cryptography == 44.0.2",
     "pid == 3.0.4",
     "certbot == 3.1.0",
-    "pydantic-settings==2.8.1",
+    "pydantic-settings==2.9.0",
 ]
 
 description = "The server part of the Certgrinder project"
