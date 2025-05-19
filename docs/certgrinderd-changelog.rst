@@ -9,8 +9,21 @@ All notable changes to ``certgrinderd`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+
 Unreleased
 ----------
+
+Changed
+~~~~~~~
+- Pin `pydantic_settings` dependency to 2.6.0 for now until FreeBSD ports catch up
+
+Fixed
+~~~~~
+- Fixed bug related to the introduction of `pydantic_settings` when using a configuration file.
+
+
+  v0.21.0-rc1 (19-may-2025)
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Added
 ~~~~~

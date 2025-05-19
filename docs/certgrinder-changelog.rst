@@ -9,13 +9,31 @@ All notable changes to ``certgrinder`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
+
+Unreleased
+----------
+
+Changed
+~~~~~~~
+- Pin `pydantic_settings` dependency to 2.6.0 for now until FreeBSD ports catch up
+
+Fixed
+~~~~~
+- Fixed bug related to the introduction of `pydantic_settings` when using a configuration file.
+
+
+v0.21.0-rc1 (19-may-2025)
+---------------------
+
+NOTE WELL: This release removes support for fetching OCSP responses. Update your server configs accordingly, so they no longer reference the OCSP response files from Certgrinder.
+
+
 Added
 ~~~~~
 - Introducing ``pydantic_settings`` means that Certgrinder now supports environment variables for all settings. Environment vars for Certgrinder should be prefixed with ``certgrinder_`` and are case insensitive, so ``CERTGRINDER_PATH`` is valid.
 
 Changed
 ~~~~~~~
-- Remove OCSP support, since LetsEncrypts OCSP responders have been turned off. REMEMBER TO UPDATE YOUR SERVER CONFIGS TO STOP USING OCSP RESPONSES FOR STAPLING!
 - Introduce ``pydantic_settings`` instead of using a dict for settings. A side effect of this change is that settings now use underscores ``_`` instead of dashes ``-``, so ``post_renew_hooks`` instead of ``post-renew-hooks``. NOTE: This is intended as an internal change only, it does not affect the names of settings in config files or command-line switches.
 - Update dependencies
 - Switch to using ``*_utc`` versions of ``produced_at``, ``next_update`` and other datetime related fields, since cryptography is deprecating the non-tz aware fields.
@@ -23,6 +41,10 @@ Changed
 - Improved static typing
 - Many small fixes to make ruff happy
 - Embrace pathlib.Path for all path handling
+
+Removed
+~~~~~~~
+- Remove OCSP support, since LetsEncrypts OCSP responders have been turned off. REMEMBER TO UPDATE YOUR SERVER CONFIGS TO STOP USING OCSP RESPONSES FOR STAPLING!
 
 
 v0.20.1 (10-jan-2025)

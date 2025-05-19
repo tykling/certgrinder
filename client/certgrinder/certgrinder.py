@@ -1921,7 +1921,8 @@ def main(mockargs: list[str] | None = None) -> None:
     config.update(vars(args))
 
     # remove command, subcommand, and method from config (part of argparse internals)
-    for key in ["command", "subcommand", "method"]:
+    # also remove config-file
+    for key in ["command", "subcommand", "method", "config-file"]:
         if key in config:
             del config[key]
 

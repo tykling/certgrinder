@@ -58,7 +58,6 @@ class Config(BaseSettings):
     certbot_work_dir: Path | None = None
     certificate_file: Path | None = None
     cleanup_hook: Path | None = Path("manual-cleanup-hook.sh")
-    config_file: Path | None = None
     csr_path: Path | None = None
     debug: bool = False
     expected_chain_length: int = 2
@@ -907,7 +906,8 @@ def main(mockargs: list[str] | None = None) -> None:
     config.update(vars(args))
 
     # remove command, subcommand, and method from config (part of argparse internals)
-    for key in ["command", "subcommand", "method"]:
+    # also remove config-file
+    for key in ["command", "subcommand", "method", "config-file"]:
         if key in config:
             del config[key]
 
