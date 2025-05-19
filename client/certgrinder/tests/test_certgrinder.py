@@ -128,12 +128,8 @@ def test_get_certificate(  # noqa: PLR0913, PLR0915
     caplog: pytest.LogCaptureFixture,
     capsys: pytest.CaptureFixture[str],
     tmpdir_factory: pytest.TempdirFactory,
-    ocsp_ca_index_file: Path,
 ) -> None:
-    """Get a couple of certificates and check that they look right.
-
-    Also get OCSP responses for the certificates.
-    """
+    """Get a couple of certificates and check that they look right."""
     caplog.set_level(logging.DEBUG)
 
     mockargs = [
@@ -219,106 +215,12 @@ def test_get_certificate(  # noqa: PLR0913, PLR0915
                 assert str(certificate.serial_number) in caplog.text
                 assert str(certificate.subject) in caplog.text
 
-                # write certificate info to pebble ocsp index file for rsa certs only,
-                # because the openssl ocsp responder doesn't want identical subjects in
-                # the index file, regardless of the unique_subject setting in openssl.cnf
-                if keytype == "rsa":
-                    subject = [f"/{x.rfc4514_string()}" for x in certificate.subject]
-                    with ocsp_ca_index_file.open("a+") as f:
-                        f.write(
-                            f"V	{certificate.not_valid_after_utc.strftime('%y%m%d%H%M%SZ')}		{hex(certificate.serial_number).upper()[2:]}	unknown	{''.join(subject)}\n"  # type: ignore[attr-defined]
-                        )
-                    print(f"wrote cert info to CA index file {ocsp_ca_index_file}")
-
             if keytype == "ecdsa":
                 # delete the certificate and issuer to test the cert/issuer splitter
                 certificate_path = Path(mockargs[1], domains[0] + f"-certificate.{keytype}.crt")
                 certificate_path.unlink()
                 issuer_path = Path(mockargs[1], domains[0] + f"-issuer.{keytype}.crt")
                 issuer_path.unlink()
-
-        # try to get OCSP responses before starting the responder to provoke failure
-        with pytest.raises(SystemExit) as e:
-            main([*mockargs, "get", "ocsp"])
-        assert "OCSP request failed for URL" in caplog.text, (
-            "Expected error message not found with no ocsp responder running"
-        )
-
-        # make clean before doing the next OCSP stuff
-        caplog.clear()
-
-        print("Running openssl ocsp responder...")
-        proc = subprocess.Popen(
-            args=[
-                "openssl",
-                "ocsp",
-                "-index",
-                ocsp_ca_index_file,
-                "-port",
-                "8080",
-                "-rsigner",
-                pebble_issuer[1],
-                "-rkey",
-                pebble_issuer[0],
-                "-CA",
-                pebble_issuer[1],
-                "-text",
-                # nextupdate in 7 days
-                "-ndays",
-                "7",
-            ]
-        )
-
-        # wait for it to start up
-        time.sleep(5)
-        proc.poll()
-        assert proc.returncode is None, f"OpenSSL OCSP responder not running, it quit with exit code {proc.returncode}"
-
-        # get OCSP responses for all three RSA certificates
-        with pytest.raises(SystemExit) as e:
-            main([*mockargs, "--key-type-list", "rsa", "get", "ocsp"])
-        assert e.type is SystemExit, f"Exit was not as expected, it was {e.type}"
-        assert "Did not get an OCSP response" not in caplog.text
-
-        print(f"Killing openssl ocsp responder with pid {proc.pid}...")
-        proc.kill()
-        proc.poll()
-        proc.wait(timeout=5)
-        caplog.clear()
-
-        # make sure we have an OCSP response
-        with pytest.raises(SystemExit) as e:
-            main([*mockargs, "--key-type-list", "rsa", "show", "ocsp"])
-        assert e.type is SystemExit, f"Exit was not as expected, it was {e.type}"
-        assert "OCSP response not found" not in caplog.text
-        caplog.clear()
-
-        # and that the renew threshold works
-        with pytest.raises(SystemExit) as e:
-            main(
-                [
-                    *mockargs,
-                    "--key-type-list",
-                    "rsa",
-                    "--ocsp-renew-threshold-percent",
-                    "0",
-                    "check",
-                    "ocsp",
-                ]
-            )
-        assert e.type is SystemExit, f"Exit was not as expected, it was {e.type}"
-        assert e.value.code == 1, "Exit code not 1 as expected with expired ocsp response"
-        assert "OCSP response not found" not in caplog.text
-        assert "of the time between produced_at_utc and next_update_utc has passed, the limit is 0%" in caplog.text
-        caplog.clear()
-
-        # and that exit code is 0 when all is well
-        with pytest.raises(SystemExit) as e:
-            main([*mockargs, "--key-type-list", "rsa", "check", "ocsp"])
-        assert e.type is SystemExit, f"Exit was not as expected, it was {e.type}"
-        assert e.value.code == 0, "Exit code not 0 as expected with OK ocsp response"
-        assert "OCSP response not found" not in caplog.text
-        assert "was produced_at more than" not in caplog.text
 
         # we only need to test CAA once
         if certgrinderd_configfile[0] == "dns":
@@ -1312,21 +1214,9 @@ def mock_get_certificate_ok() -> bool:
     return True
 
 
-def mock_get_ocsp_ok() -> bool:
-    """A fake certgrinder.get_ocsp() which just returns True."""
-    print("pretending we got an ocsp response")
-    return True
-
-
 def mock_get_certificate_fail() -> bool:
     """A fake certgrinder.get_certificate() which just returns False."""
     print("pretending we didn't get a certificate")
-    return False
-
-
-def mock_get_ocsp_fail() -> bool:
-    """A fake certgrinder.get_ocsp() which just returns False."""
-    print("pretending we didn't get an ocsp response")
     return False
 
 
@@ -1349,16 +1239,10 @@ def test_periodic(
     monkeypatch.setattr(time, "sleep", mock_time_sleep)
 
     monkeypatch.setattr(certgrinder, "get_certificate", mock_get_certificate_ok)
-    monkeypatch.setattr(certgrinder, "get_ocsp", mock_get_ocsp_ok)
     result = certgrinder.periodic()
     assert result is True, "periodic() did not return True as expected"
 
     monkeypatch.setattr(certgrinder, "get_certificate", mock_get_certificate_fail)
-    result = certgrinder.periodic()
-    assert result is False, "periodic() did not return False as expected"
-
-    monkeypatch.setattr(certgrinder, "get_certificate", mock_get_certificate_ok)
-    monkeypatch.setattr(certgrinder, "get_ocsp", mock_get_ocsp_fail)
     result = certgrinder.periodic()
     assert result is False, "periodic() did not return False as expected"
 
@@ -1369,62 +1253,6 @@ def test_init(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(certgrinder.certgrinder, "__name__", "__main__")
     with pytest.raises(SystemExit):
         certgrinder.certgrinder.init()
-
-
-def test_check_ocsp_response_not_found(caplog: pytest.LogCaptureFixture, tmpdir_factory: pytest.TempdirFactory) -> None:
-    """Test that the check ocsp subcommand fails as expected with a missing OCSP response."""
-    caplog.set_level(logging.DEBUG)
-    mockargs = [
-        "--path",
-        str(tmpdir_factory.mktemp("certificates")),
-        "--domain-list",
-        "example.com,www.example.com",
-        "--domain-list",
-        "example.net",
-        "--debug",
-    ]
-    with pytest.raises(SystemExit) as e:
-        main([*mockargs, "check", "ocsp"])
-    assert e.type is SystemExit, f"Exit was not as expected, it was {e.type}"
-    assert "OCSP response not found for keytype rsa for domainset" in caplog.text
-
-
-def test_show_ocsp_response_not_found(caplog: pytest.LogCaptureFixture, tmpdir_factory: pytest.TempdirFactory) -> None:
-    """Test the show ocsp subcommand with no OCSP file on disk."""
-    caplog.set_level(logging.DEBUG)
-    mockargs = [
-        "--path",
-        str(tmpdir_factory.mktemp("certificates")),
-        "--domain-list",
-        "example.com,www.example.com",
-        "--domain-list",
-        "example.net",
-        "--debug",
-    ]
-    with pytest.raises(SystemExit) as e:
-        main([*mockargs, "show", "ocsp"])
-    assert e.type is SystemExit, f"Exit was not as expected, it was {e.type}"
-    assert "OCSP response not found for domainset" in caplog.text
-
-
-def test_get_ocsp_falsy_input(signed_certificate: x509.Certificate, caplog: pytest.LogCaptureFixture) -> None:
-    """Test the get_ocsp() method with a falsy input."""
-    caplog.set_level(logging.DEBUG)
-    certgrinder = Certgrinder()
-    certgrinder.get_ocsp(certificate=signed_certificate, issuers=[signed_certificate], stdout=None)
-    assert "Did not get an OCSP response in stdout from certgrinderd" in caplog.text
-
-
-def test_get_ocsp_wrong_input(signed_certificate: x509.Certificate, caplog: pytest.LogCaptureFixture) -> None:
-    """Test the get_ocsp() method with a non-cert input."""
-    caplog.set_level(logging.DEBUG)
-    certgrinder = Certgrinder()
-    certgrinder.get_ocsp(
-        certificate=signed_certificate,
-        issuers=[signed_certificate],
-        stdout=b"not-a-cert",
-    )
-    assert "Unable to parse OCSP response" in caplog.text
 
 
 def test_run_certgrinderd_unparseable_output(
@@ -1487,7 +1315,6 @@ def test_show_paths(caplog: pytest.LogCaptureFixture, tmpdir_factory: pytest.Tem
     assert str(certgrinder.certificate_chain_path) in caplog.text
     assert str(certgrinder.issuer_path) in caplog.text
     assert str(certgrinder.concat_path) in caplog.text
-    assert str(certgrinder.ocsp_response_path) in caplog.text
 
 
 def test_check_connection(
