@@ -10,8 +10,8 @@ All notable changes to ``certgrinder`` will be documented in this file.
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 
-Unreleased
-----------
+v0.21.0-rc2 (19-may-2025)
+-------------------------
 
 Changed
 ~~~~~~~
@@ -23,7 +23,7 @@ Fixed
 
 
 v0.21.0-rc1 (19-may-2025)
----------------------
+-------------------------
 
 NOTE WELL: This release removes support for fetching OCSP responses. Update your server configs accordingly, so they no longer reference the OCSP response files from Certgrinder.
 
