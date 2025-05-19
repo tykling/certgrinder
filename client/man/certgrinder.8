@@ -94,15 +94,6 @@ Set this to a DNS server IP (v4 or v6, no hostnames) to use that DNS server inst
 .sp
 Default: \fBNone\fP
 .TP
-.B \fIocsp\-renew\-threshold\-percent\fP
-The amount of time in percent between \fBproduced_at\fP and \fBnext_update\fP that must have passed before an OCSP response is considered too old. As of January 2021 LetsEncrypt has 7 days between \fBproduced_at\fP and \fBnext_update\fP in OCSP responses, so the default of 50% means OCSP responses will be renewed after 3.5 days (half of the validity period) has passed.
-.sp
-As of January 2021 LetsEncrypt produces new OCSP responses after half of the validity period has passed, so any setting lower than that will be pointless. Setting this lower than 50 will just result in Certgrinder fetching the same OCSP response over and over.
-.sp
-Set to 0 to always renew OCSP responses regardless of their age.
-.sp
-Default: \fB50\fP
-.TP
 .B \fIpath\fP
 The directory used for keys, CSRs and certificates. Must exist and be writable by the user running Certgrinder.
 .sp
@@ -119,12 +110,12 @@ The directory to place the certgrinderd PID file in.
 Default: \fB/tmp\fP
 .TP
 .B \fIpost\-renew\-hooks\fP
-A list of commands which \fBcertgrinder\fP must run after renewing one or more certificates or OCSP responses. Use this to reload/restart services which need to be poked after the certificate changes. Can be specified multiple times on the command\-line. Remember to include sudo or whatever if needed. Wrap complex commands in a small shell script to avoid quoting issues.
+A list of commands which \fBcertgrinder\fP must run after renewing one or more certificates. Use this to reload/restart services which need to be poked after the certificate changes. Can be specified multiple times on the command\-line. Remember to include sudo or whatever if needed. Wrap complex commands in a small shell script to avoid quoting issues.
 .sp
 Default: \fBNone\fP
 .TP
 .B \fIpost\-renew\-hooks\-dir\fP
-A path to a hooks.d style directory containing files to be executed after renewing one or more certificates or OCSP responses. Each executable file in this path will be run in the order returned by \fBos.listdir()\fP\&. Set \fBpost\-renew\-hooks\-dir\-runner\fP if something like \fBsudo\fP is needed to elevate privileges before running the hooks.
+A path to a hooks.d style directory containing files to be executed after renewing one or more certificates. Each executable file in this path will be run in the order returned by \fBos.listdir()\fP\&. Set \fBpost\-renew\-hooks\-dir\-runner\fP if something like \fBsudo\fP is needed to elevate privileges before running the hooks.
 .sp
 Default: \fBNone\fP
 .TP
@@ -175,7 +166,7 @@ Finally you need to choose which challenge type to use for this \fBcertgrinder\f
 At this point you should be ready to test! Start by checking with SSH manually to see that the SSH key is installed properly on the Certgrinder server, and firewalls are open. Certgrinder has a \fB\-\-staging\fP switch which makes \fBcertgrinderd\fP use the LetsEncrypt staging environment. Use this until everything works! \fBcertgrinder\fP outputs some info on what happens, and can output more with \fB\-d / \-\-debug\fP, but sometimes you need to check syslog on the Certgrinder server.
 .SS Crontab job
 .sp
-I run Certgrinder daily, although by default it only attempts certificate renewal when less than 30 days validity remains, and OCSP response renewal when half the validity period has passed.
+I recommend running Certgrinder daily. By default it only attempts certificate renewal when less than 30 days validity remains.
 .sp
 When everything above works it is time to automate it by adding it to crontab. The following line works for me (the \fBperiodic\fP command sleeps a random number of minutes before doing its thing, so all the clients don\(aqt contact the Certgrinder server at once):
 .INDENT 0.0
@@ -195,13 +186,9 @@ All the functionality in Certgrinder can be accessed by using \fBcommands\fP and
 .IP \(bu 2
 \fI\%check connection command\fP
 .IP \(bu 2
-\fI\%check ocsp command\fP
-.IP \(bu 2
 \fI\%check tlsa command\fP
 .IP \(bu 2
 \fI\%get certificate command\fP
-.IP \(bu 2
-\fI\%get ocsp command\fP
 .IP \(bu 2
 \fI\%help command\fP
 .IP \(bu 2
@@ -210,8 +197,6 @@ All the functionality in Certgrinder can be accessed by using \fBcommands\fP and
 \fI\%show certificate command\fP
 .IP \(bu 2
 \fI\%show configuration command\fP
-.IP \(bu 2
-\fI\%show ocsp command\fP
 .IP \(bu 2
 \fI\%show paths command\fP
 .IP \(bu 2
@@ -230,11 +215,6 @@ The \fBcheck certificate\fP subcommand loops over the configured domainsets and 
 .SS check connection command
 .sp
 The \fBcheck connection\fP subcommand simply checks that the connection to the \fBcertgrinderd\fP server works as expected. It calls the \fBping\fP command on the \fBcertgrinderd\fP server and expects to see the string \fBpong\fP on stdout. If the expected string is found the exit code will be 0, if a problem is found the exit code will be 1.
-.SS check ocsp command
-.sp
-The \fBcheck ocsp\fP subcommand loops over the configured domainsets and checks for the existance of an OCSP response for each. If an OCSP response for a certificate is missing or too old \fBcertgrinder\fP will exit with exit code 1, if all is well the exit code will be 0.
-.sp
-An OCSP response is considered too old when more than \fBocsp\-renew\-threshold\-percent\fP percent of the time between \fBproducedAt\fP and \fBnextUpdate\fP has passed. As of January 2021 LetsEncrypt has 7 days (one week) between \fBproducedAt\fP and \fBnextUpdate\fP which means OCSP responses will be renewed after 3.5 days with the default \fBocsp\-renew\-threshold\-percent\fP setting of \fB50\fP\&.
 .SS check tlsa command
 .sp
 The \fBcheck tlsa\fP subcommand is like the \fBshow tlsa\fP subcommand but it goes one step further and actually checks in the \fBDNS\fP if the records could be found, and prints some output accordingly. The following example shows two runs of \fBcheck tlsa\fP mode. The first run finds no TLSA records and outputs what needs to be added:
@@ -283,9 +263,6 @@ The \fBget\fP subcommands do all the real work.
 .SS get certificate command
 .sp
 The \fBget certificate\fP subcommand loops over the configured domainsets and gets a new certificate for each, regardless of the current status of existing certificates. Use with care, only for troubleshooting. \fIDo not use from cron. Use the periodic command instead.\fP
-.SS get ocsp command
-.sp
-The \fBget ocsp\fP subcommand loops over the configured domainsets and gets a new OCSP response for each, regardless of the current status of existing OCSP responses. \fIDo not use from cron. Use the periodic command instead.\fP
 .SS help command
 .sp
 The \fBhelp\fP command is just a shortcut for \fB\-h\fP which shows commandline usage and help.
@@ -293,7 +270,7 @@ The \fBhelp\fP command is just a shortcut for \fB\-h\fP which shows commandline 
 .sp
 The \fBperiodic\fP command sleeps for a random number of minutes between 0 and the config setting \fBperiodic\-sleep\-minutes\fP before doing anything. Set this setting to 0 to disable sleeping.
 .sp
-After sleeping the certificates and OCSP responses are checked and renewed as needed. This command is meant to be run daily from cron or similar.
+After sleeping the certificates are checked and renewed as needed. This command is meant to be run daily from cron or similar.
 .SS show commands
 .sp
 The \fBshow\fP subcommands show information but never change anything.
@@ -303,12 +280,9 @@ The \fBshow certificate\fP subcommand loops over configured domainsets and outpu
 .SS show configuration command
 .sp
 The \fBshow configuration\fP subcommand just dumps the active configuration as a pretty printed JSON object and exits. Useful for testing or debugging configuration issues.
-.SS show ocsp command
-.sp
-The \fBshow ocsp\fP subcommand loops over the configured domainsets and shows info about each OCSP response.
 .SS show paths command
 .sp
-The \fBshow paths\fP subcommand loops over the configured domainsets and outputs the paths used for keys, certificates and OCSP responses.
+The \fBshow paths\fP subcommand loops over the configured domainsets and outputs the paths used for keys and certificates.
 .SS show spki command
 .sp
 The \fBshow spki\fP subcommand outputs pin\-sha256 spki pins for the public keys. The \fBHPKP\fP standard \X'tty: link https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning'\fI\%https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning\fP\X'tty: link' defined the \fBpin\-sha256\fP format for public key pins. While the \fBHPKP\fP standard didn\(aqt get much traction the pinning format is used in various places now, so \fBcertgrinder\fP can generate them.

@@ -31,7 +31,5 @@ There is a Docker image for the client at https://hub.docker.com/r/certgrinder/c
 
 - Certgrinder does not rotate the RSA/ECDSA keypair on each certificate renewal, which makes ``TLSA`` and similar public key pinning easy. The Certgrinder client can output and check such ``TLSA`` and ``SPKI`` pins for the keypairs it manages, as well as checking correctness of ``TLSA`` records in the DNS.
 
-- Certgrinder supports fetching OCSP responses via the Certgrinder server. Having Certgrinder fetch the OCSP response makes it possible to configure OCSP stapling without relying on the various TLS servers own OCSP-fetching implementation. It also means that OCSP stapling can be done on servers behind strict firewalls or with no Internet connection, as the communication with CA is done via the Certgrinder server.
-
 ## Terminology
 The central host with the LetsEncrypt signing stack is called the "Certgrinder server". The individual servers (the ones that need the certificates) are called "Certgrinder clients". These match the two Python packages ``certgrinderd`` and ``certgrinder``, respectively.

@@ -68,15 +68,6 @@ This is an alphabetical list of the configurable options:
 
      Default: ``None``
 
-   `ocsp-renew-threshold-percent`
-     The amount of time in percent between ``produced_at`` and ``next_update`` that must have passed before an OCSP response is considered too old. As of January 2021 LetsEncrypt has 7 days between ``produced_at`` and ``next_update`` in OCSP responses, so the default of 50% means OCSP responses will be renewed after 3.5 days (half of the validity period) has passed.
-
-     As of January 2021 LetsEncrypt produces new OCSP responses after half of the validity period has passed, so any setting lower than that will be pointless. Setting this lower than 50 will just result in Certgrinder fetching the same OCSP response over and over.
-
-     Set to 0 to always renew OCSP responses regardless of their age.
-
-     Default: ``50``
-
    `path`
      The directory used for keys, CSRs and certificates. Must exist and be writable by the user running Certgrinder.
 
@@ -93,12 +84,12 @@ This is an alphabetical list of the configurable options:
      Default: ``/tmp``
 
    `post-renew-hooks`
-     A list of commands which ``certgrinder`` must run after renewing one or more certificates or OCSP responses. Use this to reload/restart services which need to be poked after the certificate changes. Can be specified multiple times on the command-line. Remember to include sudo or whatever if needed. Wrap complex commands in a small shell script to avoid quoting issues.
+     A list of commands which ``certgrinder`` must run after renewing one or more certificates. Use this to reload/restart services which need to be poked after the certificate changes. Can be specified multiple times on the command-line. Remember to include sudo or whatever if needed. Wrap complex commands in a small shell script to avoid quoting issues.
 
      Default: ``None``
 
    `post-renew-hooks-dir`
-     A path to a hooks.d style directory containing files to be executed after renewing one or more certificates or OCSP responses. Each executable file in this path will be run in the order returned by ``os.listdir()``. Set ``post-renew-hooks-dir-runner`` if something like ``sudo`` is needed to elevate privileges before running the hooks.
+     A path to a hooks.d style directory containing files to be executed after renewing one or more certificates. Each executable file in this path will be run in the order returned by ``os.listdir()``. Set ``post-renew-hooks-dir-runner`` if something like ``sudo`` is needed to elevate privileges before running the hooks.
 
      Default: ``None``
 
@@ -151,7 +142,7 @@ At this point you should be ready to test! Start by checking with SSH manually t
 
 Crontab job
 ~~~~~~~~~~~
-I run Certgrinder daily, although by default it only attempts certificate renewal when less than 30 days validity remains, and OCSP response renewal when half the validity period has passed.
+I recommend running Certgrinder daily. By default it only attempts certificate renewal when less than 30 days validity remains.
 
 When everything above works it is time to automate it by adding it to crontab. The following line works for me (the ``periodic`` command sleeps a random number of minutes before doing its thing, so all the clients don't contact the Certgrinder server at once)::
 
@@ -164,15 +155,12 @@ All the functionality in Certgrinder can be accessed by using ``commands`` and `
 
 - `check certificate command`_
 - `check connection command`_
-- `check ocsp command`_
 - `check tlsa command`_
 - `get certificate command`_
-- `get ocsp command`_
 - `help command`_
 - `periodic command`_
 - `show certificate command`_
 - `show configuration command`_
-- `show ocsp command`_
 - `show paths command`_
 - `show spki command`_
 - `show tlsa command`_
@@ -192,13 +180,6 @@ The ``check certificate`` subcommand loops over the configured domainsets and ch
 check connection command
 ^^^^^^^^^^^^^^^^^^^^^^^^
 The ``check connection`` subcommand simply checks that the connection to the ``certgrinderd`` server works as expected. It calls the ``ping`` command on the ``certgrinderd`` server and expects to see the string ``pong`` on stdout. If the expected string is found the exit code will be 0, if a problem is found the exit code will be 1.
-
-
-check ocsp command
-^^^^^^^^^^^^^^^^^^
-The ``check ocsp`` subcommand loops over the configured domainsets and checks for the existance of an OCSP response for each. If an OCSP response for a certificate is missing or too old ``certgrinder`` will exit with exit code 1, if all is well the exit code will be 0.
-
-An OCSP response is considered too old when more than ``ocsp-renew-threshold-percent`` percent of the time between ``producedAt`` and ``nextUpdate`` has passed. As of January 2021 LetsEncrypt has 7 days (one week) between ``producedAt`` and ``nextUpdate`` which means OCSP responses will be renewed after 3.5 days with the default ``ocsp-renew-threshold-percent`` setting of ``50``.
 
 
 check tlsa command
@@ -240,10 +221,6 @@ get certificate command
 ^^^^^^^^^^^^^^^^^^^^^^^
 The ``get certificate`` subcommand loops over the configured domainsets and gets a new certificate for each, regardless of the current status of existing certificates. Use with care, only for troubleshooting. `Do not use from cron. Use the periodic command instead.`
 
-get ocsp command
-^^^^^^^^^^^^^^^^
-The ``get ocsp`` subcommand loops over the configured domainsets and gets a new OCSP response for each, regardless of the current status of existing OCSP responses. `Do not use from cron. Use the periodic command instead.`
-
 help command
 ~~~~~~~~~~~~
 The ``help`` command is just a shortcut for ``-h`` which shows commandline usage and help.
@@ -252,7 +229,7 @@ periodic command
 ~~~~~~~~~~~~~~~~
 The ``periodic`` command sleeps for a random number of minutes between 0 and the config setting ``periodic-sleep-minutes`` before doing anything. Set this setting to 0 to disable sleeping.
 
-After sleeping the certificates and OCSP responses are checked and renewed as needed. This command is meant to be run daily from cron or similar.
+After sleeping the certificates are checked and renewed as needed. This command is meant to be run daily from cron or similar.
 
 show commands
 ~~~~~~~~~~~~~
@@ -266,13 +243,9 @@ show configuration command
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 The ``show configuration`` subcommand just dumps the active configuration as a pretty printed JSON object and exits. Useful for testing or debugging configuration issues.
 
-show ocsp command
-^^^^^^^^^^^^^^^^^
-The ``show ocsp`` subcommand loops over the configured domainsets and shows info about each OCSP response.
-
 show paths command
 ^^^^^^^^^^^^^^^^^^
-The ``show paths`` subcommand loops over the configured domainsets and outputs the paths used for keys, certificates and OCSP responses.
+The ``show paths`` subcommand loops over the configured domainsets and outputs the paths used for keys and certificates.
 
 show spki command
 ^^^^^^^^^^^^^^^^^

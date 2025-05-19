@@ -1,6 +1,6 @@
 Certgrinderd
 ============
-The Certgrinder server ``certgrinderd`` takes care of getting certificates and OCSP responses on behalf of the calling clients. ``certgrinderd`` doesn't run always like a daemon, so it never acts on its own. It only does something when a Certgrinder client runs it, usually over SSH.
+The Certgrinder server ``certgrinderd`` takes care of getting certificates on behalf of the calling clients. ``certgrinderd`` doesn't run always like a daemon, so it never acts on its own. It only does something when a Certgrinder client runs it, usually over SSH.
 
 The following sections explain the steps you need to setup a Certgrinder server.
 
