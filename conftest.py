@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import datetime
-import json
 import pathlib
 import shutil
 import subprocess
@@ -57,14 +56,6 @@ def pebble_server_build(tmp_path_factory) -> Path:
         cwd=pebblepath,
     )
     assert proc.returncode == 0
-
-    print("Patching pebble config file...")
-    pebbleconfig = pebblepath / "test/config/pebble-config.json"
-    with open(pebbleconfig) as f:
-        conf = json.loads(f.read())
-    conf["pebble"].update({"ocspResponderURL": "http://127.0.0.1:8080"})
-    with open(pebbleconfig, "w") as f:
-        f.write(json.dumps(conf))
     return pebblepath
 
 
@@ -119,16 +110,6 @@ def pebble_issuer(tmp_path_factory, pebble_server_build) -> tuple[Path, Path]:
 
     # return both paths
     return keypath, certpath
-
-
-@pytest.fixture(scope="function")
-def ocsp_ca_index_file(tmp_path_factory) -> Path:
-    """Return path to the CA index file to use for testing."""
-    indexpath = tmp_path_factory.mktemp("pebble") / "pebble-ocsp-index.ca"
-    print(f"Path to CA index for this test session is {indexpath}")
-    with open(indexpath, "w") as _:
-        pass
-    return indexpath
 
 
 @pytest.fixture
@@ -690,156 +671,6 @@ def signed_certificate(known_private_key, known_private_key_2):
         .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName("example.com")]), critical=False
-        )
-        .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
-    )
-    return cert
-
-
-@pytest.fixture
-def delegated_signer_certificate_not_signed_by_issuer(
-    known_private_key_3, known_private_key_4
-):
-    """Return a signed certificate with the ocsp signing permission, but not signed by the issuer."""
-    subject = x509.Name(
-        [
-            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
-            x509.NameAttribute(
-                x509.oid.NameOID.COMMON_NAME, "delegatedresponder.example"
-            ),
-        ]
-    )
-    issuer = x509.Name(
-        [
-            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
-            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "delegatedissuer.example"),
-        ]
-    )
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(known_private_key_3.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
-        .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
-            critical=True,
-        )
-        .add_extension(
-            x509.ExtendedKeyUsage(usages=[x509.oid.ExtendedKeyUsageOID.OCSP_SIGNING]),
-            critical=True,
-        )
-        .sign(known_private_key_4, primitives.hashes.SHA256(), default_backend())
-    )
-    return cert
-
-
-@pytest.fixture
-def delegated_signer_certificate(known_private_key_3, known_private_key_2):
-    """Return a signed certificate with the ocsp signing permission."""
-    subject = x509.Name(
-        [
-            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
-            x509.NameAttribute(
-                x509.oid.NameOID.COMMON_NAME, "delegatedresponder.example"
-            ),
-        ]
-    )
-    issuer = x509.Name(
-        [
-            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
-            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "example.com"),
-        ]
-    )
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(known_private_key_3.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
-        .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
-            critical=True,
-        )
-        .add_extension(
-            x509.ExtendedKeyUsage(usages=[x509.oid.ExtendedKeyUsageOID.OCSP_SIGNING]),
-            critical=True,
-        )
-        .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
-    )
-    return cert
-
-
-@pytest.fixture
-def delegated_signer_certificate_no_eku(known_private_key_3, known_private_key_2):
-    """Return a delegated signer certificate without ExtendedKeyUsage extension."""
-    subject = x509.Name(
-        [
-            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
-            x509.NameAttribute(
-                x509.oid.NameOID.COMMON_NAME, "delegatedresponder.example"
-            ),
-        ]
-    )
-    issuer = x509.Name(
-        [
-            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
-            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "example.com"),
-        ]
-    )
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(known_private_key_3.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
-        .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
-            critical=True,
-        )
-        .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
-    )
-    return cert
-
-
-@pytest.fixture
-def delegated_signer_certificate_no_ocsp_perm(known_private_key_3, known_private_key_2):
-    """Return a signed certificate with eku but no ocsp signing permission."""
-    subject = x509.Name(
-        [
-            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
-            x509.NameAttribute(
-                x509.oid.NameOID.COMMON_NAME, "delegatedresponder.example"
-            ),
-        ]
-    )
-    issuer = x509.Name(
-        [
-            x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "DK"),
-            x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "example.com"),
-        ]
-    )
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(known_private_key_3.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=90))
-        .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName("delegatedresponder.example")]),
-            critical=True,
-        )
-        .add_extension(
-            x509.ExtendedKeyUsage(usages=[x509.oid.ExtendedKeyUsageOID.CODE_SIGNING]),
-            critical=True,
         )
         .sign(known_private_key_2, primitives.hashes.SHA256(), default_backend())
     )
