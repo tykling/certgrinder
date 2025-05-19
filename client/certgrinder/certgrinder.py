@@ -844,7 +844,7 @@ class Certgrinder:
     ) -> bool:
         """Get a new certificate for self.domainset.
 
-        This methods gets a new certificate regardless of the status of any
+        This method gets a new certificate regardless of the status of any
         existing certificate. It is called by ``self.periodic()`` as needed.
         It can also be called by the ``get certificate`` subcommand.
 
