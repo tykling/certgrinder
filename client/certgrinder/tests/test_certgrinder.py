@@ -42,8 +42,7 @@ class DNSResponse(NamedTuple):
 def delete_argparse_keys(config: dict[str, str]) -> dict[str, str]:
     """Delete keys that are part of argparse internals."""
     for key in ["command", "subcommand", "method"]:
-        if key in config:
-            del config[key]
+        config.pop(key, None)
     return config
 
 
