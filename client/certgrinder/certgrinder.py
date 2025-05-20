@@ -1025,15 +1025,15 @@ class Certgrinder:
 
         Returns: True if exit code was 0, False otherwise.
         """
-        logger.info(f"Running post renew hook: {hook}")
+        logger.info(f"Running post renew hook: {hook!s}")
         start = datetime.datetime.now(tz=datetime.timezone.utc)
         p = subprocess.Popen(hook)  # noqa: S603
         runtime = datetime.datetime.now(tz=datetime.timezone.utc) - start
         exitcode = p.wait()
         if exitcode != 0:
-            logger.error(f"Got exit code {exitcode} when running post_renew_hook {hook} - hook runtime was {runtime}")
+            logger.error(f"Got exit code {exitcode} when running post_renew_hook {hook!s} - hook runtime was {runtime}")
             return False
-        logger.info(f"Post renew hook {hook} ended with exit code 0, good. Hook runtime was {runtime}")
+        logger.info(f"Post renew hook {hook!s} ended with exit code 0, good. Hook runtime was {runtime}")
         return True
 
     # SPKI METHODS

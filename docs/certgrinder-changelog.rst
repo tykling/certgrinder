@@ -10,6 +10,15 @@ All notable changes to ``certgrinder`` will be documented in this file.
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
 
+Unreleased
+----------
+
+Fixed
+~~~~~~
+
+- Convert pathlib.Path paths to str before logging
+
+
 v0.21.0 (19-may-2025)
 ---------------------
 
