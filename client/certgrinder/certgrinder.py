@@ -205,9 +205,6 @@ class Certgrinder:
             # the current LE chain has one intermediate
             self.conf.preferred_chain = "ISRG_Root_X1"
 
-        # one intermediate
-        self.conf.expected_chain_length = 2
-
         logger.debug(f"Certgrinder {__version__} configured OK - running with config: {self.conf}")
 
     # RSA KEY METHODS
@@ -796,7 +793,7 @@ class Certgrinder:
             or None if an error happens
         """
         certs = self.split_pem_chain(certificate_chain)
-        if len(certs) != self.conf.expected_chain_length:
+        if self.conf.expected_chain_length and len(certs) != self.conf.expected_chain_length:
             logger.error(
                 "The input does not contain a valid certificate chain (it does not have "
                 f"{self.conf.expected_chain_length} PEM-looking chunks, it has {len(certs)})."
