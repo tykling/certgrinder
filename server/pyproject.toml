@@ -15,7 +15,6 @@ classifiers = [
 ]
 
 dependencies = [
-    "requests == 2.32.4",
     "PyYAML == 6.0.1",
     "cryptography == 44.0.3",
     "pid == 3.0.4",
