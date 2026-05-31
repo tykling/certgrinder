@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "CERTGRINDER" "8" "May 20, 2025" "" "Certgrinder"
+.TH "CERTGRINDER" "8" "May 31, 2026" "" "Certgrinder"
 .SH NAME
 certgrinder \- Manpage for certgrinder
 .sp
@@ -71,6 +71,11 @@ Default: \fB30\fP
 .TP
 .B \fIdomain\-list\fP
 Comma\-separated lists of domains for the certificates. Can be specified multiple times on the command\-line, \fB\-\-domain\-list example.com,www.example.com \-\-domain\-list example.net\fP means two certificates, the first with two names, the second with one name.
+.sp
+Default: \fBNone\fP
+.TP
+.B \fIexpected\-chain\-length\fP
+Set this to validate the chain length when receiving a certificate. Since v0.22 this defaults to being unset, before v0.22 the default changed with LetsEncrypt chain length. Set to 0 or leave unset to disable validating chain length.
 .sp
 Default: \fBNone\fP
 .TP
@@ -324,7 +329,7 @@ Shown above is the \fBshow tlsa\fP subcommand in action. The value supplied shou
 The \fBversion\fP command is just a shortcut for \fB\-v\fP which shows the Certgrinder version and exits.
 .SH COMMAND LINE USAGE
 .sp
-Certgrinder version 0.21.0rc2.dev3+g633865a.d20250519. See the manpage or ReadTheDocs for more info.
+Certgrinder version 0.21.1.dev1+ge0905b47f.d20260531. See the manpage or ReadTheDocs for more info.
 
 .INDENT 0.0
 .INDENT 3.5

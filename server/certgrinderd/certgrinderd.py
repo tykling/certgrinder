@@ -60,7 +60,7 @@ class Config(BaseSettings):
     cleanup_hook: Path | None = Path("manual-cleanup-hook.sh")
     csr_path: Path | None = None
     debug: bool = False
-    expected_chain_length: int = 2
+    expected_chain_length: int | None = None
     log_level: str = "INFO"
     pid_dir: Path = Path("/tmp")  # noqa: S108
     preferred_chain: str = "ISRG_Root_X1"

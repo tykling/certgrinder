@@ -63,7 +63,7 @@ class Config(BaseSettings, validate_assignment=True):
     certgrinderd: str = "certgrinderd"
     cert_renew_threshold_days: int = 30
     domain_list: list[str] = []
-    expected_chain_length: int = 2
+    expected_chain_length: int | None = None
     invalid_ca_cn_list: list[str] = ["Fake LE Intermediate X1", "Fake LE Intermediate X2"]
     key_type_list: list[str] = ["rsa", "ecdsa"]
     log_level: str = "INFO"
@@ -793,7 +793,7 @@ class Certgrinder:
             or None if an error happens
         """
         certs = self.split_pem_chain(certificate_chain)
-        if self.conf.expected_chain_length and len(certs) != self.conf.expected_chain_length:
+        if not certs or (self.conf.expected_chain_length and len(certs) != self.conf.expected_chain_length):
             logger.error(
                 "The input does not contain a valid certificate chain (it does not have "
                 f"{self.conf.expected_chain_length} PEM-looking chunks, it has {len(certs)})."
@@ -1165,11 +1165,11 @@ class Certgrinder:
         # loop over the responses
         result = []
         for reply in dnsresponse:
-            replytype = f"{reply.usage} {reply.selector} {reply.mtype}"  # type: ignore[attr-defined]
+            replytype = f"{reply.usage} {reply.selector} {reply.mtype}"
             logger.debug(f"Found TLSA record type {replytype}")
             if not tlsatype or tlsastr == replytype:
                 # add this record to the result to be returned
-                result.append(binascii.hexlify(reply.cert).decode("ASCII"))  # type: ignore[attr-defined]
+                result.append(binascii.hexlify(reply.cert).decode("ASCII"))
 
         if result:
             logger.debug(f"Returning {len(result)} TLSA records")

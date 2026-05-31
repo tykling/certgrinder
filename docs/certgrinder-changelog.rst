@@ -17,6 +17,7 @@ Fixed
 ~~~~~~
 
 - Convert pathlib.Path paths to str before logging
+- Change the default for `expected-chain-length` from 2 to ``None``. This disables checking the chain length of the new certificate. This default has been changed a few times to chase LetsEncrypt changes. To retain the old behaviour set `expected-chain-length: 2` (or 3) in the ``certgrinderd`` config file.
 
 
 v0.21.0 (19-may-2025)

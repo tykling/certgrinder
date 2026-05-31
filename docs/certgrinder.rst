@@ -48,6 +48,11 @@ This is an alphabetical list of the configurable options:
 
      Default: ``None``
 
+   `expected-chain-length`
+    Set this to validate the chain length when receiving a certificate. Since v0.22 this defaults to being unset, before v0.22 the default changed with LetsEncrypt chain length. Set to 0 or leave unset to disable validating chain length.
+
+    Default: ``None``
+
    `invalid-ca-cn-list`
      List of CommonName of certificate issuers to consider invalid. This is not a regular CA certificate validity check, it is used to detect certificates issued by LetsEncrypt staging servers as invalid.
 

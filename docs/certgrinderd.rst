@@ -95,6 +95,11 @@ This is an alphabetical list of the configurable options:
 
      Default: ``False``
 
+   `expected-chain-length`
+    Set this to validate the chain length when receiving a certificate. Since v0.22 this defaults to being unset, before v0.22 the default changed with LetsEncrypt chain length. Set to 0 or leave unset to disable validating chain length.
+
+    Default: ``None``
+
    `log-level`
      Sets the verbosity level for console and syslog logging. One of DEBUG, INFO, WARNING, ERROR, CRITICAL.
 
