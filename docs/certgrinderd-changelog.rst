@@ -9,13 +9,18 @@ All notable changes to ``certgrinderd`` will be documented in this file.
 
 This project adheres to `Semantic Versioning <http://semver.org/>`__.
 
-Unreleased
-----------
+v0.21.1 (1-jun-2026)
+--------------------
 
 Fixed
 ~~~~~~
 
 - Change the default for `expected-chain-length` from 2 to ``None``. This disables checking the chain length of the new certificate. This default has been changed a few times to chase LetsEncrypt changes. To retain the old behaviour set `expected-chain-length: 2` (or 3) in the ``certgrinderd`` config file.
+
+Changed
+~~~~~~~
+
+- Update dependencies
 
 
 v0.21.0 (19-may-2025)
