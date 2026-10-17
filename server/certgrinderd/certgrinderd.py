@@ -19,6 +19,7 @@ from pprint import pprint
 import cryptography.x509
 import yaml
 from cryptography.hazmat import primitives
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 from pid import PidFile  # type: ignore[import-not-found]
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -215,7 +216,7 @@ class Certgrinderd:
             None
         """
         with path.open("wb") as f:
-            f.write(csr.public_bytes(primitives.serialization.Encoding.PEM))
+            f.write(csr.public_bytes(serialization.Encoding.PEM))
 
     @staticmethod
     def check_csr(csr: cryptography.x509.CertificateSigningRequest) -> bool:
